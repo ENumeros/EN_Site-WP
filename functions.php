@@ -229,6 +229,194 @@ function cp_bloquear_registo_publico() {
 }
 add_action( 'login_init', 'cp_bloquear_registo_publico' );
 
+// ─── Site fechado ao público (apenas Área de Cliente acessível) ───────────
+// Enquanto os textos não estão aprovados, qualquer visitante não autenticado
+// só vê um aviso de "Em construção" na página inicial, com um atalho de
+// teclado escondido para a Área de Cliente (para quem já tem o link enviado
+// por nós). Todo o resto do site redireciona para a página inicial.
+// Administradores autenticados navegam normalmente, para poderem rever o
+// site completo antes do lançamento.
+
+function cp_portao_site_publico() {
+    if ( is_admin() ) return;
+    if ( is_user_logged_in() ) return;
+
+    // Área de Cliente (e as suas ?vista=) está sempre acessível.
+    $pedido = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+    if ( false !== strpos( $pedido, 'area-de-cliente' ) ) return;
+
+    // Página inicial: mostra apenas o aviso "Em construção" (com atalho
+    // de teclado escondido para a Área de Cliente), até os textos reais
+    // serem aprovados.
+    if ( is_front_page() ) {
+        cp_pagina_em_construcao();
+        exit;
+    }
+
+    // Todo o resto do site: redireciona para a página inicial.
+    wp_safe_redirect( home_url( '/' ) );
+    exit;
+}
+add_action( 'template_redirect', 'cp_portao_site_publico' );
+
+function cp_pagina_em_construcao() {
+    $url_area_cliente = esc_url( home_url( '/area-de-cliente/' ) );
+    ?>
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entre Números — Em construção</title>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f1115;
+        color: #f5f5f0;
+        font-family: 'Public Sans', Arial, sans-serif;
+        text-align: center;
+    }
+    .cp-ec { padding: 2rem; max-width: 32rem; }
+    .cp-ec h1 {
+        font-family: Georgia, 'Fraunces', serif;
+        font-weight: 500;
+        font-size: clamp(1.8rem, 5vw, 3rem);
+        margin: 0 0 .75rem;
+        letter-spacing: -0.01em;
+    }
+    .cp-ec p { opacity: .65; margin: 0; font-size: 1rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="cp-ec">
+    <h1>Entre Números</h1>
+    <p>Em construção. Voltamos em breve.</p>
+</div>
+<script>
+document.addEventListener( 'keydown', function ( e ) {
+    if ( e.ctrlKey && e.altKey && e.shiftKey && e.key.toLowerCase() === 'a' ) {
+        window.location.href = '<?php echo $url_area_cliente; ?>';
+    }
+} );
+</script>
+</body>
+</html>
+    <?php
+}
+
+// ─── Página de início de sessão personalizada ──────────────────────────────
+// Dá à página de login (wp-login.php) a imagem da marca em vez do ecrã
+// genérico do WordPress: mesma paleta escura e tipografia da página
+// "Em construção".
+
+function cp_login_estilos() {
+    ?>
+    <style>
+        body.login {
+            background: #0f1115;
+            font-family: 'Public Sans', Arial, sans-serif;
+        }
+        body.login #login h1 a {
+            background-image: none;
+            width: auto;
+            height: auto;
+            text-indent: 0;
+            overflow: visible;
+            font-family: Georgia, 'Fraunces', serif;
+            font-weight: 500;
+            font-size: 1.8rem;
+            color: #f5f5f0;
+            text-align: center;
+            display: block;
+            pointer-events: none;
+        }
+        body.login #login {
+            width: 25rem;
+        }
+        body.login #login form,
+        body.login #login .message,
+        body.login #login #backtoblog,
+        body.login #login #nav {
+            background: #181b21;
+            border: 1px solid #2a2e37;
+            border-radius: 12px;
+        }
+        body.login #login #backtoblog,
+        body.login #login #nav {
+            background: transparent;
+            border: none;
+            text-align: center;
+        }
+        body.login #login form {
+            box-shadow: 0 8px 28px rgba(0,0,0,.35);
+            padding: 2rem;
+        }
+        body.login #login label,
+        body.login #login #backtoblog a,
+        body.login #login #nav a {
+            color: #cfd1d6;
+        }
+        body.login .input,
+        body.login input[type="text"],
+        body.login input[type="password"] {
+            background: #0f1115;
+            border: 1px solid #2a2e37;
+            color: #f5f5f0;
+            box-shadow: none;
+            font-size: 16px;
+            padding: 10px 14px;
+        }
+        body.login .input:focus,
+        body.login input[type="text"]:focus,
+        body.login input[type="password"]:focus {
+            border-color: #8b8fff;
+            box-shadow: 0 0 0 1px #8b8fff;
+        }
+        body.login .wp-core-ui .button-primary {
+            background: #6c63ff;
+            border-color: #6c63ff;
+            box-shadow: none;
+            text-shadow: none;
+            border-radius: 8px;
+        }
+        body.login .wp-core-ui .button-primary:hover,
+        body.login .wp-core-ui .button-primary:focus {
+            background: #574fe0;
+            border-color: #574fe0;
+        }
+        body.login #login_error,
+        body.login .message {
+            border-left-color: #6c63ff;
+            background: #181b21;
+            color: #f5f5f0;
+        }
+        body.login #nav a,
+        body.login #backtoblog a {
+            text-decoration: none;
+        }
+        body.login #nav a:hover,
+        body.login #backtoblog a:hover {
+            color: #f5f5f0;
+        }
+    </style>
+    <?php
+}
+add_action( 'login_enqueue_scripts', 'cp_login_estilos' );
+
+function cp_login_logo_url() {
+    return home_url( '/' );
+}
+add_filter( 'login_headerurl', 'cp_login_logo_url' );
+
+function cp_login_logo_url_title() {
+    return get_bloginfo( 'name' );
+}
+add_filter( 'login_headertext', 'cp_login_logo_url_title' );
+
 // ─── Formulário de contacto (sem plugin) ───────────────────────────────────
 
 function cp_handle_contact_form() {

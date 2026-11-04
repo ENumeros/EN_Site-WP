@@ -314,3 +314,856 @@ function cp_ac_render_matriz_page() {
 	</div>
 	<?php
 }
+
+
+// ─── API de sincronização de Empresas (Work → Área de Cliente) ────────────
+// Endpoint próprio em /wp-json/cp/v1/empresas usado pela app interna (Work)
+// para sincronizar empresas-cliente. Sincronização é one-way: a Work envia
+// dados para aqui, o WordPress nunca escreve de volta na Work. Autenticação
+// via WordPress Application Passwords (utilizador com permissão para editar
+// o CPT cp_empresa).
+
+function cp_ac_rest_routes() {
+    register_rest_route( 'cp/v1', '/empresas', [
+        [
+            'methods'             => 'GET',
+            'callback'            => 'cp_ac_rest_listar_empresas',
+            'permission_callback' => 'cp_ac_rest_permissao',
+        ],
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_empresa',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id' => [ 'required' => true, 'type' => 'string' ],
+                'nome'    => [ 'required' => true, 'type' => 'string' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes' );
+
+function cp_ac_rest_permissao() {
+    return current_user_can( 'edit_posts' );
+}
+
+function cp_ac_rest_listar_empresas( $request ) {
+    $empresas = get_posts( [
+        'post_type'      => 'cp_empresa',
+        'posts_per_page' => -1,
+        'post_status'    => 'publish',
+    ] );
+    $resultado = [];
+    foreach ( $empresas as $empresa ) {
+        $resultado[] = [
+            'id'      => $empresa->ID,
+            'nome'    => $empresa->post_title,
+            'work_id' => get_post_meta( $empresa->ID, '_cp_work_id', true ),
+            'ferramentas' => cp_ac_empresa_ferramentas_ativas( $empresa->ID ),
+        ];
+    }
+    return rest_ensure_response( $resultado );
+}
+
+function cp_ac_rest_sincronizar_empresa( $request ) {
+    $work_id = sanitize_text_field( $request->get_param( 'work_id' ) );
+    $nome    = sanitize_text_field( $request->get_param( 'nome' ) );
+    $ferramentas_param = $request->get_param( 'ferramentas' );
+
+    if ( '' === $work_id || '' === $nome ) {
+        return new WP_Error(
+            'cp_dados_invalidos',
+            __( 'work_id e nome são obrigatórios.', 'contabilidade-pro' ),
+            [ 'status' => 400 ]
+        );
+    }
+
+    $existente = get_posts( [
+        'post_type'   => 'cp_empresa',
+        'meta_key'    => '_cp_work_id',
+        'meta_value'  => $work_id,
+        'numberposts' => 1,
+        'post_status' => 'any',
+    ] );
+
+    if ( ! empty( $existente ) ) {
+        $post_id = $existente[0]->ID;
+        wp_update_post( [
+            'ID'          => $post_id,
+            'post_title'  => $nome,
+            'post_status' => 'publish',
+        ] );
+        $criado = false;
+    } else {
+        $post_id = wp_insert_post( [
+            'post_type'   => 'cp_empresa',
+            'post_title'  => $nome,
+            'post_status' => 'publish',
+        ] );
+        if ( is_wp_error( $post_id ) ) {
+            return $post_id;
+        }
+        update_post_meta( $post_id, '_cp_work_id', $work_id );
+        $criado = true;
+    }
+
+    if ( is_array( $ferramentas_param ) ) {
+        cp_ac_set_empresa_ferramentas( $post_id, array_map( 'sanitize_key', $ferramentas_param ) );
+    }
+
+    return rest_ensure_response( [
+        'id'          => $post_id,
+        'criado'      => $criado,
+        'ferramentas' => cp_ac_empresa_ferramentas_ativas( $post_id ),
+    ] );
+}
+
+
+// ─── API de criação de Utilizadores (Work → Área de Cliente) ──────────────
+// Endpoint próprio em /wp-json/cp/v1/utilizadores usado pela app interna
+// (Work) para criar a conta de login do cliente no WordPress e associar-lhe
+// as empresas a que deve ter acesso (por work_id de empresa, já resolvido
+// para o ID do post cp_empresa correspondente). A password gerada nunca é
+// devolvida na resposta nem enviada pela Work — ao criar o utilizador
+// dispara-se o fluxo nativo do WordPress para o cliente definir a sua
+// própria password (link de "definir password").
+
+function cp_ac_rest_routes_utilizadores() {
+    register_rest_route( 'cp/v1', '/utilizadores', [
+        [
+            'methods'             => 'GET',
+            'callback'            => 'cp_ac_rest_listar_utilizadores',
+            'permission_callback' => 'cp_ac_rest_permissao_utilizadores',
+        ],
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_criar_utilizador',
+            'permission_callback' => 'cp_ac_rest_permissao_utilizadores',
+            'args'                => [
+                'work_id'  => [ 'required' => true, 'type' => 'string' ],
+                'nome'     => [ 'required' => true, 'type' => 'string' ],
+                'email'    => [ 'required' => true, 'type' => 'string' ],
+                'empresas' => [ 'required' => false, 'type' => 'array' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_utilizadores' );
+
+function cp_ac_rest_permissao_utilizadores() {
+    return current_user_can( 'create_users' );
+}
+
+function cp_ac_rest_listar_utilizadores( $request ) {
+    $utilizadores = get_users( [
+        'meta_key'     => '_cp_work_id',
+        'meta_compare' => 'EXISTS',
+    ] );
+    $resultado = [];
+    foreach ( $utilizadores as $utilizador ) {
+        $resultado[] = [
+            'id'       => $utilizador->ID,
+            'nome'     => $utilizador->display_name,
+            'email'    => $utilizador->user_email,
+            'work_id'  => get_user_meta( $utilizador->ID, '_cp_work_id', true ),
+            'empresas' => get_user_meta( $utilizador->ID, 'cp_empresas', true ),
+        ];
+    }
+    return rest_ensure_response( $resultado );
+}
+
+function cp_ac_rest_criar_utilizador( $request ) {
+    $work_id       = sanitize_text_field( $request->get_param( 'work_id' ) );
+    $nome          = sanitize_text_field( $request->get_param( 'nome' ) );
+    $email         = sanitize_email( $request->get_param( 'email' ) );
+    $empresas_work = $request->get_param( 'empresas' );
+    $empresas_work = is_array( $empresas_work ) ? array_map( 'sanitize_text_field', $empresas_work ) : [];
+
+    if ( '' === $work_id || '' === $nome || ! is_email( $email ) ) {
+        return new WP_Error(
+            'cp_dados_invalidos',
+            __( 'work_id, nome e um email válido são obrigatórios.', 'contabilidade-pro' ),
+            [ 'status' => 400 ]
+        );
+    }
+
+    // Resolve os work_id das empresas para os IDs dos posts cp_empresa já
+    // sincronizados. Uma empresa ainda não sincronizada é ignorada e
+    // reportada em "empresas_nao_encontradas", para a Work saber que tem
+    // de a sincronizar primeiro.
+    $empresas_ids    = [];
+    $nao_encontradas = [];
+    foreach ( $empresas_work as $empresa_work_id ) {
+        $posts = get_posts( [
+            'post_type'   => 'cp_empresa',
+            'meta_key'    => '_cp_work_id',
+            'meta_value'  => $empresa_work_id,
+            'numberposts' => 1,
+            'post_status' => 'any',
+        ] );
+        if ( ! empty( $posts ) ) {
+            $empresas_ids[] = $posts[0]->ID;
+        } else {
+            $nao_encontradas[] = $empresa_work_id;
+        }
+    }
+
+    // Já existe utilizador para este work_id? Atualiza em vez de duplicar.
+    $existentes = get_users( [
+        'meta_key'   => '_cp_work_id',
+        'meta_value' => $work_id,
+        'number'     => 1,
+    ] );
+
+    if ( ! empty( $existentes ) ) {
+        $user_id = $existentes[0]->ID;
+        wp_update_user( [
+            'ID'           => $user_id,
+            'display_name' => $nome,
+            'user_email'   => $email,
+        ] );
+        if ( ! empty( $empresas_ids ) ) {
+            update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
+        }
+        return rest_ensure_response( [
+            'id'                       => $user_id,
+            'criado'                   => false,
+            'empresas_nao_encontradas' => $nao_encontradas,
+        ] );
+    }
+
+    // Email já usado por outra conta WordPress (sem work_id associado)?
+    if ( email_exists( $email ) ) {
+        return new WP_Error(
+            'cp_email_existente',
+            __( 'Já existe uma conta WordPress com este email.', 'contabilidade-pro' ),
+            [ 'status' => 409 ]
+        );
+    }
+
+    $username = sanitize_user( current( explode( '@', $email ) ), true );
+    if ( username_exists( $username ) ) {
+        $username .= '-' . wp_rand( 100, 999 );
+    }
+
+    $user_id = wp_insert_user( [
+        'user_login'   => $username,
+        'user_email'   => $email,
+        'display_name' => $nome,
+        'user_pass'    => wp_generate_password( 32, true, true ), // nunca comunicada
+        'role'         => 'subscriber',
+    ] );
+
+    if ( is_wp_error( $user_id ) ) {
+        return $user_id;
+    }
+
+    update_user_meta( $user_id, '_cp_work_id', $work_id );
+    if ( ! empty( $empresas_ids ) ) {
+        update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
+    }
+
+    // Dispara o fluxo nativo do WordPress para o cliente definir a própria
+    // password (a password gerada acima nunca é enviada nem devolvida).
+    wp_new_user_notification( $user_id, null, 'user' );
+
+    return rest_ensure_response( [
+        'id'                       => $user_id,
+        'criado'                   => true,
+        'empresas_nao_encontradas' => $nao_encontradas,
+    ] );
+}
+
+
+// ─── Util: resolver empresa pelo work_id ───────────────────────────────────
+
+function cp_ac_empresa_by_work_id( $work_id ) {
+    $work_id = sanitize_text_field( $work_id );
+    if ( '' === $work_id ) return 0;
+    $posts = get_posts( [
+        'post_type'   => 'cp_empresa',
+        'meta_key'    => '_cp_work_id',
+        'meta_value'  => $work_id,
+        'numberposts' => 1,
+        'post_status' => 'any',
+    ] );
+    return empty( $posts ) ? 0 : $posts[0]->ID;
+}
+
+// Resposta de erro consistente quando o work_id não corresponde a nenhuma
+// empresa sincronizada (a Work tem de sincronizar a empresa primeiro).
+function cp_ac_rest_erro_empresa_nao_encontrada() {
+    return new WP_Error(
+        'cp_empresa_nao_encontrada',
+        __( 'Nenhuma empresa sincronizada com este work_id.', 'contabilidade-pro' ),
+        [ 'status' => 404 ]
+    );
+}
+
+// Guarda um ficheiro recebido por multipart (campo $campo de $_FILES, via
+// WP_REST_Request::get_file_params()) na media library e devolve
+// [ 'id' => attachment_id, 'url' => attachment_url ] ou um WP_Error.
+function cp_ac_rest_guardar_ficheiro( $request, $campo ) {
+    $ficheiros = $request->get_file_params();
+    if ( empty( $ficheiros[ $campo ] ) || UPLOAD_ERR_OK !== $ficheiros[ $campo ]['error'] ) {
+        return new WP_Error(
+            'cp_ficheiro_em_falta',
+            sprintf( /* translators: %s: nome do campo */ __( 'Ficheiro em falta ou inválido no campo "%s".', 'contabilidade-pro' ), $campo ),
+            [ 'status' => 400 ]
+        );
+    }
+    if ( ! function_exists( 'wp_handle_upload' ) ) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+    }
+    $anexo_id = media_handle_upload( $campo, 0, [], [
+        'test_form' => false,
+        'action'    => 'cp_ac_upload',
+    ] );
+    if ( is_wp_error( $anexo_id ) ) {
+        return $anexo_id;
+    }
+    return [
+        'id'  => $anexo_id,
+        'url' => wp_get_attachment_url( $anexo_id ),
+    ];
+}
+
+
+// ════════════════════════════════════════════════════════════════════════
+// Pendentes (Work → Área de Cliente → Work)
+// ════════════════════════════════════════════════════════════════════════
+// Dois grupos por empresa: "documentos pendentes" (a Work pede um documento
+// específico ao cliente) e "movimentos a esclarecer" (linhas do extrato
+// bancário que a Work precisa que o cliente explique). A Work envia a
+// lista completa (substitui sempre tudo) via POST /pendentes. O cliente
+// responde no site (upload e/ou texto); essas respostas ficam guardadas em
+// '_cp_pendentes_respostas' até a Work as ir buscar (GET /respostas) e
+// confirmar que as processou (POST /respostas/confirmar), altura em que são
+// apagadas daqui — o WordPress nunca é a fonte de verdade definitiva, é só
+// uma caixa de correio de ida e volta.
+
+function cp_ac_pendentes_documentos( $empresa_id ) {
+    $itens = get_post_meta( $empresa_id, '_cp_pendentes_documentos', true );
+    return is_array( $itens ) ? $itens : [];
+}
+
+function cp_ac_pendentes_movimentos( $empresa_id ) {
+    $itens = get_post_meta( $empresa_id, '_cp_pendentes_movimentos', true );
+    return is_array( $itens ) ? $itens : [];
+}
+
+function cp_ac_pendentes_respostas( $empresa_id ) {
+    $itens = get_post_meta( $empresa_id, '_cp_pendentes_respostas', true );
+    return is_array( $itens ) ? $itens : [];
+}
+
+// Devolve a resposta (se existir) para um item (documento ou movimento).
+function cp_ac_pendente_resposta_do_item( $empresa_id, $item_id ) {
+    foreach ( cp_ac_pendentes_respostas( $empresa_id ) as $resposta ) {
+        if ( $resposta['item_id'] === $item_id ) return $resposta;
+    }
+    return null;
+}
+
+function cp_ac_rest_routes_pendentes() {
+    register_rest_route( 'cp/v1', '/pendentes', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_pendentes',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id'    => [ 'required' => true, 'type' => 'string' ],
+                'documentos' => [ 'required' => false, 'type' => 'array' ],
+                'movimentos' => [ 'required' => false, 'type' => 'array' ],
+            ],
+        ],
+    ] );
+    register_rest_route( 'cp/v1', '/pendentes/respostas', [
+        [
+            'methods'             => 'GET',
+            'callback'            => 'cp_ac_rest_listar_respostas_pendentes',
+            'permission_callback' => 'cp_ac_rest_permissao',
+        ],
+    ] );
+    register_rest_route( 'cp/v1', '/pendentes/respostas/confirmar', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_confirmar_respostas_pendentes',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id' => [ 'required' => true, 'type' => 'string' ],
+                'ids'     => [ 'required' => true, 'type' => 'array' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_pendentes' );
+
+function cp_ac_rest_sincronizar_pendentes( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $documentos_in = $request->get_param( 'documentos' );
+    $movimentos_in = $request->get_param( 'movimentos' );
+
+    $documentos = [];
+    if ( is_array( $documentos_in ) ) {
+        foreach ( $documentos_in as $doc ) {
+            if ( empty( $doc['id'] ) ) continue;
+            $documentos[] = [
+                'id'        => sanitize_text_field( $doc['id'] ),
+                'titulo'    => isset( $doc['titulo'] ) ? sanitize_text_field( $doc['titulo'] ) : '',
+                'pedido_em' => isset( $doc['pedido_em'] ) ? sanitize_text_field( $doc['pedido_em'] ) : '',
+            ];
+        }
+    }
+
+    $movimentos = [];
+    if ( is_array( $movimentos_in ) ) {
+        foreach ( $movimentos_in as $mov ) {
+            if ( empty( $mov['id'] ) ) continue;
+            $movimentos[] = [
+                'id'        => sanitize_text_field( $mov['id'] ),
+                'data'      => isset( $mov['data'] ) ? sanitize_text_field( $mov['data'] ) : '',
+                'valor'     => isset( $mov['valor'] ) ? (float) $mov['valor'] : 0,
+                'descricao' => isset( $mov['descricao'] ) ? sanitize_text_field( $mov['descricao'] ) : '',
+                'pergunta'  => isset( $mov['pergunta'] ) ? sanitize_text_field( $mov['pergunta'] ) : '',
+            ];
+        }
+    }
+
+    update_post_meta( $empresa_id, '_cp_pendentes_documentos', $documentos );
+    update_post_meta( $empresa_id, '_cp_pendentes_movimentos', $movimentos );
+
+    return rest_ensure_response( [
+        'ok'                => true,
+        'total_documentos'  => count( $documentos ),
+        'total_movimentos'  => count( $movimentos ),
+    ] );
+}
+
+function cp_ac_rest_listar_respostas_pendentes( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    return rest_ensure_response( [
+        'respostas' => cp_ac_pendentes_respostas( $empresa_id ),
+    ] );
+}
+
+function cp_ac_rest_confirmar_respostas_pendentes( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $ids = array_map( 'sanitize_text_field', (array) $request->get_param( 'ids' ) );
+
+    $restantes = array_values( array_filter( cp_ac_pendentes_respostas( $empresa_id ), function ( $resposta ) use ( $ids ) {
+        return ! in_array( $resposta['item_id'], $ids, true );
+    } ) );
+    update_post_meta( $empresa_id, '_cp_pendentes_respostas', $restantes );
+
+    return rest_ensure_response( [ 'ok' => true, 'restantes' => count( $restantes ) ] );
+}
+
+// ─── Resposta do cliente a um pendente (upload e/ou texto) ─────────────────
+// Formulário simples no ecrã "Pendentes" — não é REST, é o próprio cliente
+// autenticado a submeter via admin-post.php, como o formulário de contacto.
+
+function cp_ac_handle_pendente_resposta() {
+    if ( ! is_user_logged_in() ) wp_die( esc_html__( 'Sessão inválida.', 'contabilidade-pro' ) );
+    if ( ! isset( $_POST['cp_pendente_nonce'] ) || ! wp_verify_nonce( $_POST['cp_pendente_nonce'], 'cp_pendente_resposta' ) ) {
+        wp_die( esc_html__( 'Pedido inválido. Volta à página e tenta novamente.', 'contabilidade-pro' ) );
+    }
+
+    $empresa_id = cp_ac_empresa_ativa();
+    $item_id    = isset( $_POST['item_id'] ) ? sanitize_text_field( wp_unslash( $_POST['item_id'] ) ) : '';
+    $tipo       = isset( $_POST['tipo'] ) && 'documento' === $_POST['tipo'] ? 'documento' : 'movimento';
+    $texto      = isset( $_POST['texto'] ) ? sanitize_textarea_field( wp_unslash( $_POST['texto'] ) ) : '';
+    $voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
+
+    // O item tem mesmo de pertencer à empresa ativa do utilizador.
+    $ids_validos = wp_list_pluck( 'documento' === $tipo ? cp_ac_pendentes_documentos( $empresa_id ) : cp_ac_pendentes_movimentos( $empresa_id ), 'id' );
+    if ( ! $empresa_id || '' === $item_id || ! in_array( $item_id, $ids_validos, true ) ) {
+        wp_safe_redirect( add_query_arg( 'cp_erro', 'pendente_invalido', $voltar ) );
+        exit;
+    }
+
+    $anexo_id  = 0;
+    $anexo_url = '';
+    $anexo_nome = '';
+    if ( ! empty( $_FILES['anexo'] ) && UPLOAD_ERR_NO_FILE !== $_FILES['anexo']['error'] ) {
+        if ( ! function_exists( 'wp_handle_upload' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+        }
+        $anexo_nome_original = isset( $_FILES['anexo']['name'] ) ? sanitize_file_name( $_FILES['anexo']['name'] ) : '';
+        $resultado = media_handle_upload( 'anexo', 0, [], [ 'test_form' => false ] );
+        if ( ! is_wp_error( $resultado ) ) {
+            $anexo_id   = $resultado;
+            $anexo_url  = wp_get_attachment_url( $resultado );
+            $anexo_nome = $anexo_nome_original;
+        }
+    }
+
+    if ( '' === $texto && ! $anexo_id ) {
+        wp_safe_redirect( add_query_arg( 'cp_erro', 'resposta_vazia', $voltar ) );
+        exit;
+    }
+
+    $respostas = cp_ac_pendentes_respostas( $empresa_id );
+    // Substitui uma resposta anterior ao mesmo item, se existir.
+    $respostas = array_values( array_filter( $respostas, function ( $r ) use ( $item_id ) {
+        return $r['item_id'] !== $item_id;
+    } ) );
+    $respostas[] = [
+        'item_id'       => $item_id,
+        'tipo'          => $tipo,
+        'texto'         => $texto,
+        'anexo_id'      => $anexo_id,
+        'anexo_url'     => $anexo_url,
+        'anexo_nome'    => $anexo_nome,
+        'respondido_em' => current_time( 'mysql' ),
+    ];
+    update_post_meta( $empresa_id, '_cp_pendentes_respostas', $respostas );
+
+    wp_safe_redirect( add_query_arg( 'cp_sucesso', 'resposta_enviada', $voltar ) );
+    exit;
+}
+add_action( 'admin_post_cp_pendente_responder', 'cp_ac_handle_pendente_resposta' );
+
+
+// ════════════════════════════════════════════════════════════════════════
+// Conta Corrente (Work → Área de Cliente)
+// ════════════════════════════════════════════════════════════════════════
+// Resumo (saldo, faturado, pago) + linhas (faturas/recibos). A Work envia
+// tudo de uma vez via POST /conta-corrente (substitui sempre tudo, mas
+// preserva o documento já anexado a uma linha que continue a existir). O
+// PDF de cada documento é enviado à parte, por multipart, via POST
+// /conta-corrente/documento, identificando a linha pelo seu "id".
+
+function cp_ac_conta_corrente( $empresa_id ) {
+    $dados = get_post_meta( $empresa_id, '_cp_conta_corrente', true );
+    if ( ! is_array( $dados ) ) $dados = [];
+    $dados += [ 'resumo' => [], 'linhas' => [] ];
+    return $dados;
+}
+
+function cp_ac_rest_routes_conta_corrente() {
+    register_rest_route( 'cp/v1', '/conta-corrente', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_conta_corrente',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id' => [ 'required' => true, 'type' => 'string' ],
+                'resumo'  => [ 'required' => false, 'type' => 'object' ],
+                'linhas'  => [ 'required' => false, 'type' => 'array' ],
+            ],
+        ],
+    ] );
+    register_rest_route( 'cp/v1', '/conta-corrente/documento', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_conta_corrente_documento',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id'  => [ 'required' => true, 'type' => 'string' ],
+                'linha_id' => [ 'required' => true, 'type' => 'string' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_conta_corrente' );
+
+function cp_ac_rest_sincronizar_conta_corrente( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $atual         = cp_ac_conta_corrente( $empresa_id );
+    $anexos_por_id = [];
+    foreach ( $atual['linhas'] as $linha ) {
+        if ( ! empty( $linha['anexo_id'] ) ) {
+            $anexos_por_id[ $linha['id'] ] = [
+                'anexo_id'  => $linha['anexo_id'],
+                'anexo_url' => $linha['anexo_url'],
+            ];
+        }
+    }
+
+    $resumo_in = $request->get_param( 'resumo' );
+    $resumo    = [];
+    if ( is_array( $resumo_in ) ) {
+        foreach ( [ 'saldo_atual', 'saldo_nota', 'faturado_ano', 'faturado_nota', 'pago_ano', 'pago_nota' ] as $campo ) {
+            if ( isset( $resumo_in[ $campo ] ) ) {
+                $resumo[ $campo ] = in_array( $campo, [ 'saldo_atual', 'faturado_ano', 'pago_ano' ], true )
+                    ? (float) $resumo_in[ $campo ]
+                    : sanitize_text_field( $resumo_in[ $campo ] );
+            }
+        }
+    }
+
+    $linhas_in = $request->get_param( 'linhas' );
+    $linhas    = [];
+    if ( is_array( $linhas_in ) ) {
+        foreach ( $linhas_in as $linha ) {
+            if ( empty( $linha['id'] ) ) continue;
+            $id       = sanitize_text_field( $linha['id'] );
+            $nova     = [
+                'id'        => $id,
+                'data'      => isset( $linha['data'] ) ? sanitize_text_field( $linha['data'] ) : '',
+                'documento' => isset( $linha['documento'] ) ? sanitize_text_field( $linha['documento'] ) : '',
+                'tipo'      => isset( $linha['tipo'] ) ? sanitize_text_field( $linha['tipo'] ) : '',
+                'valor'     => isset( $linha['valor'] ) ? (float) $linha['valor'] : 0,
+                'estado'    => isset( $linha['estado'] ) ? sanitize_text_field( $linha['estado'] ) : '',
+                'anexo_id'  => 0,
+                'anexo_url' => '',
+            ];
+            if ( isset( $anexos_por_id[ $id ] ) ) {
+                $nova['anexo_id']  = $anexos_por_id[ $id ]['anexo_id'];
+                $nova['anexo_url'] = $anexos_por_id[ $id ]['anexo_url'];
+            }
+            $linhas[] = $nova;
+        }
+    }
+
+    update_post_meta( $empresa_id, '_cp_conta_corrente', [ 'resumo' => $resumo, 'linhas' => $linhas ] );
+
+    return rest_ensure_response( [ 'ok' => true, 'total_linhas' => count( $linhas ) ] );
+}
+
+function cp_ac_rest_conta_corrente_documento( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $linha_id = sanitize_text_field( $request->get_param( 'linha_id' ) );
+    $ficheiro = cp_ac_rest_guardar_ficheiro( $request, 'ficheiro' );
+    if ( is_wp_error( $ficheiro ) ) return $ficheiro;
+
+    $dados      = cp_ac_conta_corrente( $empresa_id );
+    $encontrada = false;
+    foreach ( $dados['linhas'] as &$linha ) {
+        if ( $linha['id'] === $linha_id ) {
+            $linha['anexo_id']  = $ficheiro['id'];
+            $linha['anexo_url'] = $ficheiro['url'];
+            $encontrada = true;
+            break;
+        }
+    }
+    unset( $linha );
+
+    if ( ! $encontrada ) {
+        return new WP_Error(
+            'cp_linha_nao_encontrada',
+            __( 'Não existe nenhuma linha com este linha_id. Sincroniza primeiro via POST /conta-corrente.', 'contabilidade-pro' ),
+            [ 'status' => 404 ]
+        );
+    }
+
+    update_post_meta( $empresa_id, '_cp_conta_corrente', $dados );
+
+    return rest_ensure_response( [ 'ok' => true, 'anexo_id' => $ficheiro['id'], 'anexo_url' => $ficheiro['url'] ] );
+}
+
+
+// ════════════════════════════════════════════════════════════════════════
+// Mapas de Gestão (Work → Área de Cliente)
+// ════════════════════════════════════════════════════════════════════════
+// Um mapa por mês (chave "YYYY-MM"), sempre com um PDF. Criar/substituir um
+// mês é sempre o mesmo pedido multipart (POST /mapas-gestao); remover um
+// mês é POST /mapas-gestao/remover.
+
+function cp_ac_mapas_gestao( $empresa_id ) {
+    $mapas = get_post_meta( $empresa_id, '_cp_mapas_gestao', true );
+    return is_array( $mapas ) ? $mapas : [];
+}
+
+function cp_ac_rest_routes_mapas_gestao() {
+    register_rest_route( 'cp/v1', '/mapas-gestao', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_mapa_gestao',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id' => [ 'required' => true, 'type' => 'string' ],
+                'mes'     => [ 'required' => true, 'type' => 'string' ],
+                'titulo'  => [ 'required' => false, 'type' => 'string' ],
+            ],
+        ],
+    ] );
+    register_rest_route( 'cp/v1', '/mapas-gestao/remover', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_remover_mapa_gestao',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id' => [ 'required' => true, 'type' => 'string' ],
+                'mes'     => [ 'required' => true, 'type' => 'string' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_mapas_gestao' );
+
+function cp_ac_rest_sincronizar_mapa_gestao( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $mes = sanitize_text_field( $request->get_param( 'mes' ) );
+    if ( ! preg_match( '/^\d{4}-\d{2}$/', $mes ) ) {
+        return new WP_Error(
+            'cp_mes_invalido',
+            __( 'mes tem de estar no formato AAAA-MM.', 'contabilidade-pro' ),
+            [ 'status' => 400 ]
+        );
+    }
+
+    $ficheiro = cp_ac_rest_guardar_ficheiro( $request, 'ficheiro' );
+    if ( is_wp_error( $ficheiro ) ) return $ficheiro;
+
+    $titulo_param = $request->get_param( 'titulo' );
+    $titulo       = $titulo_param ? sanitize_text_field( $titulo_param ) : sprintf(
+        /* translators: %s: mês no formato AAAA-MM */
+        __( 'Mapa de Gestão — %s', 'contabilidade-pro' ),
+        $mes
+    );
+
+    $mapas = cp_ac_mapas_gestao( $empresa_id );
+    $anterior = null;
+    $mapas = array_values( array_filter( $mapas, function ( $m ) use ( $mes, &$anterior ) {
+        if ( $m['mes'] === $mes ) { $anterior = $m; return false; }
+        return true;
+    } ) );
+    if ( $anterior && ! empty( $anterior['anexo_id'] ) ) {
+        wp_delete_attachment( $anterior['anexo_id'], true );
+    }
+
+    $mapas[] = [
+        'mes'          => $mes,
+        'titulo'       => $titulo,
+        'publicado_em' => current_time( 'mysql' ),
+        'anexo_id'     => $ficheiro['id'],
+        'anexo_url'    => $ficheiro['url'],
+    ];
+    // Mais recente primeiro.
+    usort( $mapas, function ( $a, $b ) { return strcmp( $b['mes'], $a['mes'] ); } );
+
+    update_post_meta( $empresa_id, '_cp_mapas_gestao', $mapas );
+
+    return rest_ensure_response( [ 'ok' => true, 'mes' => $mes, 'anexo_url' => $ficheiro['url'] ] );
+}
+
+function cp_ac_rest_remover_mapa_gestao( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $mes      = sanitize_text_field( $request->get_param( 'mes' ) );
+    $mapas    = cp_ac_mapas_gestao( $empresa_id );
+    $removido = null;
+    $restantes = array_values( array_filter( $mapas, function ( $m ) use ( $mes, &$removido ) {
+        if ( $m['mes'] === $mes ) { $removido = $m; return false; }
+        return true;
+    } ) );
+
+    if ( ! $removido ) {
+        return new WP_Error(
+            'cp_mapa_nao_encontrado',
+            __( 'Não existe nenhum mapa para este mês.', 'contabilidade-pro' ),
+            [ 'status' => 404 ]
+        );
+    }
+
+    if ( ! empty( $removido['anexo_id'] ) ) {
+        wp_delete_attachment( $removido['anexo_id'], true );
+    }
+    update_post_meta( $empresa_id, '_cp_mapas_gestao', $restantes );
+
+    return rest_ensure_response( [ 'ok' => true ] );
+}
+
+
+// ════════════════════════════════════════════════════════════════════════
+// Recibos de Vencimento (Work → Área de Cliente)
+// ════════════════════════════════════════════════════════════════════════
+// Um recibo por colaborador/mês, chave (work_id, cod_emp, ano, mes), sempre
+// com um PDF. Upsert: se já existir um recibo com esta chave, substitui o
+// ficheiro e os campos — nunca duplica. O "n_processamento" é controlo
+// interno da Work e não é enviado para aqui.
+
+function cp_ac_recibos_vencimento( $empresa_id ) {
+    $recibos = get_post_meta( $empresa_id, '_cp_recibos_vencimento', true );
+    return is_array( $recibos ) ? $recibos : [];
+}
+
+function cp_ac_rest_routes_recibos_vencimento() {
+    register_rest_route( 'cp/v1', '/recibos-vencimento', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_recibo_vencimento',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id'            => [ 'required' => true, 'type' => 'string' ],
+                'cod_emp'            => [ 'required' => true, 'type' => 'string' ],
+                'nome_emp'           => [ 'required' => true, 'type' => 'string' ],
+                'ano'                => [ 'required' => true, 'type' => 'integer' ],
+                'mes'                => [ 'required' => true, 'type' => 'integer' ],
+                'tipo_processamento' => [ 'required' => false, 'type' => 'string' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_recibos_vencimento' );
+
+function cp_ac_rest_sincronizar_recibo_vencimento( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $cod_emp  = sanitize_text_field( $request->get_param( 'cod_emp' ) );
+    $nome_emp = sanitize_text_field( $request->get_param( 'nome_emp' ) );
+    $ano      = (int) $request->get_param( 'ano' );
+    $mes      = (int) $request->get_param( 'mes' );
+
+    if ( '' === $cod_emp || $mes < 1 || $mes > 12 ) {
+        return new WP_Error(
+            'cp_dados_invalidos',
+            __( 'cod_emp é obrigatório e mes tem de estar entre 1 e 12.', 'contabilidade-pro' ),
+            [ 'status' => 400 ]
+        );
+    }
+
+    $tipo_param         = $request->get_param( 'tipo_processamento' );
+    $tipo_processamento = $tipo_param ? sanitize_text_field( $tipo_param ) : '';
+
+    $ficheiro = cp_ac_rest_guardar_ficheiro( $request, 'ficheiro' );
+    if ( is_wp_error( $ficheiro ) ) return $ficheiro;
+
+    $recibos  = cp_ac_recibos_vencimento( $empresa_id );
+    $anterior = null;
+    $recibos  = array_values( array_filter( $recibos, function ( $r ) use ( $cod_emp, $ano, $mes, &$anterior ) {
+        if ( $r['cod_emp'] === $cod_emp && (int) $r['ano'] === $ano && (int) $r['mes'] === $mes ) {
+            $anterior = $r;
+            return false;
+        }
+        return true;
+    } ) );
+    if ( $anterior && ! empty( $anterior['anexo_id'] ) ) {
+        wp_delete_attachment( $anterior['anexo_id'], true );
+    }
+
+    $recibos[] = [
+        'cod_emp'            => $cod_emp,
+        'nome_emp'           => $nome_emp,
+        'ano'                => $ano,
+        'mes'                => $mes,
+        'tipo_processamento' => $tipo_processamento,
+        'anexo_id'           => $ficheiro['id'],
+        'anexo_url'          => $ficheiro['url'],
+        'atualizado_em'      => current_time( 'mysql' ),
+    ];
+
+    update_post_meta( $empresa_id, '_cp_recibos_vencimento', $recibos );
+
+    return rest_ensure_response( [ 'id' => $ficheiro['id'], 'criado' => ! $anterior ] );
+}

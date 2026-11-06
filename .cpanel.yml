@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/enumeros/public_html/wp-content/themes/contabilidade-pro/
+    - /bin/cp -R * $DEPLOYPATH

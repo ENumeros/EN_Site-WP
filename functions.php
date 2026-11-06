@@ -281,20 +281,35 @@ function cp_pagina_em_construcao() {
         text-align: center;
     }
     .cp-ec { padding: 2rem; max-width: 32rem; }
-    .cp-ec h1 {
-        font-family: Georgia, 'Fraunces', serif;
-        font-weight: 500;
-        font-size: clamp(1.8rem, 5vw, 3rem);
-        margin: 0 0 .75rem;
-        letter-spacing: -0.01em;
+    .cp-ec img {
+        max-width: min(90vw, 28rem);
+        height: auto;
+        margin: 0 0 1rem;
     }
-    .cp-ec p { opacity: .65; margin: 0; font-size: 1rem; line-height: 1.5; }
+    .cp-ec p {
+        opacity: 1;
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 500;
+        line-height: 1.5;
+        letter-spacing: .02em;
+        color: #c9d2ea;
+    }
+    .cp-ec p.cp-ec-sub {
+        margin-top: .4rem;
+        font-size: .95rem;
+        font-weight: 400;
+        opacity: .6;
+        color: #f5f5f0;
+        letter-spacing: .01em;
+    }
 </style>
 </head>
 <body>
 <div class="cp-ec">
-    <h1>Entre Números</h1>
-    <p>Em construção. Voltamos em breve.</p>
+    <img src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/img/banner.png' ); ?>" alt="Entre Números">
+    <p>Algo novo está a nascer.</p>
+    <p class="cp-ec-sub">Contabilidade, fiscalidade e recursos humanos, num só lugar.</p>
 </div>
 <script>
 document.addEventListener( 'keydown', function ( e ) {

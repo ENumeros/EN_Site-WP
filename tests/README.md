@@ -28,9 +28,39 @@ de ficheiro mais frequentes (`add_action`, `register_post_type`,
 `register_rest_route`, tradução, sanitização). `AreaClienteTest.php` é o
 exemplo a copiar para o próximo ficheiro de `inc/` a testar.
 
+`PushTest.php` testa o módulo de notificações push
+(`inc/area-cliente-push.php`): base64url, CRUD de subscrições e as duas
+funções de criptografia mais propensas a erro (conversão DER→raw da
+assinatura ECDSA, HKDF). **Não testa** o envio real de uma notificação —
+isso depende de cifra `aes128gcm` de ponta a ponta e de um endpoint real
+do browser, que só se confirma manualmente (ver "Notificações push" em
+baixo). Nota de limitação: Brain Monkey só consegue substituir funções
+que ainda não estão definidas (as do WordPress) — uma função do próprio
+tema já carregada (ex. `cp_push_enviar_subscricao`) não pode ser
+estubada a partir de outra função do tema, por isso
+`cp_push_notificar_empresa()` não tem teste unitário próprio.
+
 Não testa (de propósito, nesta fase): o HTML gerado pelas `cp_ac_vista_*`,
 pedidos HTTP reais aos endpoints REST, nem nada que dependa de uma base
 de dados MySQL real.
+
+## Notificações push — verificação manual
+
+Não automatizável (depende de criptografia real + endpoint do browser).
+Passos:
+
+1. Ativar a extensão `openssl` no PHP deste site no Local (site →
+   aba "PHP" → extensões) — está desligada por omissão nesta instalação.
+2. Em `https://enumerospt.local/area-de-cliente/`, autenticado, clicar
+   "Ativar notificações" e aceitar a permissão do browser; confirmar no
+   separador de rede que `POST /wp-json/cp/v1/push/subscrever` devolve
+   `{ "ok": true }`.
+3. Simular um sync da Work (`POST /wp-json/cp/v1/pendentes`, autenticado
+   com Application Password, com um `work_id` já sincronizado e um
+   documento novo) e confirmar que aparece uma notificação do sistema.
+4. Alterar à mão o `endpoint` de uma subscrição em usermeta
+   (`cp_push_subscricoes`) para um URL inválido, repetir o passo 3, e
+   confirmar que essa subscrição morta desaparece em vez de dar erro.
 
 ## O que falta: integração com `wp-env`
 

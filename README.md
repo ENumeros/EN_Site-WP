@@ -52,6 +52,17 @@ no array `$all_services` em `page-servicos.php`.
 
 ---
 
+## Backoffice (equipa)
+
+Mesmo princípio: cria uma página com slug `backoffice` para
+`page-backoffice.php` aparecer. É uma central de notificações para a
+equipa — mostra o que mudou recentemente (ex.: cliente respondeu a um
+pendente) com um link direto para o sítio certo no wp-admin. Para dar
+acesso a alguém da equipa, edita o utilizador em **Utilizadores** e
+escolhe o papel **Equipa Entre Números**.
+
+---
+
 ## Personalizações avançadas
 
 ### Alterar cores

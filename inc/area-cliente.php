@@ -705,6 +705,11 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
     $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
     if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
 
+    // Guardado antes de sobrescrever, só para detetar o que é mesmo novo
+    // (para notificar o cliente só quando há novidade a sério).
+    $ids_documentos_antes = wp_list_pluck( cp_ac_pendentes_documentos( $empresa_id ), 'id' );
+    $ids_movimentos_antes = wp_list_pluck( cp_ac_pendentes_movimentos( $empresa_id ), 'id' );
+
     $documentos_in = $request->get_param( 'documentos' );
     $movimentos_in = $request->get_param( 'movimentos' );
 
@@ -736,6 +741,17 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
 
     update_post_meta( $empresa_id, '_cp_pendentes_documentos', $documentos );
     update_post_meta( $empresa_id, '_cp_pendentes_movimentos', $movimentos );
+
+    $ha_novidade = array_diff( wp_list_pluck( $documentos, 'id' ), $ids_documentos_antes )
+        || array_diff( wp_list_pluck( $movimentos, 'id' ), $ids_movimentos_antes );
+    if ( $ha_novidade && cp_ac_empresa_tem_ferramenta( $empresa_id, 'pendentes' ) ) {
+        cp_push_notificar_empresa(
+            $empresa_id,
+            __( 'Novos pendentes', 'contabilidade-pro' ),
+            __( 'Tem documentos ou movimentos novos à espera de resposta.', 'contabilidade-pro' ),
+            add_query_arg( 'vista', 'pendentes', home_url( '/area-de-cliente/' ) )
+        );
+    }
 
     return rest_ensure_response( [
         'ok'                => true,
@@ -828,6 +844,17 @@ function cp_ac_handle_pendente_resposta() {
         'respondido_em' => current_time( 'mysql' ),
     ];
     update_post_meta( $empresa_id, '_cp_pendentes_respostas', $respostas );
+
+    cp_push_notificar_equipa(
+        __( 'Nova resposta de cliente', 'contabilidade-pro' ),
+        sprintf(
+            /* translators: %s: nome da empresa */
+            __( '%s respondeu a um pendente.', 'contabilidade-pro' ),
+            get_the_title( $empresa_id )
+        ),
+        get_edit_post_link( $empresa_id ),
+        $empresa_id
+    );
 
     wp_safe_redirect( add_query_arg( 'cp_sucesso', 'resposta_enviada', $voltar ) );
     exit;
@@ -1051,6 +1078,15 @@ function cp_ac_rest_sincronizar_mapa_gestao( $request ) {
     usort( $mapas, function ( $a, $b ) { return strcmp( $b['mes'], $a['mes'] ); } );
 
     update_post_meta( $empresa_id, '_cp_mapas_gestao', $mapas );
+
+    if ( cp_ac_empresa_tem_ferramenta( $empresa_id, 'mapas_gestao' ) ) {
+        cp_push_notificar_empresa(
+            $empresa_id,
+            __( 'Novo mapa de gestão', 'contabilidade-pro' ),
+            $titulo,
+            add_query_arg( 'vista', 'mapas_gestao', home_url( '/area-de-cliente/' ) )
+        );
+    }
 
     return rest_ensure_response( [ 'ok' => true, 'mes' => $mes, 'anexo_url' => $ficheiro['url'] ] );
 }

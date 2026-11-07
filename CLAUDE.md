@@ -6,23 +6,26 @@ site público nem a Área de Cliente têm os textos finais aprovados
 isso). Isso dá margem para consolidar a estrutura agora, antes de haver
 tráfego real a proteger.
 
-Este tema tem **duas aplicações distintas dentro do mesmo repositório**,
-e as diferenças entre elas são propositadas, não inconsistência:
+Este tema tem **três superfícies distintas dentro do mesmo
+repositório**, e as diferenças entre elas são propositadas, não
+inconsistência:
 
-| | Site público | Área de Cliente |
-|---|---|---|
-| Ficheiros | `front-page.php`, `page.php`, `page-servicos.php`, `header.php`, `footer.php` | `page-area-de-cliente.php` + `inc/area-cliente.php` + `inc/area-cliente-vistas.php` |
-| Público | Visitantes anónimos | Clientes autenticados (`subscriber`) |
-| Layout | Usa `header.php`/`footer.php`, `wp_head()`/`wp_footer()` normais | Documento HTML autónomo, sem `get_header()`/`get_footer()` |
-| CSS | `assets/css/main.css`, prefixo de classes `c-` / sem prefixo | `<style>` inline no topo de `page-area-de-cliente.php`, prefixo `ac-` |
-| Variáveis de cor | `--c-*` (`--c-accent`, `--c-bg`, `--c-ink`, …) | `--ac-*` (`--ac-navy`, `--ac-gold`, `--ac-muted`, …) — **paleta própria**, não reutiliza as `--c-*` |
-| Tema claro/escuro | `localStorage['cp-theme']`, botão `.theme-toggle` | mesma chave `localStorage['cp-theme']`, botão `.ac-theme-toggle` — sincronizados de propósito |
-| Estilo de marcação | Classes CSS em `main.css` | Maioritariamente `style="..."` inline por elemento, só os padrões repetidos (`.ac-card`, `.ac-badge`, `.ac-table`, …) têm classe |
+| | Site público | Área de Cliente | Backoffice |
+|---|---|---|---|
+| Ficheiros | `front-page.php`, `page.php`, `page-servicos.php`, `header.php`, `footer.php` | `page-area-de-cliente.php` + `inc/area-cliente.php` + `inc/area-cliente-vistas.php` | `page-backoffice.php` + `inc/area-cliente-backoffice.php` |
+| Público | Visitantes anónimos | Clientes autenticados (`subscriber`) | Equipa (`administrator` ou papel `equipa_en`) |
+| Layout | Usa `header.php`/`footer.php`, `wp_head()`/`wp_footer()` normais | Documento HTML autónomo, sem `get_header()`/`get_footer()` | Igual à Área de Cliente |
+| CSS | `assets/css/main.css`, prefixo de classes `c-` / sem prefixo | `assets/css/area-cliente.css`, prefixo `ac-` | **Partilha** `area-cliente.css` com a Área de Cliente (mesma família "app autenticada") |
+| Variáveis de cor | `--c-*` (`--c-accent`, `--c-bg`, `--c-ink`, …) | `--ac-*` (`--ac-navy`, `--ac-gold`, `--ac-muted`, …) — **paleta própria**, não reutiliza as `--c-*` | Mesmas `--ac-*` da Área de Cliente |
+| Tema claro/escuro | `localStorage['cp-theme']`, botão `.theme-toggle` | mesma chave `localStorage['cp-theme']`, botão `.ac-theme-toggle`, lógica em `assets/js/ac-theme-toggle.js` | Mesmo botão/ficheiro partilhado |
+| Estilo de marcação | Classes CSS em `main.css` | Maioritariamente `style="..."` inline por elemento, só os padrões repetidos (`.ac-card`, `.ac-badge`, `.ac-table`, …) têm classe | Igual à Área de Cliente |
 
-Ao editar um dos dois lados, **não "unificar" com o outro** sem decisão
-explícita — são duas superfícies com públicos, hierarquia visual e ciclo
-de vida diferentes. A única ponte deliberada entre os dois é a chave de
-tema (`cp-theme`) e o prefixo comum `cp_`/`cp-` nas funções e classes.
+Ao editar o site público, **não "unificar" com as outras duas** sem
+decisão explícita — é uma superfície com público, hierarquia visual e
+ciclo de vida diferente. Área de Cliente e Backoffice já partilham CSS/JS
+de propósito (ambas são "apps" autenticadas da mesma família); a ponte
+deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
+`cp_`/`cp-` nas funções e classes.
 
 ---
 
@@ -72,12 +75,56 @@ tema (`cp-theme`) e o prefixo comum `cp_`/`cp-` nas funções e classes.
 - `cp_empresa_ativa` (usermeta) guarda a empresa selecionada, mas é sempre
   revalidada contra `cp_ac_user_empresas()` — nunca confiar nela sem
   confirmar que o utilizador ainda tem acesso a essa empresa.
-- Cores e layout só no `<style>` de `page-area-de-cliente.php`, variáveis
-  `--ac-*`. Se este bloco crescer muito mais, considerar extrair para
-  `assets/css/area-cliente.css` — mas mantendo o prefixo `ac-` e sem
-  importar `main.css`.
+- Cores e layout em `assets/css/area-cliente.css` (partilhado com o
+  Backoffice — ver secção própria abaixo), variáveis `--ac-*`. Nunca
+  importar `main.css` aqui nem o contrário.
+- **Notificações push** (`inc/area-cliente-push.php`): Web Push (VAPID +
+  `aes128gcm`) implementado só com `ext-openssl`, **sem** nenhuma
+  dependência de Composer em runtime — o deploy (`.cpanel.yml`) é uma
+  cópia de ficheiros, sem `composer install`, e `vendor/` está no
+  `.gitignore`. Se alguma vez for preciso trocar isto por uma biblioteca
+  (ex. `minishlink/web-push`), o deploy tem de mudar primeiro (comitar
+  `vendor/` ou acrescentar `composer install --no-dev` ao `.cpanel.yml`).
+  Chaves VAPID vivem na opção `cp_push_vapid_keys` (geradas uma única vez,
+  lazy). `/sw-push.js` e `/manifest.webmanifest` são servidos à mão em
+  `template_redirect`, com o mesmo padrão de `cp_portao_site_publico()` —
+  não usam `add_rewrite_rule`. Antes de disparar uma notificação nova,
+  confirma sempre `cp_ac_empresa_tem_ferramenta( $empresa_id, 'chave' )`
+  primeiro — nunca notificar sobre uma ferramenta que a empresa não tem
+  ligada na matriz. `cp_push_notificar_empresa()` notifica os clientes de
+  uma empresa; `cp_push_notificar_equipa()` (mesmo ficheiro) notifica a
+  equipa — ver secção "Backoffice".
 
-## Convenções gerais (ambos os lados)
+## Backoffice
+
+- **Âmbito desta fase, de propósito limitado**: central de notificações
+  + atalhos para o `wp-admin`. Não tem (ainda) nenhum ecrã de gestão
+  próprio — confirmar/editar continua só em `wp-admin`. Não acrescentar
+  ações novas aqui sem decisão explícita de alargar o âmbito.
+- **Acesso**: capacidade `cp_backoffice`, concedida ao papel `equipa_en`
+  (criado uma vez em `cp_backoffice_registar_papel_equipa()`, hook
+  `after_switch_theme`). Administradores têm acesso automático via
+  `manage_options`. Atribuir o papel a alguém da equipa é só escolhê-lo
+  no ecrã nativo wp-admin → Utilizadores → Editar — nenhuma UI nova.
+  `cp_backoffice_utilizador_tem_acesso( $user_id )` é o gate único; usa-o
+  em qualquer sítio novo que precise de distinguir equipa de clientes.
+- **Feed de eventos**: `cp_backoffice_registar_evento()`/
+  `cp_backoffice_listar_eventos()` (`inc/area-cliente-backoffice.php`)
+  guardam na opção `cp_eventos_staff` (array, mais recente primeiro,
+  cortado a 100 — mesma escala/padrão das listas da Área de Cliente,
+  não precisa de tabela nova). Nunca escrever diretamente nessa opção —
+  passa sempre por `cp_push_notificar_equipa()`, que regista o evento
+  **e** envia o push num só sítio, para os dois nunca ficarem
+  dessincronizados.
+- Precisa de uma página WordPress com slug `backoffice` (mesmo padrão
+  de `/servicos`/`/area-de-cliente` descrito no `README.md` do tema) —
+  não existe por omissão, tem de ser criada em wp-admin.
+- Antes de ligar um gatilho novo (ex.: quando o ecrã Documentos tiver
+  upload real), repete exatamente o padrão já usado em
+  `cp_ac_handle_pendente_resposta()`: só chamar
+  `cp_push_notificar_equipa()` depois de o dado estar mesmo gravado.
+
+## Convenções gerais (nas três superfícies)
 
 - Prefixo de função: `cp_` no geral, `cp_ac_` para tudo da Área de
   Cliente. Segue isto em código novo.

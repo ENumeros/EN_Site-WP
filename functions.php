@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // ─── Área de Cliente: empresas, ferramentas e matriz de acesso ────────────
 require_once get_template_directory() . '/inc/area-cliente.php';
 require_once get_template_directory() . '/inc/area-cliente-vistas.php';
+require_once get_template_directory() . '/inc/area-cliente-push.php';
+require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
 
 // ─── Configuração do tema ──────────────────────────────────────────────────
 
@@ -60,6 +62,43 @@ function cp_enqueue_assets() {
     );
     if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
         wp_enqueue_script( 'comment-reply' );
+    }
+
+    // Área de Cliente e Backoffice partilham o mesmo "app shell" (CSS,
+    // alternador de tema, notificações push) — nunca carregado no site
+    // público.
+    if ( is_page( 'area-de-cliente' ) || is_page( 'backoffice' ) ) {
+        wp_enqueue_style(
+            'cp-area-cliente',
+            get_template_directory_uri() . '/assets/css/area-cliente.css',
+            [ 'cp-google-fonts' ],
+            '1.0.0-' . filemtime( get_template_directory() . '/assets/css/area-cliente.css' )
+        );
+        wp_enqueue_script(
+            'cp-ac-theme-toggle',
+            get_template_directory_uri() . '/assets/js/ac-theme-toggle.js',
+            [],
+            '1.0.0',
+            true
+        );
+
+        $chaves_vapid = cp_push_vapid_keys();
+        wp_enqueue_script(
+            'cp-push',
+            get_template_directory_uri() . '/assets/js/push.js',
+            [],
+            '1.0.0',
+            true
+        );
+        wp_add_inline_script(
+            'cp-push',
+            'window.cpPush = ' . wp_json_encode( [
+                'vapidPublicKey' => $chaves_vapid ? $chaves_vapid['public'] : '',
+                'restUrl'        => esc_url_raw( rest_url( 'cp/v1' ) ),
+                'restNonce'      => wp_create_nonce( 'wp_rest' ),
+            ] ) . ';',
+            'before'
+        );
     }
 }
 add_action( 'wp_enqueue_scripts', 'cp_enqueue_assets' );
@@ -241,9 +280,11 @@ function cp_portao_site_publico() {
     if ( is_admin() ) return;
     if ( is_user_logged_in() ) return;
 
-    // Área de Cliente (e as suas ?vista=) está sempre acessível.
+    // Área de Cliente (e as suas ?vista=) e o Backoffice da equipa estão
+    // sempre acessíveis, mesmo sem sessão iniciada (mostram o próprio
+    // ecrã de login).
     $pedido = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-    if ( false !== strpos( $pedido, 'area-de-cliente' ) ) return;
+    if ( false !== strpos( $pedido, 'area-de-cliente' ) || false !== strpos( $pedido, 'backoffice' ) ) return;
 
     // Página inicial: mostra apenas o aviso "Em construção" (com atalho
     // de teclado escondido para a Área de Cliente), até os textos reais

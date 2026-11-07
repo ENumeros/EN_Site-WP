@@ -1,0 +1,24 @@
+{
+    "name": "entre-numeros/contabilidade-pro",
+    "description": "Tema WordPress da Entre Números — testes automáticos",
+    "type": "wordpress-theme",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "brain/monkey": "^2.6"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ContabilidadePro\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "allow-plugins": false
+    }
+}

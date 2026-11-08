@@ -12,6 +12,16 @@ require_once get_template_directory() . '/inc/area-cliente-push.php';
 require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
 require_once get_template_directory() . '/inc/area-cliente-tarefas.php';
 
+// ─── Barra de admin do WP: desligada na Área de Cliente/Backoffice ────────
+// Estas páginas têm a sua própria topbar (ac-topbar) — a barra nativa do
+// WP só duplicava navegação e confundia quem não é administrador.
+
+function cp_desligar_barra_admin( $mostrar ) {
+    if ( is_page( 'area-de-cliente' ) || is_page( 'backoffice' ) ) return false;
+    return $mostrar;
+}
+add_filter( 'show_admin_bar', 'cp_desligar_barra_admin' );
+
 // ─── Configuração do tema ──────────────────────────────────────────────────
 
 function cp_setup() {

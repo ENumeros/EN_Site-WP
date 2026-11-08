@@ -104,9 +104,8 @@ else :
 					foreach ( $ferramentas as $chave => $info ) :
 						if ( ! cp_ac_tem_ferramenta( $chave ) ) continue;
 						$houve_ferramenta = true;
-						// Tarefas não tem entrada própria no menu — só se acede a partir
-						// do cartão no Dashboard (cp_ac_vista_url( 'tarefas' ) continua a
-						// funcionar normalmente a partir de lá).
+						// Lembretes não tem entrada própria no menu nem página só sua —
+						// geridos diretamente no Dashboard (cp_ac_vista_dashboard()).
 						if ( 'tarefas' === $chave ) continue;
 						$ac_grupo = isset( $info['grupo'] ) ? $info['grupo'] : '';
 						if ( '' !== $ac_grupo && $ac_grupo !== $ac_grupo_atual ) :

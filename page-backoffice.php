@@ -79,7 +79,7 @@ else :
 				</a>
 				<a class="ac-nav-link<?php echo $bo_empresa_id ? ' active' : ''; ?>" href="#cp-backoffice-tarefas">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M7.5 9.5 9 11l2.5-3"></path><path d="M14 9h4"></path><path d="M7.5 15.5 9 17l2.5-3"></path><path d="M14 15h4"></path></svg>
-					<?php esc_html_e( 'Tarefas', 'contabilidade-pro' ); ?>
+					<?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?>
 				</a>
 				<a class="ac-nav-link" href="<?php echo esc_url( admin_url() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
@@ -168,8 +168,8 @@ else :
 
 				<div id="cp-backoffice-tarefas" style="margin-top:36px">
 					<div>
-						<h1 style="font-size:23px"><?php esc_html_e( 'Tarefas', 'contabilidade-pro' ); ?></h1>
-						<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Deixe uma nota rápida para um cliente, ou conclua uma tarefa dele.', 'contabilidade-pro' ); ?></div>
+						<h1 style="font-size:23px"><?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?></h1>
+						<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Deixe uma nota rápida para um cliente, ou conclua um lembrete dele.', 'contabilidade-pro' ); ?></div>
 					</div>
 
 					<div class="ac-card" style="padding:22px;margin-top:18px">

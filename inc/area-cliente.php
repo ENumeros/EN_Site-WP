@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function cp_ac_ferramentas() {
 	return [
 		'tarefas'            => [
-			'label' => __( 'Tarefas', 'contabilidade-pro' ),
+			'label' => __( 'Lembretes', 'contabilidade-pro' ),
 			'grupo' => '',
 			'icon'  => '<rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M7.5 9.5 9 11l2.5-3"></path><path d="M14 9h4"></path><path d="M7.5 15.5 9 17l2.5-3"></path><path d="M14 15h4"></path>',
 		],

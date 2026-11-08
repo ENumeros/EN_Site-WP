@@ -94,18 +94,24 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   ligada na matriz. `cp_push_notificar_empresa()` notifica os clientes de
   uma empresa; `cp_push_notificar_equipa()` (mesmo ficheiro) notifica a
   equipa — ver secção "Backoffice".
-- **Tarefas** (`inc/area-cliente-tarefas.php`): ao contrário das outras
+- **Lembretes** (`inc/area-cliente-tarefas.php`): ao contrário das outras
   ferramentas, não é "Work escreve, cliente responde" — é uma lista
   partilhada que tanto o cliente como a equipa podem escrever
   diretamente (postmeta `_cp_tarefas` no post da empresa). Escrita por
   formulário `admin-post.php` (mesmo padrão de
   `cp_ac_handle_pendente_resposta()`), nunca REST+fetch — não precisa de
-  evitar reload de página. Quem pode concluir uma tarefa:
+  evitar reload de página. Quem pode concluir um lembrete:
   `cp_ac_tarefa_pode_concluir()` — o próprio criador, ou qualquer
   utilizador com `cp_backoffice_utilizador_tem_acesso()`. A UI
   (`cp_ac_render_tarefas()`) é partilhada entre a Área de Cliente e o
   Backoffice — ao estender esta funcionalidade, mantém os dois lados a
-  chamar a mesma função em vez de duplicar markup.
+  chamar a mesma função em vez de duplicar markup. Na Área de Cliente não
+  tem página/vista própria — gerido diretamente dentro do Dashboard
+  (`cp_ac_vista_dashboard()`), de propósito: é um "to-do rápido" para
+  deixar notas, não uma gestão de tarefas a sério (daí o nome na UI ser
+  "Lembretes", não "Tarefas" — os nomes internos no código continuam
+  `tarefa`/`tarefas` por não serem visíveis ao utilizador; só renomear
+  também o código se isto um dia crescer para uma gestão de tarefas real).
 
 ## Backoffice
 
@@ -136,7 +142,7 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   `cp_ac_handle_pendente_resposta()`: só chamar
   `cp_push_notificar_equipa()` depois de o dado estar mesmo gravado.
 - **Excecão deliberada ao "não tem ecrã de gestão próprio"**: a secção
-  "Tarefas" do Backoffice é gestão a sério (criar/concluir tarefas de
+  "Lembretes" do Backoffice é gestão a sério (criar/concluir lembretes de
   qualquer empresa), decidida explicitamente porque é o mesmo
   mecanismo partilhado com a Área de Cliente (`cp_ac_render_tarefas()`,
   ver secção "Área de Cliente" acima), não um ecrã novo construído do

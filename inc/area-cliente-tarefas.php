@@ -1,9 +1,15 @@
 <?php
 /**
- * Tarefas — to-do rápido e partilhado por empresa, entre o cliente e a
- * equipa ("enviar contrato da renda", etc.). Guardado como postmeta no
- * post da empresa, mesmo princípio de "caixa de correio" usado em
- * Pendentes (inc/area-cliente.php).
+ * Lembretes — nota rápida e partilhada por empresa, entre o cliente e a
+ * equipa ("enviar contrato da renda", etc.) — não é uma gestão de tarefas,
+ * só notas de ação simples, geridas a partir do Dashboard. Guardado como
+ * postmeta no post da empresa, mesmo princípio de "caixa de correio" usado
+ * em Pendentes (inc/area-cliente.php).
+ *
+ * Nomes internos (funções, meta `_cp_tarefas`, ações `cp_tarefa_*`) ficam
+ * como "tarefa" por não serem visíveis ao utilizador — só o texto no ecrã
+ * passou a "lembrete". Se no futuro isto crescer para uma gestão de
+ * tarefas a sério, faz sentido renomear também o código nessa altura.
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -87,13 +93,13 @@ function cp_ac_handle_tarefa_criar() {
 	if ( $equipa ) {
 		cp_push_notificar_empresa(
 			$empresa_id,
-			__( 'Nova tarefa', 'contabilidade-pro' ),
+			__( 'Novo lembrete', 'contabilidade-pro' ),
 			$titulo,
-			cp_ac_vista_url( 'tarefas' )
+			home_url( '/area-de-cliente/' )
 		);
 	} else {
 		cp_push_notificar_equipa(
-			__( 'Nova tarefa de cliente', 'contabilidade-pro' ),
+			__( 'Novo lembrete de cliente', 'contabilidade-pro' ),
 			sprintf(
 				/* translators: 1: nome da empresa, 2: título da tarefa */
 				__( '%1$s: %2$s', 'contabilidade-pro' ),
@@ -139,10 +145,10 @@ function cp_ac_handle_tarefa_concluir() {
 			}
 		}
 		if ( cp_backoffice_utilizador_tem_acesso( $user_id ) ) {
-			cp_push_notificar_empresa( $empresa_id, __( 'Tarefa concluída', 'contabilidade-pro' ), $titulo, cp_ac_vista_url( 'tarefas' ) );
+			cp_push_notificar_empresa( $empresa_id, __( 'Lembrete concluído', 'contabilidade-pro' ), $titulo, home_url( '/area-de-cliente/' ) );
 		} else {
 			cp_push_notificar_equipa(
-				__( 'Tarefa concluída pelo cliente', 'contabilidade-pro' ),
+				__( 'Lembrete concluído pelo cliente', 'contabilidade-pro' ),
 				sprintf(
 					/* translators: 1: nome da empresa, 2: título da tarefa */
 					__( '%1$s: %2$s', 'contabilidade-pro' ),
@@ -179,13 +185,13 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 			<?php wp_nonce_field( 'cp_tarefa_criar', 'cp_tarefa_nonce' ); ?>
 			<input type="hidden" name="action" value="cp_tarefa_criar">
 			<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
-			<input type="text" name="titulo" required placeholder="<?php esc_attr_e( 'Nova tarefa — ex.: enviar contrato da renda', 'contabilidade-pro' ); ?>" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
+			<input type="text" name="titulo" required placeholder="<?php esc_attr_e( 'Novo lembrete — ex.: enviar contrato da renda', 'contabilidade-pro' ); ?>" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
 			<button class="ac-btn ac-btn-primary" type="submit" style="padding:9px 16px"><?php esc_html_e( 'Adicionar', 'contabilidade-pro' ); ?></button>
 		</form>
 	</div>
 
 	<?php if ( empty( $tarefas ) ) : ?>
-		<?php cp_ac_vazio( __( 'Sem tarefas no momento', 'contabilidade-pro' ), __( 'Quando a equipa lhe pedir alguma ação, ou criar uma tarefa, aparece aqui.', 'contabilidade-pro' ) ); ?>
+		<?php cp_ac_vazio( __( 'Sem lembretes no momento', 'contabilidade-pro' ), __( 'Quando a equipa lhe pedir alguma ação, ou deixar uma nota, aparece aqui.', 'contabilidade-pro' ) ); ?>
 	<?php else : ?>
 		<div class="ac-card" style="padding:22px">
 			<?php foreach ( $tarefas as $tarefa ) :
@@ -216,7 +222,7 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 							$quem = 'equipa' === $tarefa['criado_por'] ? __( 'Entre Números', 'contabilidade-pro' ) : __( 'Cliente', 'contabilidade-pro' );
 							printf(
 								/* translators: 1: quem criou (Entre Números ou Cliente), 2: há quanto tempo, ex. "3 horas" */
-								esc_html__( 'Criada por %1$s — há %2$s', 'contabilidade-pro' ),
+								esc_html__( 'Criado por %1$s — há %2$s', 'contabilidade-pro' ),
 								esc_html( $quem ),
 								esc_html( human_time_diff( strtotime( $tarefa['criado_em'] ), current_time( 'timestamp' ) ) )
 							);

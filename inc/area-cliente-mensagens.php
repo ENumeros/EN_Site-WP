@@ -462,51 +462,56 @@ function cp_ac_render_mensagens_dropdown_link( $empresa_id ) {
 	<?php
 }
 
-// Página própria (Área de Cliente): lista de conversas + painel da
-// conversa aberta (montado por JS a cada clique numa linha — não dá
-// para pré-renderizar todas as conversas sem saber quantas há) + "Nova
-// conversa". Sem acesso pelo menu lateral (de propósito, como
+// Página própria (Área de Cliente): duas colunas — conversas à esquerda,
+// a conversa escolhida sempre visível à direita (conteúdo montado por
+// JS a cada clique numa linha — não dá para pré-renderizar todas as
+// conversas sem saber quantas há), estilo caixa de entrada normal, sem
+// abrir/fechar nada. Sem acesso pelo menu lateral (de propósito, como
 // Lembretes) — só pelo link no dropdown do utilizador ou pelo atalho do
 // "+" no Dashboard.
 function cp_ac_render_mensagens_pagina( $empresa_id ) {
 	$conversas = cp_ac_conversas( $empresa_id );
 	?>
-	<div class="ac-card" style="padding:22px">
-		<div class="ac-sec-head">
-			<h3 style="font-size:16px"><?php esc_html_e( 'Conversas', 'contabilidade-pro' ); ?></h3>
-		</div>
-		<div id="cp-conversas-lista">
-			<?php if ( empty( $conversas ) ) : ?>
-				<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem conversas — comece uma abaixo.', 'contabilidade-pro' ); ?></div>
-			<?php else : ?>
-				<?php foreach ( $conversas as $conversa ) : ?>
-					<button type="button" class="ac-conversa-row" data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>">
-						<span class="ac-conversa-row-head">
-							<span class="ac-conversa-assunto"><?php echo esc_html( $conversa['assunto'] ); ?></span>
-							<?php if ( $conversa['por_ler'] ) : ?><span class="ac-conversa-badge"><?php echo (int) $conversa['por_ler']; ?></span><?php endif; ?>
-						</span>
-						<span class="ac-conversa-resumo"><?php echo esc_html( wp_trim_words( $conversa['ultima_mensagem'], 10 ) ); ?></span>
-					</button>
-				<?php endforeach; ?>
-			<?php endif; ?>
-		</div>
-	</div>
+	<div class="ac-mensagens-colunas">
+		<div class="ac-mensagens-col-lista">
+			<div class="ac-card" style="padding:22px">
+				<div class="ac-sec-head">
+					<h3 style="font-size:16px"><?php esc_html_e( 'Conversas', 'contabilidade-pro' ); ?></h3>
+				</div>
+				<div id="cp-conversas-lista">
+					<?php if ( empty( $conversas ) ) : ?>
+						<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem conversas — comece uma abaixo.', 'contabilidade-pro' ); ?></div>
+					<?php else : ?>
+						<?php foreach ( $conversas as $conversa ) : ?>
+							<button type="button" class="ac-conversa-row" data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>">
+								<span class="ac-conversa-row-head">
+									<span class="ac-conversa-assunto"><?php echo esc_html( $conversa['assunto'] ); ?></span>
+									<?php if ( $conversa['por_ler'] ) : ?><span class="ac-conversa-badge"><?php echo (int) $conversa['por_ler']; ?></span><?php endif; ?>
+								</span>
+								<span class="ac-conversa-resumo"><?php echo esc_html( wp_trim_words( $conversa['ultima_mensagem'], 10 ) ); ?></span>
+							</button>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</div>
+			</div>
 
-	<div id="cp-conversa-painel" class="ac-card" style="padding:22px" hidden>
-		<div class="ac-sec-head">
-			<div style="display:flex;align-items:center;gap:12px">
-				<button type="button" id="cp-conversa-voltar" class="ac-btn ac-btn-ghost" style="padding:7px 12px;font-size:12.5px">&larr; <?php esc_html_e( 'Voltar', 'contabilidade-pro' ); ?></button>
-				<h3 id="cp-conversa-painel-titulo" style="font-size:16px"></h3>
+			<div class="ac-card" style="padding:22px">
+				<div class="ac-sec-head">
+					<h3 style="font-size:16px"><?php esc_html_e( 'Nova conversa', 'contabilidade-pro' ); ?></h3>
+				</div>
+				<?php cp_ac_render_conversa_form( $empresa_id, 'cp-conversa-form-pagina' ); ?>
 			</div>
 		</div>
-		<div id="cp-conversa-painel-corpo"></div>
-	</div>
 
-	<div class="ac-card" style="padding:22px">
-		<div class="ac-sec-head">
-			<h3 style="font-size:16px"><?php esc_html_e( 'Nova conversa', 'contabilidade-pro' ); ?></h3>
+		<div class="ac-mensagens-col-painel">
+			<div id="cp-conversa-painel" class="ac-card" style="padding:22px">
+				<div id="cp-conversa-painel-vazio" class="ac-mensagens-vazio"><?php esc_html_e( 'Escolha uma conversa à esquerda.', 'contabilidade-pro' ); ?></div>
+				<div id="cp-conversa-painel-conteudo" hidden>
+					<h3 id="cp-conversa-painel-titulo" style="font-size:16px;margin-bottom:16px"></h3>
+					<div id="cp-conversa-painel-corpo"></div>
+				</div>
+			</div>
 		</div>
-		<?php cp_ac_render_conversa_form( $empresa_id, 'cp-conversa-form-pagina' ); ?>
 	</div>
 	<?php
 }

@@ -156,6 +156,12 @@ a:hover{color:var(--ac-navy)}
 .ac-conversa-badge{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:#C0392B;color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .ac-conversa-badge[hidden]{display:none}
 .ac-conversa-resumo{font-size:12px;color:var(--ac-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ac-conversa-row.is-ativa{background:var(--ac-bg)}
+
+/* Página de Mensagens: conversas à esquerda, conversa aberta à direita */
+.ac-mensagens-colunas{display:flex;align-items:flex-start;gap:20px}
+.ac-mensagens-col-lista{flex:0 0 320px;display:flex;flex-direction:column;gap:20px;min-width:0}
+.ac-mensagens-col-painel{flex:1;min-width:0}
 .ac-mv-pos{color:var(--ac-badge-green-fg)}
 .ac-mv-line{font-size:12px;color:var(--ac-muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:3px}
 .ac-mv-q{font-size:13.5px;color:var(--ac-text);margin-top:6px;padding:8px 10px;background:var(--ac-bg);border-radius:8px}
@@ -175,6 +181,8 @@ a:hover{color:var(--ac-navy)}
 	.ac-main{width:100%}
 	.ac-content{padding:20px}
 	.ac-topbar{padding:14px 18px;flex-wrap:wrap}
+	.ac-mensagens-colunas{flex-direction:column}
+	.ac-mensagens-col-lista{flex:none;width:100%}
 	.ac-user-name{display:none}
 }
 .ac-trend{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600}

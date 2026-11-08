@@ -90,7 +90,8 @@
 		var avatarBadge       = document.getElementById( 'cp-mensagens-badge' );
 		var dropdownBadge     = document.getElementById( 'cp-mensagens-dropdown-badge' );
 		var listaConversasEl  = document.getElementById( 'cp-conversas-lista' );
-		var painelConversa    = document.getElementById( 'cp-conversa-painel' );
+		var painelVazio       = document.getElementById( 'cp-conversa-painel-vazio' );
+		var painelConteudo    = document.getElementById( 'cp-conversa-painel-conteudo' );
 
 		var conversasCache      = [];
 		var timerConversas      = null;
@@ -99,6 +100,13 @@
 
 		// ─── Lista de conversas + badges (avatar e link do dropdown) ───────
 
+		function marcarLinhaAtiva() {
+			if ( ! listaConversasEl ) return;
+			listaConversasEl.querySelectorAll( '.ac-conversa-row' ).forEach( function ( linha ) {
+				linha.classList.toggle( 'is-ativa', linha.getAttribute( 'data-conversa-id' ) === conversaAbertaId );
+			} );
+		}
+
 		function atualizarConversas() {
 			return pedirApi( 'GET', '/conversas?empresa_id=' + empresaId ).then( function ( dados ) {
 				conversasCache = dados.conversas || [];
@@ -106,6 +114,7 @@
 					listaConversasEl.innerHTML = conversasCache.length
 						? conversasCache.map( linhaConversa ).join( '' )
 						: '<div class="ac-mensagens-vazio">Sem conversas — comece uma abaixo.</div>';
+					marcarLinhaAtiva();
 				}
 				var temPorLer = dados.por_ler_total > 0;
 				if ( avatarBadge ) avatarBadge.hidden = ! temPorLer;
@@ -146,10 +155,12 @@
 			conversaAbertaId = null;
 		}
 
-		// Página de Mensagens: clicar numa conversa abre o painel inline,
-		// montado aqui (não dá para pré-renderizar todas as conversas).
+		// Página de Mensagens: clicar numa conversa mostra-a logo na coluna
+		// da direita, montada aqui (não dá para pré-renderizar todas as
+		// conversas sem saber quantas há) — sempre visível, sem abrir/fechar
+		// nada; trocar de conversa é só clicar noutra linha.
 		function abrirConversaPainel( conversaId, assunto ) {
-			if ( ! painelConversa ) return;
+			if ( ! painelConteudo ) return;
 			var titulo = document.getElementById( 'cp-conversa-painel-titulo' );
 			var corpo  = document.getElementById( 'cp-conversa-painel-corpo' );
 			if ( titulo ) titulo.textContent = assunto;
@@ -157,25 +168,16 @@
 				corpo.innerHTML = '<div id="cp-mensagens-lista" class="ac-mensagens-lista"></div><div style="margin-top:14px">' +
 					formularioMensagemHtml( empresaId, conversaId, 'cp-mensagens-form-painel' ) + '</div>';
 			}
-			painelConversa.hidden = false;
-			painelConversa.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+			if ( painelVazio ) painelVazio.hidden = true;
+			painelConteudo.hidden = false;
 
 			pararPollConversaAberta();
 			conversaAbertaId = conversaId;
+			marcarLinhaAtiva();
 			carregarMensagensConversa( conversaId );
 			pedirApi( 'POST', '/mensagens/marcar-lida', { empresa_id: empresaId, conversa_id: conversaId } ).then( atualizarConversas );
 			timerConversaAberta = setInterval( function () { carregarMensagensConversa( conversaId ); }, INTERVALO_MS );
 		}
-
-		function fecharConversaPainel() {
-			if ( ! painelConversa ) return;
-			painelConversa.hidden = true;
-			pararPollConversaAberta();
-			atualizarConversas();
-		}
-
-		var botaoVoltar = document.getElementById( 'cp-conversa-voltar' );
-		if ( botaoVoltar ) botaoVoltar.addEventListener( 'click', fecharConversaPainel );
 
 		document.addEventListener( 'click', function ( evento ) {
 			var linha = evento.target.closest( '.ac-conversa-row' );
@@ -187,7 +189,7 @@
 
 		// Veio de "Nova conversa" no "+" do Dashboard (navegação completa,
 		// não SPA) — a página de Mensagens já abre a conversa criada.
-		if ( painelConversa ) {
+		if ( painelConteudo ) {
 			var conversaNaUrl = new URLSearchParams( window.location.search ).get( 'conversa_id' );
 			if ( conversaNaUrl ) {
 				atualizarConversas().then( function () {
@@ -201,7 +203,7 @@
 		// no carregamento da página — só falta o poll periódico e marcar
 		// como lida, sem passar pelo painel (que não existe aqui).
 		var listaInicial = document.getElementById( 'cp-mensagens-lista' );
-		if ( listaInicial && ! painelConversa ) {
+		if ( listaInicial && ! painelConteudo ) {
 			var campoConversa = document.querySelector( '[data-cp-mensagens-form] [name="conversa_id"]' );
 			var conversaIdBO  = campoConversa ? campoConversa.value : '';
 			if ( conversaIdBO ) {
@@ -254,7 +256,7 @@
 						return;
 					}
 
-					if ( painelConversa ) {
+					if ( painelConteudo ) {
 						// Já estamos na página de Mensagens: abre já a conversa.
 						abrirConversaPainel( dados.conversa.id, dados.conversa.assunto );
 						return;

@@ -73,7 +73,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 
 		<?php if ( $tem_calendario_fiscal ) : ?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Próximo prazo fiscal', 'contabilidade-pro' ); ?></div>
+				<div class="ac-stat-label"><?php esc_html_e( 'Próximo prazo', 'contabilidade-pro' ); ?></div>
 				<div style="font-family:'Fraunces',serif;font-size:26px">—</div>
 				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Sem prazos agendados', 'contabilidade-pro' ); ?></div>
 			</div>

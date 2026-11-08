@@ -301,9 +301,16 @@ function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '' ) {
 	$empresa_id = (int) $empresa_id;
 	if ( ! $empresa_id ) return;
 
+	// Quem tem mais do que uma empresa não saberia a qual se refere a
+	// notificação sem isto — mesmo quem só tem uma, o nome não atrapalha.
 	$payload = wp_json_encode( [
 		'titulo' => $titulo,
-		'corpo'  => $corpo,
+		'corpo'  => sprintf(
+			/* translators: 1: nome da empresa, 2: texto original da notificação */
+			__( '%1$s — %2$s', 'contabilidade-pro' ),
+			get_the_title( $empresa_id ),
+			$corpo
+		),
 		'url'    => $url ? $url : home_url( '/area-de-cliente/' ),
 	] );
 

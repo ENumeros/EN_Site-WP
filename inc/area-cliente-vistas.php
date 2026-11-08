@@ -173,8 +173,30 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			</div>
 		<?php endif; ?>
 
-		<?php cp_ac_render_documentos_fab(); ?>
+		<?php cp_ac_render_documento_modal(); ?>
 	<?php endif; ?>
+
+	<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos ] ); ?>
+	<?php
+}
+
+// Botão "+" flutuante do Dashboard: abre uma lista de ações rápidas. Por
+// ora só tem a de enviar um documento, mas é feito para crescer — cada
+// nova ação acrescenta uma chave a $ativas, o seu próprio item
+// (cp_ac_render_..._fab_item()) e a sua própria modal, sem tocar neste botão.
+function cp_ac_render_fab_acoes_rapidas( $ativas ) {
+	if ( ! array_filter( $ativas ) ) return;
+	?>
+	<div class="ac-fab-wrap">
+		<div id="cp-fab-menu" class="ac-fab-menu" hidden role="menu">
+			<?php if ( ! empty( $ativas['documento'] ) ) : ?>
+				<?php cp_ac_render_documento_fab_item(); ?>
+			<?php endif; ?>
+		</div>
+		<button type="button" id="cp-fab-btn" class="ac-fab" aria-haspopup="menu" aria-controls="cp-fab-menu" aria-expanded="false" aria-label="<?php esc_attr_e( 'Ações rápidas', 'contabilidade-pro' ); ?>">
+			<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+		</button>
+	</div>
 	<?php
 }
 

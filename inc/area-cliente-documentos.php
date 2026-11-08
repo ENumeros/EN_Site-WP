@@ -116,20 +116,26 @@ function cp_ac_render_documento_form() {
 	<?php
 }
 
-// Botão flutuante (canto inferior direito) — abre um modal com o formulário
-// acima, sem ocupar espaço fixo no ecrã. Usado no Dashboard.
-function cp_ac_render_documentos_fab() {
+// Entrada no menu de ações rápidas do Dashboard (botão "+" flutuante) —
+// ver cp_ac_render_fab_acoes_rapidas() em area-cliente-vistas.php. Por ora
+// é a única ação, mas o menu já suporta mais no futuro.
+function cp_ac_render_documento_fab_item() {
 	?>
-	<button type="button" id="cp-doc-fab-btn" class="ac-fab" aria-haspopup="dialog" aria-controls="cp-doc-modal">
-		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+	<button type="button" class="ac-fab-menu-item" data-cp-fab-target="cp-doc-modal" role="menuitem">
+		<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
 		<span><?php esc_html_e( 'Adicionar documento', 'contabilidade-pro' ); ?></span>
 	</button>
+	<?php
+}
 
-	<div id="cp-doc-modal-backdrop" class="ac-modal-backdrop" hidden></div>
+// Modal aberta por essa ação — formulário de envio.
+function cp_ac_render_documento_modal() {
+	?>
+	<div id="cp-doc-modal-backdrop" class="ac-modal-backdrop" data-cp-fab-modal hidden></div>
 	<div id="cp-doc-modal" class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="cp-doc-modal-title" hidden>
 		<div class="ac-modal-head">
 			<h3 id="cp-doc-modal-title" style="font-size:16px"><?php esc_html_e( 'Enviar documento', 'contabilidade-pro' ); ?></h3>
-			<button type="button" id="cp-doc-modal-close" class="ac-modal-close" aria-label="<?php esc_attr_e( 'Fechar', 'contabilidade-pro' ); ?>">
+			<button type="button" class="ac-modal-close" data-cp-fab-modal-close aria-label="<?php esc_attr_e( 'Fechar', 'contabilidade-pro' ); ?>">
 				<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
 			</button>
 		</div>

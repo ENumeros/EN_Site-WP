@@ -11,6 +11,7 @@ require_once get_template_directory() . '/inc/area-cliente-vistas.php';
 require_once get_template_directory() . '/inc/area-cliente-push.php';
 require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
 require_once get_template_directory() . '/inc/area-cliente-tarefas.php';
+require_once get_template_directory() . '/inc/area-cliente-documentos.php';
 
 // ─── Barra de admin do WP: desligada na Área de Cliente/Backoffice ────────
 // Estas páginas têm a sua própria topbar (ac-topbar) — a barra nativa do

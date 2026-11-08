@@ -151,6 +151,34 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 
 		<?php cp_ac_render_tarefas( $empresa_id ); ?>
 	<?php endif; ?>
+
+	<?php if ( $tem_documentos ) :
+		$documentos_sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
+		$documentos_erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
+		?>
+		<div>
+			<h2 style="font-size:18px"><?php esc_html_e( 'Documentos', 'contabilidade-pro' ); ?></h2>
+		</div>
+
+		<?php if ( in_array( $documentos_sucesso, [ 'documento_enviado', 'documento_apagado' ], true ) ) :
+			$documentos_titulos = [
+				'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
+				'documento_apagado' => __( 'Documento apagado', 'contabilidade-pro' ),
+			];
+			?>
+			<div class="ac-status-banner green">
+				<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
+				<div><div class="ac-status-title"><?php echo esc_html( $documentos_titulos[ $documentos_sucesso ] ); ?></div></div>
+			</div>
+		<?php elseif ( in_array( $documentos_erro, [ 'documento_em_falta', 'documento_invalido', 'documento_sem_empresa' ], true ) ) : ?>
+			<div class="ac-status-banner amber">
+				<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
+				<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+			</div>
+		<?php endif; ?>
+
+		<?php cp_ac_render_documentos( $empresa_id ); ?>
+	<?php endif; ?>
 	<?php
 }
 
@@ -318,26 +346,33 @@ function cp_ac_vista_recibos_vencimento() {
 // ─── Documentos ─────────────────────────────────────────────────────────────
 
 function cp_ac_vista_documentos() {
+	$empresa_id = cp_ac_empresa_ativa();
+	$sucesso    = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
+	$erro       = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Documentos', 'contabilidade-pro' ); ?></h1>
 		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Envie e acompanhe os documentos correntes da sua contabilidade.', 'contabilidade-pro' ); ?></div>
 	</div>
 
-	<div class="ac-card" style="padding:22px">
-		<div class="ac-sec-head">
-			<div>
-				<h3 style="font-size:16px"><?php esc_html_e( 'Documentos da Contabilidade', 'contabilidade-pro' ); ?></h3>
-				<div class="ac-sec-sub"><?php esc_html_e( 'Envie aqui, a qualquer momento, faturas, despesas e outros documentos correntes.', 'contabilidade-pro' ); ?></div>
-			</div>
+	<?php if ( in_array( $sucesso, [ 'documento_enviado', 'documento_apagado' ], true ) ) :
+		$titulos = [
+			'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
+			'documento_apagado' => __( 'Documento apagado', 'contabilidade-pro' ),
+		];
+		?>
+		<div class="ac-status-banner green">
+			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
+			<div><div class="ac-status-title"><?php echo esc_html( $titulos[ $sucesso ] ); ?></div></div>
 		</div>
-		<div class="ac-dropzone">
-			<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
-			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Arraste ficheiros para aqui ou carregue manualmente', 'contabilidade-pro' ); ?></div>
-			<button class="ac-btn ac-btn-primary" type="button"><?php esc_html_e( 'Carregar Documento', 'contabilidade-pro' ); ?></button>
+	<?php elseif ( in_array( $erro, [ 'documento_em_falta', 'documento_invalido', 'documento_sem_empresa' ], true ) ) : ?>
+		<div class="ac-status-banner amber">
+			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ); ?></div></div>
 		</div>
-		<div style="margin-top:16px;color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não enviou nenhum documento.', 'contabilidade-pro' ); ?></div>
-	</div>
+	<?php endif; ?>
+
+	<?php cp_ac_render_documentos( $empresa_id ); ?>
 
 	<div class="ac-card" style="padding:22px">
 		<div class="ac-sec-head">

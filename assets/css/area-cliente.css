@@ -177,9 +177,8 @@ a:hover{color:var(--ac-navy)}
 .ac-fab:hover{background:var(--ac-navy-strong)}
 .ac-fab-menu{position:absolute;right:0;bottom:68px;min-width:220px;background:var(--ac-surface);border:1px solid var(--ac-line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;display:flex;flex-direction:column;gap:2px}
 .ac-fab-menu[hidden]{display:none}
-.ac-fab-menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:none;background:none;color:var(--ac-text);font-size:13.5px;font-weight:600;font-family:'Public Sans',sans-serif;cursor:pointer;text-align:left}
-.ac-fab-menu-item:hover{background:var(--ac-bg)}
-.ac-fab-menu-item svg{flex:none;color:var(--ac-blue)}
+.ac-fab-menu-item{width:100%;justify-content:flex-start}
+.ac-fab-menu-item svg{flex:none}
 
 /* Modal (ex.: enviar documento) */
 .ac-modal-backdrop{position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:49}

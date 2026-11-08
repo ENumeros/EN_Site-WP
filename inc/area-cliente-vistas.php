@@ -176,24 +176,20 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 
 		<?php cp_ac_render_documento_modal(); ?>
 	<?php endif; ?>
-
-	<?php if ( $tem_mensagens ) : ?>
-		<div>
-			<h2 style="font-size:18px"><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></h2>
-		</div>
-
-		<?php cp_ac_render_mensagens( $empresa_id ); ?>
-		<?php cp_ac_render_mensagem_modal( $empresa_id ); ?>
-	<?php endif; ?>
-
-	<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos, 'mensagem' => $tem_mensagens ] ); ?>
 	<?php
+	// Mensagens não tem painel no Dashboard — vive no dropdown do
+	// utilizador (topbar) e no atalho do "+", ambos renderizados a nível
+	// de página em page-area-de-cliente.php (válidos em qualquer vista,
+	// não só aqui). Ver cp_ac_render_mensagens_dropdown() e
+	// cp_ac_render_fab_acoes_rapidas().
 }
 
-// Botão "+" flutuante do Dashboard: abre uma lista de ações rápidas
-// (enviar documento, enviar mensagem). Feito para crescer — cada nova
-// ação acrescenta uma chave a $ativas, o seu próprio item
-// (cp_ac_render_..._fab_item()) e a sua própria modal, sem tocar neste botão.
+// Botão "+" flutuante (visível em qualquer vista da Área de Cliente, não
+// só no Dashboard — chamado a partir de page-area-de-cliente.php): abre
+// uma lista de ações rápidas (enviar documento, enviar mensagem). Feito
+// para crescer — cada nova ação acrescenta uma chave a $ativas, o seu
+// próprio item (cp_ac_render_..._fab_item()) e a sua própria modal, sem
+// tocar neste botão.
 function cp_ac_render_fab_acoes_rapidas( $ativas ) {
 	if ( ! array_filter( $ativas ) ) return;
 	?>

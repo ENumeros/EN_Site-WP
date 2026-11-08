@@ -60,6 +60,8 @@
 	document.addEventListener( 'DOMContentLoaded', function () {
 		var lista     = document.getElementById( 'cp-mensagens-lista' );
 		var formulas  = document.querySelectorAll( '[data-cp-mensagens-form]' );
+		var badge     = document.getElementById( 'cp-mensagens-badge' );
+		var dropdown  = document.getElementById( 'cp-user-dropdown' );
 		if ( ! lista || ! formulas.length || ! window.cpMensagens || ! window.cpMensagens.empresaId ) return;
 
 		var ultimoId  = null;
@@ -74,7 +76,17 @@
 					lista.scrollTop = lista.scrollHeight;
 					ultimoId = novoUltimoId;
 				}
+				if ( badge ) badge.hidden = ! ( dados.por_ler > 0 );
 			} ).catch( function () { /* próximo poll tenta outra vez */ } );
+		}
+
+		// Abriu o dropdown do utilizador → marca tudo como lido (a chamada
+		// de atenção no avatar só volta quando chegar algo novo a sério).
+		if ( dropdown && badge ) {
+			new MutationObserver( function () {
+				if ( dropdown.hidden ) return;
+				pedirApi( 'POST', '/mensagens/marcar-lida', { empresa_id: window.cpMensagens.empresaId } ).then( atualizar );
+			} ).observe( dropdown, { attributes: true, attributeFilter: [ 'hidden' ] } );
 		}
 
 		function iniciarPolling() {

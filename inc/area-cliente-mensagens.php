@@ -43,6 +43,36 @@ function cp_ac_mensagem_resolver_empresa( $empresa_id_pedido, $user_id ) {
 	return cp_ac_empresa_ativa( $user_id );
 }
 
+// ─── Lidas / por ler ────────────────────────────────────────────────────────
+// Por utilizador (não por empresa só) — um utilizador pode ter acesso a
+// várias empresas (equipa, ou um cliente com mais do que uma). Usermeta
+// 'cp_mensagens_lidas' = [ empresa_id => data/hora até à qual já viu ].
+
+function cp_ac_mensagens_marcador_lido( $user_id, $empresa_id ) {
+	$marcadores = get_user_meta( $user_id, 'cp_mensagens_lidas', true );
+	$marcadores = is_array( $marcadores ) ? $marcadores : [];
+	return isset( $marcadores[ $empresa_id ] ) ? $marcadores[ $empresa_id ] : '';
+}
+
+function cp_ac_mensagens_marcar_lidas( $user_id, $empresa_id ) {
+	$marcadores = get_user_meta( $user_id, 'cp_mensagens_lidas', true );
+	$marcadores = is_array( $marcadores ) ? $marcadores : [];
+	$marcadores[ $empresa_id ] = current_time( 'mysql' );
+	update_user_meta( $user_id, 'cp_mensagens_lidas', $marcadores );
+}
+
+// Mensagens da outra parte (nunca as que o próprio utilizador escreveu)
+// enviadas depois do marcador de leitura.
+function cp_ac_mensagens_por_ler( $empresa_id, $user_id ) {
+	$marcador = cp_ac_mensagens_marcador_lido( $user_id, $empresa_id );
+	$por_ler  = 0;
+	foreach ( cp_ac_mensagens( $empresa_id ) as $mensagem ) {
+		if ( (int) $mensagem['autor_user_id'] === (int) $user_id ) continue;
+		if ( '' === $marcador || $mensagem['enviado_em'] > $marcador ) $por_ler++;
+	}
+	return $por_ler;
+}
+
 // ─── REST ───────────────────────────────────────────────────────────────────
 // A validação de que a empresa pertence mesmo ao utilizador fica dentro de
 // cada callback (via resolver acima) — o permission_callback só confirma
@@ -59,6 +89,13 @@ function cp_ac_mensagens_rest_routes() {
 		[
 			'methods'             => 'POST',
 			'callback'            => 'cp_ac_rest_mensagens_criar',
+			'permission_callback' => 'cp_ac_mensagens_rest_permissao',
+		],
+	] );
+	register_rest_route( 'cp/v1', '/mensagens/marcar-lida', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_mensagens_marcar_lida',
 			'permission_callback' => 'cp_ac_mensagens_rest_permissao',
 		],
 	] );
@@ -83,7 +120,20 @@ function cp_ac_rest_mensagens_listar( $request ) {
 		return $mensagem;
 	}, cp_ac_mensagens( $empresa_id ) );
 
-	return rest_ensure_response( [ 'mensagens' => $mensagens ] );
+	return rest_ensure_response( [
+		'mensagens' => $mensagens,
+		'por_ler'   => cp_ac_mensagens_por_ler( $empresa_id, $user_id ),
+	] );
+}
+
+function cp_ac_rest_mensagens_marcar_lida( $request ) {
+	$user_id    = get_current_user_id();
+	$empresa_id = cp_ac_mensagem_resolver_empresa( (int) $request->get_param( 'empresa_id' ), $user_id );
+	if ( ! $empresa_id || 'cp_empresa' !== get_post_type( $empresa_id ) ) {
+		return new WP_Error( 'cp_empresa_invalida', __( 'Empresa inválida.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+	}
+	cp_ac_mensagens_marcar_lidas( $user_id, $empresa_id );
+	return rest_ensure_response( [ 'ok' => true ] );
 }
 
 function cp_ac_rest_mensagens_criar( $request ) {
@@ -141,39 +191,62 @@ function cp_ac_render_mensagem_form( $empresa_id, $form_id ) {
 	<?php
 }
 
-function cp_ac_render_mensagens( $empresa_id, $mostrar_nome_empresa = false ) {
+// Só a lista (sem moldura à volta) — partilhada entre o cartão do
+// Backoffice e o dropdown do utilizador na Área de Cliente.
+function cp_ac_render_mensagens_lista( $empresa_id ) {
 	$mensagens = cp_ac_mensagens( $empresa_id );
+	?>
+	<div id="cp-mensagens-lista" class="ac-mensagens-lista">
+		<?php if ( empty( $mensagens ) ) : ?>
+			<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem mensagens — escreva aqui para falar com a Entre Números.', 'contabilidade-pro' ); ?></div>
+		<?php else : ?>
+			<?php foreach ( $mensagens as $mensagem ) : ?>
+				<div class="ac-mensagem ac-mensagem-<?php echo esc_attr( $mensagem['autor_tipo'] ); ?>" data-id="<?php echo esc_attr( $mensagem['id'] ); ?>">
+					<div class="ac-mensagem-meta">
+						<?php
+						printf(
+							/* translators: 1: nome de quem enviou, 2: há quanto tempo, ex. "3 horas" */
+							esc_html__( '%1$s — há %2$s', 'contabilidade-pro' ),
+							esc_html( $mensagem['autor_nome'] ),
+							esc_html( human_time_diff( strtotime( $mensagem['enviado_em'] ), current_time( 'timestamp' ) ) )
+						);
+						?>
+					</div>
+					<div class="ac-mensagem-texto"><?php echo esc_html( $mensagem['texto'] ); ?></div>
+				</div>
+			<?php endforeach; ?>
+		<?php endif; ?>
+	</div>
+	<?php
+}
+
+// Backoffice: cartão completo (lista + enviar), com o nome da empresa —
+// a lista de mensagens não tem painel próprio na Área de Cliente (ver
+// cp_ac_render_mensagens_dropdown()), só no Backoffice.
+function cp_ac_render_mensagens( $empresa_id, $mostrar_nome_empresa = false ) {
 	?>
 	<?php if ( $mostrar_nome_empresa ) : ?>
 		<h3 style="font-size:16px"><?php echo esc_html( get_the_title( $empresa_id ) ); ?></h3>
 	<?php endif; ?>
 
 	<div class="ac-card" style="padding:22px">
-		<div id="cp-mensagens-lista" class="ac-mensagens-lista">
-			<?php if ( empty( $mensagens ) ) : ?>
-				<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem mensagens — escreva aqui para falar com a Entre Números.', 'contabilidade-pro' ); ?></div>
-			<?php else : ?>
-				<?php foreach ( $mensagens as $mensagem ) : ?>
-					<div class="ac-mensagem ac-mensagem-<?php echo esc_attr( $mensagem['autor_tipo'] ); ?>" data-id="<?php echo esc_attr( $mensagem['id'] ); ?>">
-						<div class="ac-mensagem-meta">
-							<?php
-							printf(
-								/* translators: 1: nome de quem enviou, 2: há quanto tempo, ex. "3 horas" */
-								esc_html__( '%1$s — há %2$s', 'contabilidade-pro' ),
-								esc_html( $mensagem['autor_nome'] ),
-								esc_html( human_time_diff( strtotime( $mensagem['enviado_em'] ), current_time( 'timestamp' ) ) )
-							);
-							?>
-						</div>
-						<div class="ac-mensagem-texto"><?php echo esc_html( $mensagem['texto'] ); ?></div>
-					</div>
-				<?php endforeach; ?>
-			<?php endif; ?>
-		</div>
+		<?php cp_ac_render_mensagens_lista( $empresa_id ); ?>
 
 		<div style="margin-top:14px">
 			<?php cp_ac_render_mensagem_form( $empresa_id, 'cp-mensagens-form' ); ?>
 		</div>
+	</div>
+	<?php
+}
+
+// Área de Cliente: a mesma lista + enviar, mas dentro do dropdown do
+// utilizador na topbar (sem moldura própria — o dropdown já é o cartão).
+function cp_ac_render_mensagens_dropdown( $empresa_id ) {
+	?>
+	<div class="ac-dropdown-mensagens">
+		<div class="ac-dropdown-mensagens-head"><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></div>
+		<?php cp_ac_render_mensagens_lista( $empresa_id ); ?>
+		<?php cp_ac_render_mensagem_form( $empresa_id, 'cp-mensagens-form-dropdown' ); ?>
 	</div>
 	<?php
 }

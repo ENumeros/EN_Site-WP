@@ -85,6 +85,11 @@ else :
 		$houve_ferramenta  = false;
 		$vista_pedida      = isset( $_GET['vista'] ) ? sanitize_key( wp_unslash( $_GET['vista'] ) ) : '';
 		$vista             = ( '' !== $vista_pedida && isset( $ferramentas[ $vista_pedida ] ) && cp_ac_tem_ferramenta( $vista_pedida ) ) ? $vista_pedida : '';
+		// Atalhos de página inteira (botão "+" e dropdown do utilizador) —
+		// válidos em qualquer vista, por isso calculados aqui e não dentro
+		// de cp_ac_vista_dashboard().
+		$tem_documentos    = cp_ac_tem_ferramenta( 'documentos' );
+		$tem_mensagens     = cp_ac_tem_ferramenta( 'mensagens' );
 		?>
 		<div class="ac-shell">
 			<div class="ac-sidebar-backdrop" id="ac-sidebar-backdrop"></div>
@@ -159,10 +164,17 @@ else :
 						</button>
 						<div class="ac-user-menu">
 							<button type="button" class="ac-user-trigger" id="cp-user-menu-btn" aria-haspopup="true" aria-expanded="false">
-								<div class="ac-avatar"><?php echo esc_html( $ac_initials ); ?></div>
+								<div class="ac-avatar">
+									<?php echo esc_html( $ac_initials ); ?>
+									<?php if ( $tem_mensagens ) : ?><span id="cp-mensagens-badge" class="ac-avatar-badge" hidden></span><?php endif; ?>
+								</div>
 								<span class="ac-user-name"><?php echo esc_html( $ac_user_name ); ?></span>
 							</button>
 							<div class="ac-user-dropdown" id="cp-user-dropdown" hidden>
+								<?php if ( $tem_mensagens ) : ?>
+									<?php cp_ac_render_mensagens_dropdown( $empresa_ativa ); ?>
+									<div class="ac-dropdown-sep"></div>
+								<?php endif; ?>
 								<span id="cp-push-msg" class="ac-dropdown-msg" hidden></span>
 								<button type="button" class="ac-dropdown-item" id="cp-push-btn" aria-pressed="false" hidden><?php esc_html_e( 'Ativar notificações', 'contabilidade-pro' ); ?></button>
 								<button type="button" class="ac-dropdown-item" id="cp-pwa-install-btn" hidden><?php esc_html_e( 'Instalar app', 'contabilidade-pro' ); ?></button>
@@ -187,6 +199,14 @@ else :
 					}
 					?>
 				</div>
+
+				<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos, 'mensagem' => $tem_mensagens ] ); ?>
+				<?php if ( $tem_documentos ) : ?>
+					<?php cp_ac_render_documento_modal(); ?>
+				<?php endif; ?>
+				<?php if ( $tem_mensagens ) : ?>
+					<?php cp_ac_render_mensagem_modal( $empresa_ativa ); ?>
+				<?php endif; ?>
 			</main>
 		</div>
 		<?php

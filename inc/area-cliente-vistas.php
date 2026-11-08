@@ -126,10 +126,15 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 
 	</div>
 
-	<?php if ( $tem_tarefas ) : ?>
+	<?php if ( $tem_tarefas ) :
+		$tarefas_por_fazer = array_filter( cp_ac_tarefas( $empresa_id ), function ( $tarefa ) {
+			return empty( $tarefa['concluido'] );
+		} );
+		?>
 		<div class="ac-card" style="padding:22px">
 			<div class="ac-sec-head">
 				<h3 style="font-size:16px"><?php esc_html_e( 'Tarefas', 'contabilidade-pro' ); ?></h3>
+				<?php if ( ! empty( $tarefas_por_fazer ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $tarefas_por_fazer ) ); ?> <?php esc_html_e( 'por fazer', 'contabilidade-pro' ); ?></span><?php endif; ?>
 			</div>
 			<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Quando a equipa lhe pedir alguma ação, ou criar uma tarefa, aparece aqui.', 'contabilidade-pro' ); ?></div>
 			<a href="<?php echo esc_url( cp_ac_vista_url( 'tarefas' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:12px;display:inline-block"><?php esc_html_e( 'Ver tarefas →', 'contabilidade-pro' ); ?></a>
@@ -141,26 +146,28 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 // ─── Tarefas ────────────────────────────────────────────────────────────────
 
 function cp_ac_vista_tarefas() {
+	$empresa_id = cp_ac_empresa_ativa();
+	$sucesso    = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
+	$erro       = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Tarefas', 'contabilidade-pro' ); ?></h1>
-		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Ações que precisa de concluir — pedidas pela Entre Números ou criadas por si.', 'contabilidade-pro' ); ?></div>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Ações a fazer — pedidas pela Entre Números ou criadas por si.', 'contabilidade-pro' ); ?></div>
 	</div>
 
-	<div class="ac-card" style="padding:22px">
-		<div style="display:flex;flex-wrap:wrap;gap:12px">
-			<div class="ac-field">
-				<label><?php esc_html_e( 'Estado', 'contabilidade-pro' ); ?></label>
-				<select><option><?php esc_html_e( 'Todas', 'contabilidade-pro' ); ?></option><option><?php esc_html_e( 'Por fazer', 'contabilidade-pro' ); ?></option><option><?php esc_html_e( 'Concluídas', 'contabilidade-pro' ); ?></option></select>
-			</div>
-			<div class="ac-field">
-				<label><?php esc_html_e( 'Prioridade', 'contabilidade-pro' ); ?></label>
-				<select><option><?php esc_html_e( 'Todas', 'contabilidade-pro' ); ?></option><option><?php esc_html_e( 'Alta', 'contabilidade-pro' ); ?></option><option><?php esc_html_e( 'Média', 'contabilidade-pro' ); ?></option><option><?php esc_html_e( 'Baixa', 'contabilidade-pro' ); ?></option></select>
-			</div>
+	<?php if ( in_array( $sucesso, [ 'tarefa_criada', 'tarefa_atualizada' ], true ) ) : ?>
+		<div class="ac-status-banner green">
+			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
+			<div><div class="ac-status-title"><?php echo 'tarefa_criada' === $sucesso ? esc_html__( 'Tarefa adicionada', 'contabilidade-pro' ) : esc_html__( 'Tarefa atualizada', 'contabilidade-pro' ); ?></div></div>
 		</div>
-	</div>
+	<?php elseif ( $erro ) : ?>
+		<div class="ac-status-banner amber">
+			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escreva um título para a tarefa e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+		</div>
+	<?php endif; ?>
 
-	<?php cp_ac_vazio( __( 'Sem tarefas no momento', 'contabilidade-pro' ), __( 'Quando a equipa lhe pedir alguma ação, ou criar uma tarefa, aparece aqui.', 'contabilidade-pro' ) ); ?>
+	<?php cp_ac_render_tarefas( $empresa_id ); ?>
 	<?php
 }
 

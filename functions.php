@@ -10,6 +10,7 @@ require_once get_template_directory() . '/inc/area-cliente.php';
 require_once get_template_directory() . '/inc/area-cliente-vistas.php';
 require_once get_template_directory() . '/inc/area-cliente-push.php';
 require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
+require_once get_template_directory() . '/inc/area-cliente-tarefas.php';
 
 // ─── Configuração do tema ──────────────────────────────────────────────────
 

@@ -70,10 +70,15 @@ else :
 				<div class="ac-sidebar-word"><?php bloginfo( 'name' ); ?><small><?php esc_html_e( 'Backoffice', 'contabilidade-pro' ); ?></small></div>
 			</div>
 
+			<?php $bo_empresa_id = isset( $_GET['empresa_id'] ) ? absint( $_GET['empresa_id'] ) : 0; ?>
 			<div class="ac-nav-group">
-				<a class="ac-nav-link active" href="<?php echo esc_url( get_permalink() ); ?>">
+				<a class="ac-nav-link<?php echo $bo_empresa_id ? '' : ' active'; ?>" href="<?php echo esc_url( get_permalink() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path><circle cx="12" cy="12" r="4"></circle></svg>
 					<?php esc_html_e( 'Notificações', 'contabilidade-pro' ); ?>
+				</a>
+				<a class="ac-nav-link<?php echo $bo_empresa_id ? ' active' : ''; ?>" href="#cp-backoffice-tarefas">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M7.5 9.5 9 11l2.5-3"></path><path d="M14 9h4"></path><path d="M7.5 15.5 9 17l2.5-3"></path><path d="M14 15h4"></path></svg>
+					<?php esc_html_e( 'Tarefas', 'contabilidade-pro' ); ?>
 				</a>
 				<a class="ac-nav-link" href="<?php echo esc_url( admin_url() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
@@ -148,6 +153,29 @@ else :
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>
+
+				<div id="cp-backoffice-tarefas" style="margin-top:36px">
+					<div>
+						<h1 style="font-size:23px"><?php esc_html_e( 'Tarefas', 'contabilidade-pro' ); ?></h1>
+						<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Deixe uma nota rápida para um cliente, ou conclua uma tarefa dele.', 'contabilidade-pro' ); ?></div>
+					</div>
+
+					<div class="ac-card" style="padding:22px;margin-top:18px">
+						<form method="get" action="<?php echo esc_url( get_permalink() ); ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+							<label for="cp-bo-empresa" style="font-size:12.5px;font-weight:600"><?php esc_html_e( 'Empresa', 'contabilidade-pro' ); ?></label>
+							<select name="empresa_id" id="cp-bo-empresa" onchange="this.form.submit()" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
+								<option value=""><?php esc_html_e( 'Escolha uma empresa…', 'contabilidade-pro' ); ?></option>
+								<?php foreach ( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) as $bo_empresa ) : ?>
+									<option value="<?php echo esc_attr( $bo_empresa->ID ); ?>" <?php selected( $bo_empresa_id, $bo_empresa->ID ); ?>><?php echo esc_html( $bo_empresa->post_title ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</form>
+					</div>
+
+					<?php if ( $bo_empresa_id && get_post_type( $bo_empresa_id ) === 'cp_empresa' ) : ?>
+						<?php cp_ac_render_tarefas( $bo_empresa_id, true ); ?>
+					<?php endif; ?>
+				</div>
 			</div>
 		</main>
 	</div>

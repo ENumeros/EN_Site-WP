@@ -81,6 +81,10 @@ else :
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M7.5 9.5 9 11l2.5-3"></path><path d="M14 9h4"></path><path d="M7.5 15.5 9 17l2.5-3"></path><path d="M14 15h4"></path></svg>
 					<?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?>
 				</a>
+				<a class="ac-nav-link<?php echo $bo_empresa_id ? ' active' : ''; ?>" href="#cp-backoffice-mensagens">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v11H8l-4 3.5z"></path></svg>
+					<?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?>
+				</a>
 				<a class="ac-nav-link" href="<?php echo esc_url( admin_url() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
 					<?php esc_html_e( 'Abrir wp-admin', 'contabilidade-pro' ); ?>
@@ -186,6 +190,17 @@ else :
 
 					<?php if ( $bo_empresa_id && get_post_type( $bo_empresa_id ) === 'cp_empresa' ) : ?>
 						<?php cp_ac_render_tarefas( $bo_empresa_id, true ); ?>
+					<?php endif; ?>
+				</div>
+
+				<div id="cp-backoffice-mensagens" style="margin-top:36px">
+					<div>
+						<h1 style="font-size:23px"><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></h1>
+						<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Converse com um cliente — escolha a empresa acima, em Lembretes.', 'contabilidade-pro' ); ?></div>
+					</div>
+
+					<?php if ( $bo_empresa_id && get_post_type( $bo_empresa_id ) === 'cp_empresa' ) : ?>
+						<?php cp_ac_render_mensagens( $bo_empresa_id, true ); ?>
 					<?php endif; ?>
 				</div>
 			</div>

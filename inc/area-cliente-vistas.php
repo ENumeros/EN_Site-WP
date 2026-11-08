@@ -37,6 +37,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 	$tem_documentos        = cp_ac_tem_ferramenta( 'documentos' );
 	$tem_pendentes         = cp_ac_tem_ferramenta( 'pendentes' );
 	$tem_tarefas           = cp_ac_tem_ferramenta( 'tarefas' );
+	$tem_mensagens         = cp_ac_tem_ferramenta( 'mensagens' );
 
 	?>
 	<div>
@@ -44,7 +45,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php printf( /* translators: %s: nome da empresa */ esc_html__( 'Situação atual — %s', 'contabilidade-pro' ), esc_html( get_the_title( $empresa_id ) ) ); ?></div>
 	</div>
 
-	<?php if ( ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_pendentes && ! $tem_tarefas ) : ?>
+	<?php if ( ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_pendentes && ! $tem_tarefas && ! $tem_mensagens ) : ?>
 		<?php cp_ac_vazio( __( 'Ainda não há ferramentas ativadas para esta empresa.', 'contabilidade-pro' ), __( 'Contacte a Entre Números se estiver à espera de acesso a alguma funcionalidade.', 'contabilidade-pro' ) ); ?>
 		<?php return; ?>
 	<?php endif; ?>
@@ -174,6 +175,14 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<?php endif; ?>
 
 		<?php cp_ac_render_documento_modal(); ?>
+	<?php endif; ?>
+
+	<?php if ( $tem_mensagens ) : ?>
+		<div>
+			<h2 style="font-size:18px"><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></h2>
+		</div>
+
+		<?php cp_ac_render_mensagens( $empresa_id ); ?>
 	<?php endif; ?>
 
 	<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos ] ); ?>

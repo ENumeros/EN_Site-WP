@@ -23,6 +23,7 @@ final class AreaClienteTest extends TestCase {
 		self::assertSame(
 			[
 				'tarefas',
+				'mensagens',
 				'conta_corrente',
 				'calendario_fiscal',
 				'documentos',

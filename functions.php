@@ -12,6 +12,7 @@ require_once get_template_directory() . '/inc/area-cliente-push.php';
 require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
 require_once get_template_directory() . '/inc/area-cliente-tarefas.php';
 require_once get_template_directory() . '/inc/area-cliente-documentos.php';
+require_once get_template_directory() . '/inc/area-cliente-mensagens.php';
 
 // ─── Barra de admin do WP: desligada na Área de Cliente/Backoffice ────────
 // Estas páginas têm a sua própria topbar (ac-topbar) — a barra nativa do
@@ -126,6 +127,32 @@ function cp_enqueue_assets() {
             [],
             '1.0.0',
             true
+        );
+
+        // Mensagens: a empresa a que se refere vem do lado certo — ativa da
+        // sessão no cliente, escolhida pela equipa no Backoffice (mesmo
+        // "empresa_id" que a secção Mensagens/Lembretes do Backoffice já lê).
+        $mensagens_empresa_id = 0;
+        if ( is_page( 'area-de-cliente' ) ) {
+            $mensagens_empresa_id = cp_ac_empresa_ativa();
+        } elseif ( is_page( 'backoffice' ) ) {
+            $mensagens_empresa_id = isset( $_GET['empresa_id'] ) ? absint( $_GET['empresa_id'] ) : 0;
+        }
+        wp_enqueue_script(
+            'cp-ac-mensagens',
+            get_template_directory_uri() . '/assets/js/ac-mensagens.js',
+            [],
+            '1.0.0',
+            true
+        );
+        wp_add_inline_script(
+            'cp-ac-mensagens',
+            'window.cpMensagens = ' . wp_json_encode( [
+                'restUrl'   => esc_url_raw( rest_url( 'cp/v1' ) ),
+                'restNonce' => wp_create_nonce( 'wp_rest' ),
+                'empresaId' => $mensagens_empresa_id,
+            ] ) . ';',
+            'before'
         );
 
         $chaves_vapid = cp_push_vapid_keys();

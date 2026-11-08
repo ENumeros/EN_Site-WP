@@ -145,6 +145,7 @@ else :
 					<div class="ac-user">
 						<span id="cp-push-msg" class="ac-sec-sub" style="max-width:220px" hidden></span>
 						<button type="button" class="ac-btn ac-btn-ghost" id="cp-push-btn" style="padding:7px 12px;font-size:12.5px" aria-pressed="false" hidden><?php esc_html_e( 'Ativar notificações', 'contabilidade-pro' ); ?></button>
+						<button type="button" class="ac-btn ac-btn-ghost" id="cp-pwa-install-btn" style="padding:7px 12px;font-size:12.5px" hidden><?php esc_html_e( 'Instalar app', 'contabilidade-pro' ); ?></button>
 						<button type="button" class="ac-theme-toggle" id="ac-theme-toggle" aria-pressed="false" aria-label="<?php esc_attr_e( 'Alternar modo escuro', 'contabilidade-pro' ); ?>">
 							<svg class="ac-theme-toggle__sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
 							<svg class="ac-theme-toggle__moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -153,6 +154,10 @@ else :
 						<span class="ac-user-name"><?php echo esc_html( $ac_user_name ); ?></span>
 					</div>
 				</header>
+
+				<div id="cp-pwa-ios-instrucoes" class="ac-pwa-instrucoes" hidden>
+					<?php esc_html_e( 'No iPhone/iPad: toque no ícone Partilhar na barra do Safari e escolha "Adicionar ao Ecrã Principal".', 'contabilidade-pro' ); ?>
+				</div>
 
 				<div class="ac-content">
 					<?php

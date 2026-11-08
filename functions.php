@@ -74,6 +74,16 @@ function cp_enqueue_assets() {
             [ 'cp-google-fonts' ],
             '1.0.0-' . filemtime( get_template_directory() . '/assets/css/area-cliente.css' )
         );
+        if ( is_page( 'area-de-cliente' ) ) {
+            wp_enqueue_script(
+                'cp-pwa-install',
+                get_template_directory_uri() . '/assets/js/pwa-install.js',
+                [],
+                '1.0.0',
+                true
+            );
+        }
+
         wp_enqueue_script(
             'cp-ac-theme-toggle',
             get_template_directory_uri() . '/assets/js/ac-theme-toggle.js',

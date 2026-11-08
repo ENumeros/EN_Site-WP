@@ -143,3 +143,6 @@ a:hover{color:var(--ac-navy)}
 /* Backoffice — feed de eventos */
 .ac-evento-sem-leitura{box-shadow:inset 3px 0 0 var(--ac-gold)}
 .ac-evento-empresa{font-size:12px;color:var(--ac-muted);margin-top:2px}
+
+/* Instalar app (instruções iOS, sem beforeinstallprompt no Safari) */
+.ac-pwa-instrucoes{margin:14px 32px 0;padding:12px 16px;background:var(--ac-bg);border:1px solid var(--ac-line);border-radius:10px;font-size:13px;color:var(--ac-text)}

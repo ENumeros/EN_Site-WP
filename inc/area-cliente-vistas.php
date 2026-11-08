@@ -49,7 +49,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<?php return; ?>
 	<?php endif; ?>
 
-	<div style="display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:20px">
+	<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
 
 		<?php if ( $tem_conta_corrente ) :
 			$cc        = cp_ac_conta_corrente( $empresa_id );

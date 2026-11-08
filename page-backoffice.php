@@ -64,7 +64,8 @@ else :
 	$eventos = cp_backoffice_listar_eventos( 50 );
 	?>
 	<div class="ac-shell">
-		<nav class="ac-sidebar" aria-label="<?php esc_attr_e( 'Navegação do Backoffice', 'contabilidade-pro' ); ?>">
+		<div class="ac-sidebar-backdrop" id="ac-sidebar-backdrop"></div>
+		<nav class="ac-sidebar" id="ac-sidebar" aria-label="<?php esc_attr_e( 'Navegação do Backoffice', 'contabilidade-pro' ); ?>">
 			<div class="ac-sidebar-logo">
 				<div class="ac-sidebar-mark">EN</div>
 				<div class="ac-sidebar-word"><?php bloginfo( 'name' ); ?><small><?php esc_html_e( 'Backoffice', 'contabilidade-pro' ); ?></small></div>
@@ -96,7 +97,12 @@ else :
 
 		<main class="ac-main">
 			<header class="ac-topbar">
-				<span class="ac-empresa-chip"><?php esc_html_e( 'Equipa', 'contabilidade-pro' ); ?></span>
+				<div style="display:flex;align-items:center;gap:14px">
+					<button type="button" class="ac-sidebar-toggle" id="ac-sidebar-toggle" aria-expanded="false" aria-controls="ac-sidebar" aria-label="<?php esc_attr_e( 'Abrir menu', 'contabilidade-pro' ); ?>">
+						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+					</button>
+					<span class="ac-empresa-chip"><?php esc_html_e( 'Equipa', 'contabilidade-pro' ); ?></span>
+				</div>
 
 				<?php
 				$bo_user      = wp_get_current_user();

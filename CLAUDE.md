@@ -156,6 +156,16 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
 - `esc_url()` em todos os `href`/`action`, `esc_attr()` em todos os
   atributos, `esc_html()` em todo o texto escapado — o código existente é
   consistente nisto; não introduzir excepções.
+- **Mobile (Área de Cliente/Backoffice)**: abaixo de 860px (ver media
+  query em `assets/css/area-cliente.css`) o menu lateral (`#ac-sidebar`)
+  vira painel deslizante, aberto pelo botão `#ac-sidebar-toggle`
+  (`assets/js/ac-mobile-nav.js`) — qualquer página nova com este app
+  shell precisa dos três elementos (`#ac-sidebar`, `#ac-sidebar-toggle`,
+  `#ac-sidebar-backdrop`) para o menu funcionar em telemóvel. Grelhas de
+  cartões usam sempre `repeat(auto-fit,minmax(...))`, nunca
+  `repeat(<número fixo>,...)` — um número fixo de colunas não cabe num
+  ecrã estreito e causa scroll horizontal (era o bug do Dashboard antes
+  desta correção).
 
 ## Testes automáticos
 

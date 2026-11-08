@@ -87,7 +87,8 @@ else :
 		$vista             = ( '' !== $vista_pedida && isset( $ferramentas[ $vista_pedida ] ) && cp_ac_tem_ferramenta( $vista_pedida ) ) ? $vista_pedida : '';
 		?>
 		<div class="ac-shell">
-			<nav class="ac-sidebar" aria-label="<?php esc_attr_e( 'Navegação da Área de Cliente', 'contabilidade-pro' ); ?>">
+			<div class="ac-sidebar-backdrop" id="ac-sidebar-backdrop"></div>
+			<nav class="ac-sidebar" id="ac-sidebar" aria-label="<?php esc_attr_e( 'Navegação da Área de Cliente', 'contabilidade-pro' ); ?>">
 				<div class="ac-sidebar-logo">
 					<div class="ac-sidebar-mark">EN</div>
 					<div class="ac-sidebar-word"><?php bloginfo( 'name' ); ?><small><?php esc_html_e( 'Área de Cliente', 'contabilidade-pro' ); ?></small></div>
@@ -132,13 +133,18 @@ else :
 
 			<main class="ac-main">
 				<header class="ac-topbar">
-					<?php if ( count( $empresas_user ) > 1 ) : ?>
-						<a class="ac-empresa-chip" href="<?php echo esc_url( add_query_arg( 'cp_trocar', '1', get_permalink() ) ); ?>" title="<?php esc_attr_e( 'Trocar de empresa', 'contabilidade-pro' ); ?>">
-							<?php echo esc_html( get_the_title( $empresa_ativa ) ); ?> ↕
-						</a>
-					<?php else : ?>
-						<span class="ac-empresa-chip"><?php echo esc_html( get_the_title( $empresa_ativa ) ); ?></span>
-					<?php endif; ?>
+					<div style="display:flex;align-items:center;gap:14px">
+						<button type="button" class="ac-sidebar-toggle" id="ac-sidebar-toggle" aria-expanded="false" aria-controls="ac-sidebar" aria-label="<?php esc_attr_e( 'Abrir menu', 'contabilidade-pro' ); ?>">
+							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+						</button>
+						<?php if ( count( $empresas_user ) > 1 ) : ?>
+							<a class="ac-empresa-chip" href="<?php echo esc_url( add_query_arg( 'cp_trocar', '1', get_permalink() ) ); ?>" title="<?php esc_attr_e( 'Trocar de empresa', 'contabilidade-pro' ); ?>">
+								<?php echo esc_html( get_the_title( $empresa_ativa ) ); ?> ↕
+							</a>
+						<?php else : ?>
+							<span class="ac-empresa-chip"><?php echo esc_html( get_the_title( $empresa_ativa ) ); ?></span>
+						<?php endif; ?>
+					</div>
 
 					<?php
 					$ac_user       = wp_get_current_user();

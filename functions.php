@@ -101,6 +101,14 @@ function cp_enqueue_assets() {
             true
         );
 
+        wp_enqueue_script(
+            'cp-ac-mobile-nav',
+            get_template_directory_uri() . '/assets/js/ac-mobile-nav.js',
+            [],
+            '1.0.0',
+            true
+        );
+
         $chaves_vapid = cp_push_vapid_keys();
         wp_enqueue_script(
             'cp-push',

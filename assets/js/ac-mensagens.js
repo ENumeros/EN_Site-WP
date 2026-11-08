@@ -47,10 +47,20 @@
 		lista.innerHTML = mensagens.map( linhaMensagem ).join( '' );
 	}
 
+	// Fecha a modal a que este formulário pertence, se for o caso — mesma
+	// convenção de ids de ac-fab.js (backdrop = id da modal + "-backdrop").
+	function fecharModalDoFormulario( form ) {
+		var modal = form.closest( '.ac-modal' );
+		if ( ! modal ) return;
+		var backdrop = document.getElementById( modal.id + '-backdrop' );
+		modal.hidden = true;
+		if ( backdrop ) backdrop.hidden = true;
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
-		var lista = document.getElementById( 'cp-mensagens-lista' );
-		var form  = document.getElementById( 'cp-mensagens-form' );
-		if ( ! lista || ! form || ! window.cpMensagens || ! window.cpMensagens.empresaId ) return;
+		var lista     = document.getElementById( 'cp-mensagens-lista' );
+		var formulas  = document.querySelectorAll( '[data-cp-mensagens-form]' );
+		if ( ! lista || ! formulas.length || ! window.cpMensagens || ! window.cpMensagens.empresaId ) return;
 
 		var ultimoId  = null;
 		var timer     = null;
@@ -86,15 +96,18 @@
 			}
 		} );
 
-		form.addEventListener( 'submit', function ( evento ) {
-			evento.preventDefault();
-			var campo = form.querySelector( 'textarea[name="texto"]' );
-			var texto = campo.value.trim();
-			if ( '' === texto ) return;
+		formulas.forEach( function ( form ) {
+			form.addEventListener( 'submit', function ( evento ) {
+				evento.preventDefault();
+				var campo = form.querySelector( 'textarea[name="texto"]' );
+				var texto = campo.value.trim();
+				if ( '' === texto ) return;
 
-			pedirApi( 'POST', '/mensagens', { empresa_id: window.cpMensagens.empresaId, texto: texto } ).then( function () {
-				campo.value = '';
-				atualizar();
+				pedirApi( 'POST', '/mensagens', { empresa_id: window.cpMensagens.empresaId, texto: texto } ).then( function () {
+					campo.value = '';
+					fecharModalDoFormulario( form );
+					atualizar();
+				} );
 			} );
 		} );
 

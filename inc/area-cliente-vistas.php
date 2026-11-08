@@ -183,15 +183,16 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		</div>
 
 		<?php cp_ac_render_mensagens( $empresa_id ); ?>
+		<?php cp_ac_render_mensagem_modal( $empresa_id ); ?>
 	<?php endif; ?>
 
-	<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos ] ); ?>
+	<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos, 'mensagem' => $tem_mensagens ] ); ?>
 	<?php
 }
 
-// Botão "+" flutuante do Dashboard: abre uma lista de ações rápidas. Por
-// ora só tem a de enviar um documento, mas é feito para crescer — cada
-// nova ação acrescenta uma chave a $ativas, o seu próprio item
+// Botão "+" flutuante do Dashboard: abre uma lista de ações rápidas
+// (enviar documento, enviar mensagem). Feito para crescer — cada nova
+// ação acrescenta uma chave a $ativas, o seu próprio item
 // (cp_ac_render_..._fab_item()) e a sua própria modal, sem tocar neste botão.
 function cp_ac_render_fab_acoes_rapidas( $ativas ) {
 	if ( ! array_filter( $ativas ) ) return;
@@ -200,6 +201,9 @@ function cp_ac_render_fab_acoes_rapidas( $ativas ) {
 		<div id="cp-fab-menu" class="ac-fab-menu" hidden role="menu">
 			<?php if ( ! empty( $ativas['documento'] ) ) : ?>
 				<?php cp_ac_render_documento_fab_item(); ?>
+			<?php endif; ?>
+			<?php if ( ! empty( $ativas['mensagem'] ) ) : ?>
+				<?php cp_ac_render_mensagem_fab_item(); ?>
 			<?php endif; ?>
 		</div>
 		<button type="button" id="cp-fab-btn" class="ac-fab" aria-haspopup="menu" aria-controls="cp-fab-menu" aria-expanded="false" aria-label="<?php esc_attr_e( 'Ações rápidas', 'contabilidade-pro' ); ?>">

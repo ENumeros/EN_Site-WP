@@ -127,6 +127,20 @@ function cp_ac_rest_mensagens_criar( $request ) {
 
 // ─── UI partilhada (Área de Cliente + Backoffice) ──────────────────────────
 
+// Caixa de escrever + enviar — usada no painel principal e dentro da
+// modal do atalho rápido (ac-mensagens.js trata qualquer formulário com
+// este atributo da mesma forma: envia, limpa, atualiza a lista
+// #cp-mensagens-lista e, se estiver dentro de uma modal, fecha-a).
+function cp_ac_render_mensagem_form( $empresa_id, $form_id ) {
+	?>
+	<form id="<?php echo esc_attr( $form_id ); ?>" data-cp-mensagens-form style="display:flex;gap:10px">
+		<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
+		<textarea name="texto" required rows="1" placeholder="<?php esc_attr_e( 'Escreva uma mensagem…', 'contabilidade-pro' ); ?>" style="flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
+		<button class="ac-btn ac-btn-ghost" type="submit"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
+	</form>
+	<?php
+}
+
 function cp_ac_render_mensagens( $empresa_id, $mostrar_nome_empresa = false ) {
 	$mensagens = cp_ac_mensagens( $empresa_id );
 	?>
@@ -157,11 +171,37 @@ function cp_ac_render_mensagens( $empresa_id, $mostrar_nome_empresa = false ) {
 			<?php endif; ?>
 		</div>
 
-		<form id="cp-mensagens-form" style="display:flex;gap:10px;margin-top:14px">
-			<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
-			<textarea name="texto" required rows="1" placeholder="<?php esc_attr_e( 'Escreva uma mensagem…', 'contabilidade-pro' ); ?>" style="flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px;font-family:inherit;resize:vertical"></textarea>
-			<button class="ac-btn ac-btn-ghost" type="submit"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
-		</form>
+		<div style="margin-top:14px">
+			<?php cp_ac_render_mensagem_form( $empresa_id, 'cp-mensagens-form' ); ?>
+		</div>
+	</div>
+	<?php
+}
+
+// Entrada no menu de ações rápidas do Dashboard (botão "+" flutuante) —
+// mesmo padrão de cp_ac_render_documento_fab_item() em
+// inc/area-cliente-documentos.php: abre a modal abaixo para compor e
+// enviar sem percorrer a página até à secção Mensagens.
+function cp_ac_render_mensagem_fab_item() {
+	?>
+	<button type="button" class="ac-fab-menu-item" data-cp-fab-target="cp-msg-modal" role="menuitem">
+		<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v11H8l-4 3.5z"></path></svg>
+		<span><?php esc_html_e( 'Enviar mensagem', 'contabilidade-pro' ); ?></span>
+	</button>
+	<?php
+}
+
+function cp_ac_render_mensagem_modal( $empresa_id ) {
+	?>
+	<div id="cp-msg-modal-backdrop" class="ac-modal-backdrop" data-cp-fab-modal hidden></div>
+	<div id="cp-msg-modal" class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="cp-msg-modal-title" hidden>
+		<div class="ac-modal-head">
+			<h3 id="cp-msg-modal-title" style="font-size:16px"><?php esc_html_e( 'Enviar mensagem', 'contabilidade-pro' ); ?></h3>
+			<button type="button" class="ac-modal-close" data-cp-fab-modal-close aria-label="<?php esc_attr_e( 'Fechar', 'contabilidade-pro' ); ?>">
+				<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+			</button>
+		</div>
+		<?php cp_ac_render_mensagem_form( $empresa_id, 'cp-mensagens-form-fab' ); ?>
 	</div>
 	<?php
 }

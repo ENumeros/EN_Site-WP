@@ -194,65 +194,65 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 			<input type="text" name="titulo" required placeholder="<?php esc_attr_e( 'Novo lembrete — ex.: enviar contrato da renda', 'contabilidade-pro' ); ?>" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
 			<button class="ac-btn ac-btn-primary" type="submit" style="padding:9px 16px"><?php esc_html_e( 'Adicionar', 'contabilidade-pro' ); ?></button>
 		</form>
-	</div>
 
-	<?php if ( ! empty( $tarefas ) ) : ?>
-		<div style="display:flex;gap:8px;margin:14px 0 4px">
-			<a href="<?php echo esc_url( remove_query_arg( 'cp_lembretes' ) ); ?>" class="ac-btn <?php echo $mostrar_todos ? 'ac-btn-ghost' : 'ac-btn-primary'; ?>" style="padding:6px 12px;font-size:12.5px"><?php esc_html_e( 'Ativos', 'contabilidade-pro' ); ?></a>
-			<a href="<?php echo esc_url( add_query_arg( 'cp_lembretes', 'todos' ) ); ?>" class="ac-btn <?php echo $mostrar_todos ? 'ac-btn-primary' : 'ac-btn-ghost'; ?>" style="padding:6px 12px;font-size:12.5px"><?php esc_html_e( 'Todos', 'contabilidade-pro' ); ?></a>
-		</div>
-	<?php endif; ?>
+		<?php if ( ! empty( $tarefas ) ) : ?>
+			<div style="display:flex;gap:8px;margin-top:18px;padding-top:18px;border-top:1px solid var(--ac-line)">
+				<a href="<?php echo esc_url( remove_query_arg( 'cp_lembretes' ) ); ?>" class="ac-btn <?php echo $mostrar_todos ? 'ac-btn-ghost' : 'ac-btn-primary'; ?>" style="padding:6px 12px;font-size:12.5px"><?php esc_html_e( 'Ativos', 'contabilidade-pro' ); ?></a>
+				<a href="<?php echo esc_url( add_query_arg( 'cp_lembretes', 'todos' ) ); ?>" class="ac-btn <?php echo $mostrar_todos ? 'ac-btn-primary' : 'ac-btn-ghost'; ?>" style="padding:6px 12px;font-size:12.5px"><?php esc_html_e( 'Todos', 'contabilidade-pro' ); ?></a>
+			</div>
+		<?php endif; ?>
 
-	<?php if ( empty( $visiveis ) ) : ?>
-		<?php
-		cp_ac_vazio(
-			$mostrar_todos || empty( $tarefas )
-				? __( 'Sem lembretes no momento', 'contabilidade-pro' )
-				: __( 'Sem lembretes ativos', 'contabilidade-pro' ),
-			$mostrar_todos || empty( $tarefas )
-				? __( 'Quando a equipa lhe pedir alguma ação, ou deixar uma nota, aparece aqui.', 'contabilidade-pro' )
-				: __( 'Todos os lembretes estão concluídos — veja "Todos" para os consultar.', 'contabilidade-pro' )
-		);
-		?>
-	<?php else : ?>
-		<div class="ac-card" style="padding:22px">
-			<?php foreach ( $visiveis as $tarefa ) :
-				$pode_concluir = cp_ac_tarefa_pode_concluir( $tarefa, $user_id );
-				$concluida     = ! empty( $tarefa['concluido'] );
+		<?php if ( empty( $visiveis ) ) : ?>
+			<div style="margin-top:18px;color:var(--ac-muted);font-size:13px">
+				<?php
+				echo esc_html(
+					$mostrar_todos || empty( $tarefas )
+						? __( 'Sem lembretes no momento — quando a equipa lhe pedir alguma ação, ou deixar uma nota, aparece aqui.', 'contabilidade-pro' )
+						: __( 'Sem lembretes ativos — todos estão concluídos; veja "Todos" para os consultar.', 'contabilidade-pro' )
+				);
 				?>
-				<div class="ac-todo-item">
-					<?php if ( $pode_concluir ) : ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-							<?php wp_nonce_field( 'cp_tarefa_concluir', 'cp_tarefa_nonce' ); ?>
-							<input type="hidden" name="action" value="cp_tarefa_concluir">
-							<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
-							<input type="hidden" name="tarefa_id" value="<?php echo esc_attr( $tarefa['id'] ); ?>">
-							<input type="hidden" name="concluido" value="<?php echo $concluida ? '0' : '1'; ?>">
-							<button type="submit" class="ac-todo-check<?php echo $concluida ? ' done' : ''; ?>" aria-label="<?php echo $concluida ? esc_attr__( 'Marcar como não feita', 'contabilidade-pro' ) : esc_attr__( 'Marcar como feita', 'contabilidade-pro' ); ?>">
+			</div>
+		<?php else : ?>
+			<div style="margin-top:8px">
+				<?php foreach ( $visiveis as $tarefa ) :
+					$pode_concluir = cp_ac_tarefa_pode_concluir( $tarefa, $user_id );
+					$concluida     = ! empty( $tarefa['concluido'] );
+					?>
+					<div class="ac-todo-item">
+						<?php if ( $pode_concluir ) : ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<?php wp_nonce_field( 'cp_tarefa_concluir', 'cp_tarefa_nonce' ); ?>
+								<input type="hidden" name="action" value="cp_tarefa_concluir">
+								<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
+								<input type="hidden" name="tarefa_id" value="<?php echo esc_attr( $tarefa['id'] ); ?>">
+								<input type="hidden" name="concluido" value="<?php echo $concluida ? '0' : '1'; ?>">
+								<button type="submit" class="ac-todo-check<?php echo $concluida ? ' done' : ''; ?>" aria-label="<?php echo $concluida ? esc_attr__( 'Marcar como não feita', 'contabilidade-pro' ) : esc_attr__( 'Marcar como feita', 'contabilidade-pro' ); ?>">
+									<?php if ( $concluida ) : ?><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg><?php endif; ?>
+								</button>
+							</form>
+						<?php else : ?>
+							<span class="ac-todo-check<?php echo $concluida ? ' done' : ''; ?>" style="cursor:default">
 								<?php if ( $concluida ) : ?><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg><?php endif; ?>
-							</button>
-						</form>
-					<?php else : ?>
-						<span class="ac-todo-check<?php echo $concluida ? ' done' : ''; ?>" style="cursor:default">
-							<?php if ( $concluida ) : ?><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg><?php endif; ?>
-						</span>
-					<?php endif; ?>
-					<div>
-						<div class="ac-todo-title<?php echo $concluida ? ' done' : ''; ?>"><?php echo esc_html( $tarefa['titulo'] ); ?></div>
-						<div class="ac-todo-meta">
-							<?php
-							$quem = 'equipa' === $tarefa['criado_por'] ? __( 'Entre Números', 'contabilidade-pro' ) : __( 'Cliente', 'contabilidade-pro' );
-							printf(
-								/* translators: 1: quem criou (Entre Números ou Cliente), 2: há quanto tempo, ex. "3 horas" */
-								esc_html__( 'Criado por %1$s — há %2$s', 'contabilidade-pro' ),
-								esc_html( $quem ),
-								esc_html( human_time_diff( strtotime( $tarefa['criado_em'] ), current_time( 'timestamp' ) ) )
-							);
-							?>
+							</span>
+						<?php endif; ?>
+						<div>
+							<div class="ac-todo-title<?php echo $concluida ? ' done' : ''; ?>"><?php echo esc_html( $tarefa['titulo'] ); ?></div>
+							<div class="ac-todo-meta">
+								<?php
+								$quem = 'equipa' === $tarefa['criado_por'] ? __( 'Entre Números', 'contabilidade-pro' ) : __( 'Cliente', 'contabilidade-pro' );
+								printf(
+									/* translators: 1: quem criou (Entre Números ou Cliente), 2: há quanto tempo, ex. "3 horas" */
+									esc_html__( 'Criado por %1$s — há %2$s', 'contabilidade-pro' ),
+									esc_html( $quem ),
+									esc_html( human_time_diff( strtotime( $tarefa['criado_em'] ), current_time( 'timestamp' ) ) )
+								);
+								?>
+							</div>
 						</div>
 					</div>
-				</div>
-			<?php endforeach; ?>
-		</div>
-	<?php endif;
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	</div>
+	<?php
 }

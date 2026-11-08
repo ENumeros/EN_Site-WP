@@ -41,7 +41,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php printf( /* translators: %s: nome do utilizador */ esc_html__( 'Olá, %s', 'contabilidade-pro' ), esc_html( $nome_utilizador ) ); ?></h1>
-		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Aqui está o resumo da sua conta.', 'contabilidade-pro' ); ?></div>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php printf( /* translators: %s: nome da empresa */ esc_html__( 'Situação atual — %s', 'contabilidade-pro' ), esc_html( get_the_title( $empresa_id ) ) ); ?></div>
 	</div>
 
 	<?php if ( ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_pendentes && ! $tem_tarefas ) : ?>

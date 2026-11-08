@@ -115,14 +115,33 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
 - **Mensagens** (`inc/area-cliente-mensagens.php`): a única ferramenta que
   foge ao padrão "admin-post.php + reload" — a lista tem de atualizar
   sozinha, sem refresh. Por isso lê e escreve por REST (`GET`/`POST
-  cp/v1/mensagens`), com `assets/js/ac-mensagens.js` a fazer polling (a
-  cada 12s, pausado com `document.hidden`) e o envio por `fetch`, em vez
-  do formulário clássico — nenhuma outra ferramenta deve copiar este
-  padrão só porque está ali ao lado; é a exceção, não o novo normal.
-  Mesma lógica de resolução de empresa anti-adulteração das outras
-  ferramentas partilhadas (`cp_ac_mensagem_resolver_empresa()`, cópia de
-  `cp_ac_tarefa_resolver_empresa()`), e sem página própria na Área de
-  Cliente pela mesma razão que Lembretes — vive só no Dashboard.
+  cp/v1/conversas` e `cp/v1/mensagens`), com `assets/js/ac-mensagens.js`
+  a fazer polling (a cada 12s, pausado com `document.hidden`) e o envio
+  por `fetch`, em vez do formulário clássico — nenhuma outra ferramenta
+  deve copiar este padrão só porque está ali ao lado; é a exceção, não
+  o novo normal. Mesma lógica de resolução de empresa anti-adulteração
+  das outras ferramentas partilhadas (`cp_ac_mensagem_resolver_empresa()`,
+  cópia de `cp_ac_tarefa_resolver_empresa()`).
+  **Várias conversas por empresa**, cada uma com assunto — não é um fio
+  único. `_cp_conversas` guarda as conversas, `_cp_mensagens` guarda
+  todas as mensagens de todas as conversas da empresa (cada uma com
+  `conversa_id`); nunca ler/escrever mensagens sem validar primeiro
+  `cp_ac_conversa_pertence( $conversa_id, $empresa_id )` — um
+  `conversa_id` vindo de um pedido nunca é de confiar sozinho. Mensagens
+  anteriores a esta mudança (sem `conversa_id`) são agrupadas, lazy e
+  uma única vez, numa conversa "Geral" por `cp_ac_conversas_migrar_legado()`
+  — nunca escrever outra migração à parte, isto já trata disso na
+  primeira leitura.
+  Sem página própria na Área de Cliente (mesma razão que Lembretes) —
+  vive no dropdown do utilizador (lista de conversas) e numa modal
+  partilhada só, preenchida por JS a cada conversa aberta
+  (`#cp-conversa-modal` — não tentar pré-renderizar todas as conversas
+  em PHP). O Backoffice, por já ter o seu próprio espaço de ecrã, usa
+  antes um `<select name="conversa_id">` com navegação por query-string,
+  igual ao seletor de empresa ao lado — não precisa da modal.
+  Lidas/por ler são por conversa (usermeta `cp_mensagens_lidas`), não por
+  empresa: abrir uma conversa marca só essa como lida; o badge do avatar
+  soma as não lidas de todas as conversas da empresa ativa.
 
 ## Backoffice
 

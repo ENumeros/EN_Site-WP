@@ -71,7 +71,10 @@ else :
 				<div class="ac-sidebar-word"><?php bloginfo( 'name' ); ?><small><?php esc_html_e( 'Backoffice', 'contabilidade-pro' ); ?></small></div>
 			</div>
 
-			<?php $bo_empresa_id = isset( $_GET['empresa_id'] ) ? absint( $_GET['empresa_id'] ) : 0; ?>
+			<?php
+			$bo_empresa_id  = isset( $_GET['empresa_id'] ) ? absint( $_GET['empresa_id'] ) : 0;
+			$bo_conversa_id = isset( $_GET['conversa_id'] ) ? sanitize_text_field( wp_unslash( $_GET['conversa_id'] ) ) : '';
+			?>
 			<div class="ac-nav-group">
 				<a class="ac-nav-link<?php echo $bo_empresa_id ? '' : ' active'; ?>" href="<?php echo esc_url( get_permalink() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path><circle cx="12" cy="12" r="4"></circle></svg>
@@ -200,7 +203,7 @@ else :
 					</div>
 
 					<?php if ( $bo_empresa_id && get_post_type( $bo_empresa_id ) === 'cp_empresa' ) : ?>
-						<?php cp_ac_render_mensagens( $bo_empresa_id, true ); ?>
+						<?php cp_ac_render_mensagens( $bo_empresa_id, $bo_conversa_id ); ?>
 					<?php endif; ?>
 				</div>
 			</div>

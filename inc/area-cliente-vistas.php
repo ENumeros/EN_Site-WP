@@ -588,6 +588,24 @@ function cp_ac_vista_calendario_fiscal() {
 	<?php
 }
 
+// ─── Mensagens ──────────────────────────────────────────────────────────────
+// Sem entrada no menu lateral, de propósito (como Lembretes) — só
+// acessível pelo link no dropdown do utilizador ou pelo atalho "Nova
+// conversa" do "+" no Dashboard. Ver cp_ac_render_mensagens_pagina() em
+// inc/area-cliente-mensagens.php.
+
+function cp_ac_vista_mensagens() {
+	$empresa_id = cp_ac_empresa_ativa();
+	?>
+	<div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></h1>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Converse com a Entre Números — uma conversa por assunto.', 'contabilidade-pro' ); ?></div>
+	</div>
+
+	<?php cp_ac_render_mensagens_pagina( $empresa_id ); ?>
+	<?php
+}
+
 // ─── Util: URL de uma vista ─────────────────────────────────────────────────
 
 function cp_ac_vista_url( $chave ) {

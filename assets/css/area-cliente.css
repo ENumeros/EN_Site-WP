@@ -67,13 +67,11 @@ a:hover{color:var(--ac-navy)}
 .ac-user-trigger{display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer}
 .ac-user-dropdown{position:absolute;right:0;top:calc(100% + 10px);min-width:230px;background:var(--ac-surface);border:1px solid var(--ac-line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:8px;display:flex;flex-direction:column;gap:4px;z-index:20}
 .ac-user-dropdown[hidden]{display:none}
-.ac-dropdown-item{width:100%;text-align:left;padding:9px 12px;border-radius:8px;border:none;background:none;color:var(--ac-text);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.ac-dropdown-item{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:9px 12px;border-radius:8px;border:none;background:none;color:var(--ac-text);font-size:13px;font-weight:600;font-family:inherit;text-decoration:none;cursor:pointer}
 .ac-dropdown-item:hover{background:var(--ac-bg)}
 .ac-dropdown-msg{padding:6px 12px 2px;font-size:12px;color:var(--ac-muted)}
 .ac-dropdown-sep{height:1px;background:var(--ac-line);margin:4px 2px}
-.ac-dropdown-mensagens{width:300px;max-width:calc(100vw - 48px);padding:6px 8px 4px}
-.ac-dropdown-mensagens-head{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ac-muted);margin-bottom:8px}
-#cp-conversas-lista{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+#cp-conversas-lista{display:flex;flex-direction:column;gap:6px}
 
 /* Alternador de tema (claro/escuro) */
 .ac-theme-toggle{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-muted);cursor:pointer;flex:none;padding:0}
@@ -156,6 +154,7 @@ a:hover{color:var(--ac-navy)}
 .ac-conversa-row-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ac-conversa-assunto{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ac-conversa-badge{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:#C0392B;color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ac-conversa-badge[hidden]{display:none}
 .ac-conversa-resumo{font-size:12px;color:var(--ac-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ac-mv-pos{color:var(--ac-badge-green-fg)}
 .ac-mv-line{font-size:12px;color:var(--ac-muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:3px}

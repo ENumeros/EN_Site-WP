@@ -1,11 +1,12 @@
 // Mensagens (Área de Cliente / Backoffice) — várias conversas por
 // empresa, cada uma com o seu assunto. Lê e envia por REST, sem
-// recarregar a página (exceto ao criar uma conversa no Backoffice, que
-// navega para já a mostrar selecionada — mesmo padrão já usado para
-// trocar de empresa ali). Depende de window.cpMensagens = { restUrl,
-// restNonce, empresaId }, definido inline por cp_enqueue_assets() em
-// functions.php. Mesmo estilo de pedido (fetch + X-WP-Nonce) de
-// assets/js/push.js.
+// recarregar a página (exceto ao criar uma conversa no Backoffice, ou
+// pelo atalho "Nova conversa" do "+" na Área de Cliente — nesses dois
+// casos navega logo para onde a conversa fica visível, mesmo padrão já
+// usado para trocar de empresa no Backoffice). Depende de
+// window.cpMensagens = { restUrl, restNonce, empresaId }, definido
+// inline por cp_enqueue_assets() em functions.php. Mesmo estilo de
+// pedido (fetch + X-WP-Nonce) de assets/js/push.js.
 ( function () {
 	'use strict';
 
@@ -86,17 +87,17 @@
 		if ( ! window.cpMensagens || ! window.cpMensagens.empresaId ) return;
 		var empresaId = window.cpMensagens.empresaId;
 
-		var dropdown         = document.getElementById( 'cp-user-dropdown' );
-		var listaConversasEl = document.getElementById( 'cp-conversas-lista' );
-		var badge            = document.getElementById( 'cp-mensagens-badge' );
-		var conversaModalEl  = document.getElementById( 'cp-conversa-modal' );
+		var avatarBadge       = document.getElementById( 'cp-mensagens-badge' );
+		var dropdownBadge     = document.getElementById( 'cp-mensagens-dropdown-badge' );
+		var listaConversasEl  = document.getElementById( 'cp-conversas-lista' );
+		var painelConversa    = document.getElementById( 'cp-conversa-painel' );
 
-		var conversasCache     = [];
-		var timerConversas     = null;
+		var conversasCache      = [];
+		var timerConversas      = null;
 		var timerConversaAberta = null;
-		var conversaAbertaId   = null;
+		var conversaAbertaId    = null;
 
-		// ─── Lista de conversas (dropdown) + badge do avatar ───────────────
+		// ─── Lista de conversas + badges (avatar e link do dropdown) ───────
 
 		function atualizarConversas() {
 			return pedirApi( 'GET', '/conversas?empresa_id=' + empresaId ).then( function ( dados ) {
@@ -106,7 +107,12 @@
 						? conversasCache.map( linhaConversa ).join( '' )
 						: '<div class="ac-mensagens-vazio">Sem conversas — comece uma abaixo.</div>';
 				}
-				if ( badge ) badge.hidden = ! ( dados.por_ler_total > 0 );
+				var temPorLer = dados.por_ler_total > 0;
+				if ( avatarBadge ) avatarBadge.hidden = ! temPorLer;
+				if ( dropdownBadge ) {
+					dropdownBadge.hidden = ! temPorLer;
+					dropdownBadge.textContent = dados.por_ler_total;
+				}
 			} ).catch( function () { /* próximo poll tenta outra vez */ } );
 		}
 
@@ -120,16 +126,8 @@
 			timerConversas = null;
 		}
 
-		if ( listaConversasEl || badge ) {
-			atualizarConversas();
-			iniciarPollConversas();
-		}
-
-		if ( dropdown ) {
-			new MutationObserver( function () {
-				if ( ! dropdown.hidden ) atualizarConversas();
-			} ).observe( dropdown, { attributes: true, attributeFilter: [ 'hidden' ] } );
-		}
+		atualizarConversas();
+		iniciarPollConversas();
 
 		// ─── Mensagens de uma conversa aberta ───────────────────────────────
 
@@ -148,50 +146,62 @@
 			conversaAbertaId = null;
 		}
 
-		// Área de Cliente: clicar numa conversa do dropdown abre a modal
-		// partilhada, com conteúdo montado aqui (não dá para pré-renderizar
-		// todas as conversas na página).
-		function abrirConversaModal( conversaId, assunto ) {
-			if ( ! conversaModalEl ) return;
-			var titulo = document.getElementById( 'cp-conversa-modal-title' );
-			var corpo  = document.getElementById( 'cp-conversa-modal-corpo' );
+		// Página de Mensagens: clicar numa conversa abre o painel inline,
+		// montado aqui (não dá para pré-renderizar todas as conversas).
+		function abrirConversaPainel( conversaId, assunto ) {
+			if ( ! painelConversa ) return;
+			var titulo = document.getElementById( 'cp-conversa-painel-titulo' );
+			var corpo  = document.getElementById( 'cp-conversa-painel-corpo' );
 			if ( titulo ) titulo.textContent = assunto;
 			if ( corpo ) {
 				corpo.innerHTML = '<div id="cp-mensagens-lista" class="ac-mensagens-lista"></div><div style="margin-top:14px">' +
-					formularioMensagemHtml( empresaId, conversaId, 'cp-mensagens-form-modal' ) + '</div>';
+					formularioMensagemHtml( empresaId, conversaId, 'cp-mensagens-form-painel' ) + '</div>';
 			}
-			conversaModalEl.hidden = false;
-			document.getElementById( 'cp-conversa-modal-backdrop' ).hidden = false;
+			painelConversa.hidden = false;
+			painelConversa.scrollIntoView( { behavior: 'smooth', block: 'start' } );
 
+			pararPollConversaAberta();
 			conversaAbertaId = conversaId;
 			carregarMensagensConversa( conversaId );
 			pedirApi( 'POST', '/mensagens/marcar-lida', { empresa_id: empresaId, conversa_id: conversaId } ).then( atualizarConversas );
-			clearInterval( timerConversaAberta );
 			timerConversaAberta = setInterval( function () { carregarMensagensConversa( conversaId ); }, INTERVALO_MS );
 		}
 
-		if ( conversaModalEl ) {
-			new MutationObserver( function () {
-				if ( conversaModalEl.hidden && conversaAbertaId ) {
-					pararPollConversaAberta();
-					atualizarConversas();
-				}
-			} ).observe( conversaModalEl, { attributes: true, attributeFilter: [ 'hidden' ] } );
+		function fecharConversaPainel() {
+			if ( ! painelConversa ) return;
+			painelConversa.hidden = true;
+			pararPollConversaAberta();
+			atualizarConversas();
 		}
+
+		var botaoVoltar = document.getElementById( 'cp-conversa-voltar' );
+		if ( botaoVoltar ) botaoVoltar.addEventListener( 'click', fecharConversaPainel );
 
 		document.addEventListener( 'click', function ( evento ) {
 			var linha = evento.target.closest( '.ac-conversa-row' );
 			if ( ! linha ) return;
 			var id = linha.getAttribute( 'data-conversa-id' );
 			var conversa = conversasCache.filter( function ( c ) { return c.id === id; } )[ 0 ];
-			if ( conversa ) abrirConversaModal( id, conversa.assunto );
+			if ( conversa ) abrirConversaPainel( id, conversa.assunto );
 		} );
+
+		// Veio de "Nova conversa" no "+" do Dashboard (navegação completa,
+		// não SPA) — a página de Mensagens já abre a conversa criada.
+		if ( painelConversa ) {
+			var conversaNaUrl = new URLSearchParams( window.location.search ).get( 'conversa_id' );
+			if ( conversaNaUrl ) {
+				atualizarConversas().then( function () {
+					var conversa = conversasCache.filter( function ( c ) { return c.id === conversaNaUrl; } )[ 0 ];
+					if ( conversa ) abrirConversaPainel( conversa.id, conversa.assunto );
+				} );
+			}
+		}
 
 		// Backoffice: a conversa já vem escolhida (e a lista já renderizada)
 		// no carregamento da página — só falta o poll periódico e marcar
-		// como lida, sem passar pela modal (que não existe aqui).
+		// como lida, sem passar pelo painel (que não existe aqui).
 		var listaInicial = document.getElementById( 'cp-mensagens-lista' );
-		if ( listaInicial && ! conversaModalEl ) {
+		if ( listaInicial && ! painelConversa ) {
 			var campoConversa = document.querySelector( '[data-cp-mensagens-form] [name="conversa_id"]' );
 			var conversaIdBO  = campoConversa ? campoConversa.value : '';
 			if ( conversaIdBO ) {
@@ -202,7 +212,7 @@
 		}
 
 		// ─── Envio de mensagem / criação de conversa (delegado — os
-		// formulários da modal são montados depois deste listener existir) ──
+		// formulários do painel são montados depois deste listener existir) ─
 
 		document.addEventListener( 'submit', function ( evento ) {
 			var formMensagem = evento.target.closest( '[data-cp-mensagens-form]' );
@@ -229,18 +239,33 @@
 				if ( '' === assunto || '' === textoConversa ) return;
 
 				pedirApi( 'POST', '/conversas', { empresa_id: empresaId, assunto: assunto, texto: textoConversa } ).then( function ( dados ) {
+					formConversa.reset(); // nunca deixar o texto da anterior pronto para a próxima.
+
 					var modalDaConversa = formConversa.closest( '.ac-modal' );
-					if ( ! modalDaConversa ) {
-						// Backoffice: navega já com a conversa nova selecionada —
-						// o <select> precisa de recarregar para a ter como opção.
+					if ( modalDaConversa ) {
+						// Atalho "Nova conversa" do "+": fecha a modal e navega
+						// para a página de Mensagens já com a conversa aberta
+						// (mesma página da Área de Cliente, só muda "vista").
+						fecharModal( modalDaConversa );
 						var url = new URL( window.location.href );
-						url.searchParams.set( 'empresa_id', empresaId );
+						url.searchParams.set( 'vista', 'mensagens' );
 						url.searchParams.set( 'conversa_id', dados.conversa.id );
 						window.location.href = url.toString();
 						return;
 					}
-					fecharModal( modalDaConversa );
-					abrirConversaModal( dados.conversa.id, dados.conversa.assunto );
+
+					if ( painelConversa ) {
+						// Já estamos na página de Mensagens: abre já a conversa.
+						abrirConversaPainel( dados.conversa.id, dados.conversa.assunto );
+						return;
+					}
+
+					// Backoffice: navega já com a conversa nova selecionada —
+					// o <select> precisa de recarregar para a ter como opção.
+					var urlBO = new URL( window.location.href );
+					urlBO.searchParams.set( 'empresa_id', empresaId );
+					urlBO.searchParams.set( 'conversa_id', dados.conversa.id );
+					window.location.href = urlBO.toString();
 				} );
 			}
 		} );
@@ -250,10 +275,8 @@
 				pararPollConversas();
 				clearInterval( timerConversaAberta );
 			} else {
-				if ( listaConversasEl || badge ) {
-					atualizarConversas();
-					iniciarPollConversas();
-				}
+				atualizarConversas();
+				iniciarPollConversas();
 				if ( conversaAbertaId ) {
 					timerConversaAberta = setInterval( function () { carregarMensagensConversa( conversaAbertaId ); }, INTERVALO_MS );
 				}

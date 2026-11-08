@@ -172,7 +172,7 @@ else :
 							</button>
 							<div class="ac-user-dropdown" id="cp-user-dropdown" hidden>
 								<?php if ( $tem_mensagens ) : ?>
-									<?php cp_ac_render_conversas_dropdown( $empresa_ativa ); ?>
+									<?php cp_ac_render_mensagens_dropdown_link( $empresa_ativa ); ?>
 									<div class="ac-dropdown-sep"></div>
 								<?php endif; ?>
 								<span id="cp-push-msg" class="ac-dropdown-msg" hidden></span>
@@ -206,7 +206,6 @@ else :
 				<?php endif; ?>
 				<?php if ( $tem_mensagens ) : ?>
 					<?php cp_ac_render_mensagem_modal( $empresa_ativa ); ?>
-					<?php cp_ac_render_conversa_modal(); ?>
 				<?php endif; ?>
 			</main>
 		</div>

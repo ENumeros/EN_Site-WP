@@ -448,15 +448,33 @@ function cp_ac_render_mensagens( $empresa_id, $conversa_id = '' ) {
 	<?php
 }
 
-// Área de Cliente: lista de conversas dentro do dropdown do utilizador
-// (sem moldura própria — o dropdown já é o cartão). O conteúdo de cada
-// conversa (mensagens) é carregado à parte, por JS, na modal partilhada
-// #cp-conversa-modal — não dá para pré-renderizar todas aqui.
-function cp_ac_render_conversas_dropdown( $empresa_id ) {
+// Área de Cliente: a lista de conversas tem página própria agora
+// (cp_ac_vista_mensagens(), em area-cliente-vistas.php) — cresce mal
+// dentro de um dropdown pequeno. O dropdown do utilizador só mostra um
+// link, com o total de não lidas ao lado.
+function cp_ac_render_mensagens_dropdown_link( $empresa_id ) {
+	$por_ler = array_sum( wp_list_pluck( cp_ac_conversas( $empresa_id ), 'por_ler' ) );
+	?>
+	<a class="ac-dropdown-item" href="<?php echo esc_url( cp_ac_vista_url( 'mensagens' ) ); ?>">
+		<span><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></span>
+		<span id="cp-mensagens-dropdown-badge" class="ac-conversa-badge" <?php echo $por_ler ? '' : 'hidden'; ?>><?php echo (int) $por_ler; ?></span>
+	</a>
+	<?php
+}
+
+// Página própria (Área de Cliente): lista de conversas + painel da
+// conversa aberta (montado por JS a cada clique numa linha — não dá
+// para pré-renderizar todas as conversas sem saber quantas há) + "Nova
+// conversa". Sem acesso pelo menu lateral (de propósito, como
+// Lembretes) — só pelo link no dropdown do utilizador ou pelo atalho do
+// "+" no Dashboard.
+function cp_ac_render_mensagens_pagina( $empresa_id ) {
 	$conversas = cp_ac_conversas( $empresa_id );
 	?>
-	<div class="ac-dropdown-mensagens">
-		<div class="ac-dropdown-mensagens-head"><?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?></div>
+	<div class="ac-card" style="padding:22px">
+		<div class="ac-sec-head">
+			<h3 style="font-size:16px"><?php esc_html_e( 'Conversas', 'contabilidade-pro' ); ?></h3>
+		</div>
 		<div id="cp-conversas-lista">
 			<?php if ( empty( $conversas ) ) : ?>
 				<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem conversas — comece uma abaixo.', 'contabilidade-pro' ); ?></div>
@@ -472,24 +490,23 @@ function cp_ac_render_conversas_dropdown( $empresa_id ) {
 				<?php endforeach; ?>
 			<?php endif; ?>
 		</div>
-		<button type="button" class="ac-btn ac-btn-ghost" data-cp-fab-target="cp-nova-conversa-modal" style="width:100%;margin-top:8px"><?php esc_html_e( 'Nova conversa', 'contabilidade-pro' ); ?></button>
 	</div>
-	<?php
-}
 
-// Modal partilhada de uma conversa (Área de Cliente) — conteúdo (título,
-// lista, formulário) preenchido por JS a cada abertura via fetch.
-function cp_ac_render_conversa_modal() {
-	?>
-	<div id="cp-conversa-modal-backdrop" class="ac-modal-backdrop" data-cp-fab-modal hidden></div>
-	<div id="cp-conversa-modal" class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="cp-conversa-modal-title" hidden>
-		<div class="ac-modal-head">
-			<h3 id="cp-conversa-modal-title" style="font-size:16px"></h3>
-			<button type="button" class="ac-modal-close" data-cp-fab-modal-close aria-label="<?php esc_attr_e( 'Fechar', 'contabilidade-pro' ); ?>">
-				<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
-			</button>
+	<div id="cp-conversa-painel" class="ac-card" style="padding:22px" hidden>
+		<div class="ac-sec-head">
+			<div style="display:flex;align-items:center;gap:12px">
+				<button type="button" id="cp-conversa-voltar" class="ac-btn ac-btn-ghost" style="padding:7px 12px;font-size:12.5px">&larr; <?php esc_html_e( 'Voltar', 'contabilidade-pro' ); ?></button>
+				<h3 id="cp-conversa-painel-titulo" style="font-size:16px"></h3>
+			</div>
 		</div>
-		<div id="cp-conversa-modal-corpo"></div>
+		<div id="cp-conversa-painel-corpo"></div>
+	</div>
+
+	<div class="ac-card" style="padding:22px">
+		<div class="ac-sec-head">
+			<h3 style="font-size:16px"><?php esc_html_e( 'Nova conversa', 'contabilidade-pro' ); ?></h3>
+		</div>
+		<?php cp_ac_render_conversa_form( $empresa_id, 'cp-conversa-form-pagina' ); ?>
 	</div>
 	<?php
 }

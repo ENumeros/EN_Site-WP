@@ -105,14 +105,20 @@ else :
 				$bo_initials  = mb_strtoupper( mb_substr( $bo_parts[0], 0, 1 ) . ( isset( $bo_parts[1] ) ? mb_substr( $bo_parts[1], 0, 1 ) : mb_substr( $bo_parts[0], 1, 1 ) ) );
 				?>
 				<div class="ac-user">
-					<span id="cp-push-msg" class="ac-sec-sub" style="max-width:220px" hidden></span>
-					<button type="button" class="ac-btn ac-btn-ghost" id="cp-push-btn" style="padding:7px 12px;font-size:12.5px" aria-pressed="false" hidden><?php esc_html_e( 'Ativar notificações', 'contabilidade-pro' ); ?></button>
 					<button type="button" class="ac-theme-toggle" id="ac-theme-toggle" aria-pressed="false" aria-label="<?php esc_attr_e( 'Alternar modo escuro', 'contabilidade-pro' ); ?>">
 						<svg class="ac-theme-toggle__sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
 						<svg class="ac-theme-toggle__moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 					</button>
-					<div class="ac-avatar"><?php echo esc_html( $bo_initials ); ?></div>
-					<span class="ac-user-name"><?php echo esc_html( $bo_user_name ); ?></span>
+					<div class="ac-user-menu">
+						<button type="button" class="ac-user-trigger" id="cp-user-menu-btn" aria-haspopup="true" aria-expanded="false">
+							<div class="ac-avatar"><?php echo esc_html( $bo_initials ); ?></div>
+							<span class="ac-user-name"><?php echo esc_html( $bo_user_name ); ?></span>
+						</button>
+						<div class="ac-user-dropdown" id="cp-user-dropdown" hidden>
+							<span id="cp-push-msg" class="ac-dropdown-msg" hidden></span>
+							<button type="button" class="ac-dropdown-item" id="cp-push-btn" aria-pressed="false" hidden><?php esc_html_e( 'Ativar notificações', 'contabilidade-pro' ); ?></button>
+						</div>
+					</div>
 				</div>
 			</header>
 

@@ -169,11 +169,17 @@ add_action( 'admin_post_cp_tarefa_concluir', 'cp_ac_handle_tarefa_concluir' );
 // ─── UI partilhada (Área de Cliente + Backoffice) ──────────────────────────
 
 function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
-	$user_id = get_current_user_id();
-	$tarefas = cp_ac_tarefas( $empresa_id );
+	$user_id       = get_current_user_id();
+	$tarefas       = cp_ac_tarefas( $empresa_id );
+	$mostrar_todos = isset( $_GET['cp_lembretes'] ) && 'todos' === $_GET['cp_lembretes'];
+
 	usort( $tarefas, function ( $a, $b ) {
 		if ( $a['concluido'] !== $b['concluido'] ) return $a['concluido'] ? 1 : -1;
 		return strcmp( $b['criado_em'], $a['criado_em'] );
+	} );
+
+	$visiveis = $mostrar_todos ? $tarefas : array_filter( $tarefas, function ( $tarefa ) {
+		return empty( $tarefa['concluido'] );
 	} );
 	?>
 	<?php if ( $mostrar_nome_empresa ) : ?>
@@ -190,11 +196,27 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 		</form>
 	</div>
 
-	<?php if ( empty( $tarefas ) ) : ?>
-		<?php cp_ac_vazio( __( 'Sem lembretes no momento', 'contabilidade-pro' ), __( 'Quando a equipa lhe pedir alguma ação, ou deixar uma nota, aparece aqui.', 'contabilidade-pro' ) ); ?>
+	<?php if ( ! empty( $tarefas ) ) : ?>
+		<div style="display:flex;gap:8px;margin:14px 0 4px">
+			<a href="<?php echo esc_url( remove_query_arg( 'cp_lembretes' ) ); ?>" class="ac-btn <?php echo $mostrar_todos ? 'ac-btn-ghost' : 'ac-btn-primary'; ?>" style="padding:6px 12px;font-size:12.5px"><?php esc_html_e( 'Ativos', 'contabilidade-pro' ); ?></a>
+			<a href="<?php echo esc_url( add_query_arg( 'cp_lembretes', 'todos' ) ); ?>" class="ac-btn <?php echo $mostrar_todos ? 'ac-btn-primary' : 'ac-btn-ghost'; ?>" style="padding:6px 12px;font-size:12.5px"><?php esc_html_e( 'Todos', 'contabilidade-pro' ); ?></a>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( empty( $visiveis ) ) : ?>
+		<?php
+		cp_ac_vazio(
+			$mostrar_todos || empty( $tarefas )
+				? __( 'Sem lembretes no momento', 'contabilidade-pro' )
+				: __( 'Sem lembretes ativos', 'contabilidade-pro' ),
+			$mostrar_todos || empty( $tarefas )
+				? __( 'Quando a equipa lhe pedir alguma ação, ou deixar uma nota, aparece aqui.', 'contabilidade-pro' )
+				: __( 'Todos os lembretes estão concluídos — veja "Todos" para os consultar.', 'contabilidade-pro' )
+		);
+		?>
 	<?php else : ?>
 		<div class="ac-card" style="padding:22px">
-			<?php foreach ( $tarefas as $tarefa ) :
+			<?php foreach ( $visiveis as $tarefa ) :
 				$pode_concluir = cp_ac_tarefa_pode_concluir( $tarefa, $user_id );
 				$concluida     = ! empty( $tarefa['concluido'] );
 				?>

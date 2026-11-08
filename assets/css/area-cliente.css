@@ -172,10 +172,15 @@ a:hover{color:var(--ac-navy)}
 .ac-pwa-instrucoes{margin:14px 32px 0;padding:12px 16px;background:var(--ac-bg);border:1px solid var(--ac-line);border-radius:10px;font-size:13px;color:var(--ac-text)}
 
 /* Botão flutuante (ex.: adicionar documento), canto inferior direito */
-.ac-fab-wrap{position:fixed;right:24px;bottom:24px;z-index:40}
-.ac-fab{width:56px;height:56px;border-radius:50%;background:var(--ac-navy);color:var(--ac-on-navy);border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer}
+.ac-fab{position:fixed;right:24px;bottom:24px;z-index:40;height:50px;padding:0 20px;border-radius:25px;background:var(--ac-navy);color:var(--ac-on-navy);border:none;display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600;font-family:'Public Sans',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer}
 .ac-fab:hover{background:var(--ac-navy-strong)}
-.ac-fab-panel{position:absolute;right:0;bottom:68px;width:280px;max-width:calc(100vw - 48px);background:var(--ac-surface);border:1px solid var(--ac-line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:16px}
-.ac-fab-panel[hidden]{display:none}
-.ac-fab-panel-head{font-size:14.5px;font-weight:600;margin-bottom:10px}
-.ac-fab-panel .ac-dropzone{padding:18px}
+
+/* Modal (ex.: enviar documento) */
+.ac-modal-backdrop{position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:49}
+.ac-modal-backdrop[hidden]{display:none}
+.ac-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;max-width:calc(100vw - 48px);background:var(--ac-surface);border:1px solid var(--ac-line);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.3);padding:22px;z-index:50}
+.ac-modal[hidden]{display:none}
+.ac-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ac-modal-close{background:none;border:none;color:var(--ac-muted);cursor:pointer;padding:4px;display:flex}
+.ac-modal-close:hover{color:var(--ac-text)}
+.ac-modal .ac-dropzone{padding:20px}

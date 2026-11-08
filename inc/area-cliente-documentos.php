@@ -116,18 +116,24 @@ function cp_ac_render_documento_form() {
 	<?php
 }
 
-// Botão flutuante (canto inferior direito) — abre um pequeno painel com o
-// formulário acima, sem ocupar espaço fixo no ecrã. Usado no Dashboard.
+// Botão flutuante (canto inferior direito) — abre um modal com o formulário
+// acima, sem ocupar espaço fixo no ecrã. Usado no Dashboard.
 function cp_ac_render_documentos_fab() {
 	?>
-	<div class="ac-fab-wrap">
-		<div id="cp-doc-fab-panel" class="ac-fab-panel" hidden>
-			<div class="ac-fab-panel-head"><?php esc_html_e( 'Enviar documento', 'contabilidade-pro' ); ?></div>
-			<?php cp_ac_render_documento_form(); ?>
+	<button type="button" id="cp-doc-fab-btn" class="ac-fab" aria-haspopup="dialog" aria-controls="cp-doc-modal">
+		<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+		<span><?php esc_html_e( 'Adicionar documento', 'contabilidade-pro' ); ?></span>
+	</button>
+
+	<div id="cp-doc-modal-backdrop" class="ac-modal-backdrop" hidden></div>
+	<div id="cp-doc-modal" class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="cp-doc-modal-title" hidden>
+		<div class="ac-modal-head">
+			<h3 id="cp-doc-modal-title" style="font-size:16px"><?php esc_html_e( 'Enviar documento', 'contabilidade-pro' ); ?></h3>
+			<button type="button" id="cp-doc-modal-close" class="ac-modal-close" aria-label="<?php esc_attr_e( 'Fechar', 'contabilidade-pro' ); ?>">
+				<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+			</button>
 		</div>
-		<button type="button" id="cp-doc-fab-btn" class="ac-fab" aria-expanded="false" aria-controls="cp-doc-fab-panel" aria-label="<?php esc_attr_e( 'Adicionar documento', 'contabilidade-pro' ); ?>">
-			<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-		</button>
+		<?php cp_ac_render_documento_form(); ?>
 	</div>
 	<?php
 }

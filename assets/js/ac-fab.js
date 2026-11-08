@@ -1,36 +1,31 @@
 // Botão flutuante do Dashboard (ex.: "Adicionar documento") — abre/fecha
-// o painel com o formulário, mesmo padrão do menu do utilizador na topbar.
+// o modal com o formulário.
 ( function () {
 	'use strict';
 
 	document.addEventListener( 'DOMContentLoaded', function () {
-		var botao = document.getElementById( 'cp-doc-fab-btn' );
-		var painel = document.getElementById( 'cp-doc-fab-panel' );
-		if ( ! botao || ! painel ) return;
+		var botao    = document.getElementById( 'cp-doc-fab-btn' );
+		var modal    = document.getElementById( 'cp-doc-modal' );
+		var backdrop = document.getElementById( 'cp-doc-modal-backdrop' );
+		var fechar_btn = document.getElementById( 'cp-doc-modal-close' );
+		if ( ! botao || ! modal || ! backdrop ) return;
 
-		function fechar() {
-			painel.hidden = true;
-			botao.setAttribute( 'aria-expanded', 'false' );
+		function abrir() {
+			modal.hidden    = false;
+			backdrop.hidden = false;
 		}
 
-		botao.addEventListener( 'click', function ( evento ) {
-			evento.stopPropagation();
-			if ( painel.hidden ) {
-				painel.hidden = false;
-				botao.setAttribute( 'aria-expanded', 'true' );
-			} else {
-				fechar();
-			}
-		} );
+		function fechar() {
+			modal.hidden    = true;
+			backdrop.hidden = true;
+		}
 
-		document.addEventListener( 'click', function ( evento ) {
-			if ( ! painel.hidden && ! painel.contains( evento.target ) && evento.target !== botao ) {
-				fechar();
-			}
-		} );
+		botao.addEventListener( 'click', abrir );
+		backdrop.addEventListener( 'click', fechar );
+		if ( fechar_btn ) fechar_btn.addEventListener( 'click', fechar );
 
 		document.addEventListener( 'keydown', function ( evento ) {
-			if ( 'Escape' === evento.key ) fechar();
+			if ( 'Escape' === evento.key && ! modal.hidden ) fechar();
 		} );
 	} );
 } )();

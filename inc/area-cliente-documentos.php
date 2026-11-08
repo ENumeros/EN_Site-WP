@@ -97,7 +97,40 @@ function cp_ac_handle_documento_apagar() {
 }
 add_action( 'admin_post_cp_documento_apagar', 'cp_ac_handle_documento_apagar' );
 
-// ─── UI partilhada (Dashboard + vista Documentos) ──────────────────────────
+// ─── UI partilhada ──────────────────────────────────────────────────────────
+
+// Só o formulário de envio (dropzone) — reutilizado pela vista Documentos
+// e pelo botão flutuante do Dashboard.
+function cp_ac_render_documento_form() {
+	?>
+	<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<?php wp_nonce_field( 'cp_documento_upload', 'cp_documento_nonce' ); ?>
+		<input type="hidden" name="action" value="cp_documento_upload">
+		<div class="ac-dropzone">
+			<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
+			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
+			<input type="file" name="ficheiro" required style="font-size:12.5px;max-width:260px">
+			<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Carregar Documento', 'contabilidade-pro' ); ?></button>
+		</div>
+	</form>
+	<?php
+}
+
+// Botão flutuante (canto inferior direito) — abre um pequeno painel com o
+// formulário acima, sem ocupar espaço fixo no ecrã. Usado no Dashboard.
+function cp_ac_render_documentos_fab() {
+	?>
+	<div class="ac-fab-wrap">
+		<div id="cp-doc-fab-panel" class="ac-fab-panel" hidden>
+			<div class="ac-fab-panel-head"><?php esc_html_e( 'Enviar documento', 'contabilidade-pro' ); ?></div>
+			<?php cp_ac_render_documento_form(); ?>
+		</div>
+		<button type="button" id="cp-doc-fab-btn" class="ac-fab" aria-expanded="false" aria-controls="cp-doc-fab-panel" aria-label="<?php esc_attr_e( 'Adicionar documento', 'contabilidade-pro' ); ?>">
+			<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+		</button>
+	</div>
+	<?php
+}
 
 function cp_ac_render_documentos( $empresa_id ) {
 	$documentos = cp_ac_documentos( $empresa_id );
@@ -111,16 +144,7 @@ function cp_ac_render_documentos( $empresa_id ) {
 			</div>
 		</div>
 
-		<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<?php wp_nonce_field( 'cp_documento_upload', 'cp_documento_nonce' ); ?>
-			<input type="hidden" name="action" value="cp_documento_upload">
-			<div class="ac-dropzone">
-				<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
-				<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
-				<input type="file" name="ficheiro" required style="font-size:12.5px;max-width:260px">
-				<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Carregar Documento', 'contabilidade-pro' ); ?></button>
-			</div>
-		</form>
+		<?php cp_ac_render_documento_form(); ?>
 
 		<?php if ( empty( $documentos ) ) : ?>
 			<div style="margin-top:16px;color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não enviou nenhum documento.', 'contabilidade-pro' ); ?></div>

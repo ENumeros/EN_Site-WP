@@ -156,10 +156,6 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		$documentos_sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
 		$documentos_erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
 		?>
-		<div>
-			<h2 style="font-size:18px"><?php esc_html_e( 'Documentos', 'contabilidade-pro' ); ?></h2>
-		</div>
-
 		<?php if ( in_array( $documentos_sucesso, [ 'documento_enviado', 'documento_apagado' ], true ) ) :
 			$documentos_titulos = [
 				'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
@@ -177,7 +173,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			</div>
 		<?php endif; ?>
 
-		<?php cp_ac_render_documentos( $empresa_id ); ?>
+		<?php cp_ac_render_documentos_fab(); ?>
 	<?php endif; ?>
 	<?php
 }

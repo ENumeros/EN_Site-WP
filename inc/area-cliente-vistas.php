@@ -134,10 +134,16 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			<h2 style="font-size:18px"><?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?></h2>
 		</div>
 
-		<?php if ( in_array( $lembretes_sucesso, [ 'tarefa_criada', 'tarefa_atualizada' ], true ) ) : ?>
+		<?php if ( in_array( $lembretes_sucesso, [ 'tarefa_criada', 'tarefa_atualizada', 'tarefa_apagada' ], true ) ) :
+			$lembretes_titulos = [
+				'tarefa_criada'     => __( 'Lembrete adicionado', 'contabilidade-pro' ),
+				'tarefa_atualizada' => __( 'Lembrete atualizado', 'contabilidade-pro' ),
+				'tarefa_apagada'    => __( 'Lembrete apagado', 'contabilidade-pro' ),
+			];
+			?>
 			<div class="ac-status-banner green">
 				<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
-				<div><div class="ac-status-title"><?php echo 'tarefa_criada' === $lembretes_sucesso ? esc_html__( 'Lembrete adicionado', 'contabilidade-pro' ) : esc_html__( 'Lembrete atualizado', 'contabilidade-pro' ); ?></div></div>
+				<div><div class="ac-status-title"><?php echo esc_html( $lembretes_titulos[ $lembretes_sucesso ] ); ?></div></div>
 			</div>
 		<?php elseif ( $lembretes_erro ) : ?>
 			<div class="ac-status-banner amber">

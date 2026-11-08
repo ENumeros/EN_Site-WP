@@ -59,6 +59,20 @@ function cp_ac_tarefa_concluir( $empresa_id, $tarefa_id, $concluido, $user_id ) 
 	return false;
 }
 
+// Mesma regra de permissão de cp_ac_tarefa_pode_concluir() — quem pode
+// concluir, também pode apagar.
+function cp_ac_tarefa_apagar( $empresa_id, $tarefa_id, $user_id ) {
+	$tarefas = cp_ac_tarefas( $empresa_id );
+	foreach ( $tarefas as $i => $tarefa ) {
+		if ( $tarefa['id'] !== $tarefa_id ) continue;
+		if ( ! cp_ac_tarefa_pode_concluir( $tarefa, $user_id ) ) return false;
+		unset( $tarefas[ $i ] );
+		update_post_meta( $empresa_id, '_cp_tarefas', array_values( $tarefas ) );
+		return true;
+	}
+	return false;
+}
+
 // A que empresa um pedido (criar/concluir) se refere: a equipa escolhe
 // explicitamente (vários clientes); nunca confiar num empresa_id vindo
 // de um cliente — é sempre a empresa ativa da sua própria sessão.
@@ -166,6 +180,29 @@ function cp_ac_handle_tarefa_concluir() {
 }
 add_action( 'admin_post_cp_tarefa_concluir', 'cp_ac_handle_tarefa_concluir' );
 
+// ─── Apagar ─────────────────────────────────────────────────────────────────
+
+function cp_ac_handle_tarefa_apagar() {
+	if ( ! is_user_logged_in() ) wp_die( esc_html__( 'Sessão inválida.', 'contabilidade-pro' ) );
+	if ( ! isset( $_POST['cp_tarefa_nonce'] ) || ! wp_verify_nonce( $_POST['cp_tarefa_nonce'], 'cp_tarefa_apagar' ) ) {
+		wp_die( esc_html__( 'Pedido inválido. Volta à página e tenta novamente.', 'contabilidade-pro' ) );
+	}
+
+	$user_id    = get_current_user_id();
+	$empresa_id = cp_ac_tarefa_resolver_empresa( isset( $_POST['empresa_id'] ) ? absint( $_POST['empresa_id'] ) : 0, $user_id );
+	$tarefa_id  = isset( $_POST['tarefa_id'] ) ? sanitize_text_field( wp_unslash( $_POST['tarefa_id'] ) ) : '';
+	$voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
+
+	if ( ! $empresa_id || '' === $tarefa_id || ! cp_ac_tarefa_apagar( $empresa_id, $tarefa_id, $user_id ) ) {
+		wp_safe_redirect( add_query_arg( 'cp_erro', 'tarefa_invalida', $voltar ) );
+		exit;
+	}
+
+	wp_safe_redirect( add_query_arg( 'cp_sucesso', 'tarefa_apagada', $voltar ) );
+	exit;
+}
+add_action( 'admin_post_cp_tarefa_apagar', 'cp_ac_handle_tarefa_apagar' );
+
 // ─── UI partilhada (Área de Cliente + Backoffice) ──────────────────────────
 
 function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
@@ -208,7 +245,7 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 				echo esc_html(
 					$mostrar_todos || empty( $tarefas )
 						? __( 'Sem lembretes no momento — quando a equipa lhe pedir alguma ação, ou deixar uma nota, aparece aqui.', 'contabilidade-pro' )
-						: __( 'Sem lembretes ativos — todos estão concluídos; veja "Todos" para os consultar.', 'contabilidade-pro' )
+						: __( 'Sem lembretes ativos', 'contabilidade-pro' )
 				);
 				?>
 			</div>
@@ -219,23 +256,7 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 					$concluida     = ! empty( $tarefa['concluido'] );
 					?>
 					<div class="ac-todo-item">
-						<?php if ( $pode_concluir ) : ?>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-								<?php wp_nonce_field( 'cp_tarefa_concluir', 'cp_tarefa_nonce' ); ?>
-								<input type="hidden" name="action" value="cp_tarefa_concluir">
-								<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
-								<input type="hidden" name="tarefa_id" value="<?php echo esc_attr( $tarefa['id'] ); ?>">
-								<input type="hidden" name="concluido" value="<?php echo $concluida ? '0' : '1'; ?>">
-								<button type="submit" class="ac-todo-check<?php echo $concluida ? ' done' : ''; ?>" aria-label="<?php echo $concluida ? esc_attr__( 'Marcar como não feita', 'contabilidade-pro' ) : esc_attr__( 'Marcar como feita', 'contabilidade-pro' ); ?>">
-									<?php if ( $concluida ) : ?><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg><?php endif; ?>
-								</button>
-							</form>
-						<?php else : ?>
-							<span class="ac-todo-check<?php echo $concluida ? ' done' : ''; ?>" style="cursor:default">
-								<?php if ( $concluida ) : ?><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg><?php endif; ?>
-							</span>
-						<?php endif; ?>
-						<div>
+						<div style="flex:1">
 							<div class="ac-todo-title<?php echo $concluida ? ' done' : ''; ?>"><?php echo esc_html( $tarefa['titulo'] ); ?></div>
 							<div class="ac-todo-meta">
 								<?php
@@ -249,6 +270,31 @@ function cp_ac_render_tarefas( $empresa_id, $mostrar_nome_empresa = false ) {
 								?>
 							</div>
 						</div>
+						<?php if ( $pode_concluir ) : ?>
+							<div class="ac-todo-actions">
+								<?php if ( ! $concluida ) : ?>
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+										<?php wp_nonce_field( 'cp_tarefa_concluir', 'cp_tarefa_nonce' ); ?>
+										<input type="hidden" name="action" value="cp_tarefa_concluir">
+										<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
+										<input type="hidden" name="tarefa_id" value="<?php echo esc_attr( $tarefa['id'] ); ?>">
+										<input type="hidden" name="concluido" value="1">
+										<button type="submit" class="ac-todo-btn ac-todo-btn-check" aria-label="<?php esc_attr_e( 'Finalizar', 'contabilidade-pro' ); ?>">
+											<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg>
+										</button>
+									</form>
+								<?php endif; ?>
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Apagar este lembrete?', 'contabilidade-pro' ) ); ?>');">
+									<?php wp_nonce_field( 'cp_tarefa_apagar', 'cp_tarefa_nonce' ); ?>
+									<input type="hidden" name="action" value="cp_tarefa_apagar">
+									<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
+									<input type="hidden" name="tarefa_id" value="<?php echo esc_attr( $tarefa['id'] ); ?>">
+									<button type="submit" class="ac-todo-btn ac-todo-btn-del" aria-label="<?php esc_attr_e( 'Apagar', 'contabilidade-pro' ); ?>">
+										<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+									</button>
+								</form>
+							</div>
+						<?php endif; ?>
 					</div>
 				<?php endforeach; ?>
 			</div>

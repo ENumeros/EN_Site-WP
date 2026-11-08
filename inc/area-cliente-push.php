@@ -354,6 +354,7 @@ function cp_push_rotas_estaticas() {
 	$pedido = isset( $_SERVER['REQUEST_URI'] ) ? wp_parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) : '';
 
 	if ( '/sw-push.js' === $pedido ) {
+		status_header( 200 );
 		header( 'Content-Type: application/javascript; charset=utf-8' );
 		readfile( get_template_directory() . '/assets/js/push-sw.js' );
 		exit;
@@ -361,6 +362,7 @@ function cp_push_rotas_estaticas() {
 
 	if ( '/manifest.webmanifest' === $pedido || '/manifest-backoffice.webmanifest' === $pedido ) {
 		$backoffice = '/manifest-backoffice.webmanifest' === $pedido;
+		status_header( 200 );
 		header( 'Content-Type: application/manifest+json; charset=utf-8' );
 		echo wp_json_encode( [
 			'name'             => get_bloginfo( 'name' ) . ' — ' . ( $backoffice ? __( 'Backoffice', 'contabilidade-pro' ) : __( 'Área de Cliente', 'contabilidade-pro' ) ),
@@ -374,6 +376,11 @@ function cp_push_rotas_estaticas() {
 				[
 					'src'   => get_template_directory_uri() . '/assets/img/favicon-192.png',
 					'sizes' => '192x192',
+					'type'  => 'image/png',
+				],
+				[
+					'src'   => get_template_directory_uri() . '/assets/img/favicon-512.png',
+					'sizes' => '512x512',
 					'type'  => 'image/png',
 				],
 			],

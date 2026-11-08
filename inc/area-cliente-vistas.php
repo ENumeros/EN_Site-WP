@@ -84,7 +84,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			$ultimo = ! empty( $mapas ) ? $mapas[0] : null;
 			?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Último mapa de gestão', 'contabilidade-pro' ); ?></div>
+				<div class="ac-stat-label"><?php esc_html_e( 'Mapa de Gestão', 'contabilidade-pro' ); ?></div>
 				<?php if ( $ultimo ) : ?>
 					<div style="font-family:'Fraunces',serif;font-size:19px;line-height:1.3"><?php echo esc_html( $ultimo['titulo'] ); ?></div>
 					<?php if ( ! empty( $ultimo['publicado_em'] ) ) : ?>
@@ -93,7 +93,6 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 					<a href="<?php echo esc_url( cp_ac_vista_url( 'mapas_gestao' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Descarregar →', 'contabilidade-pro' ); ?></a>
 				<?php else : ?>
 					<div style="font-family:'Fraunces',serif;font-size:19px">—</div>
-					<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Ainda não há mapas publicados', 'contabilidade-pro' ); ?></div>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
@@ -102,7 +101,6 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Extratos & SAF-T (mês corrente)', 'contabilidade-pro' ); ?></div>
 				<div style="font-family:'Fraunces',serif;font-size:19px">—</div>
-				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Não ativo para este cliente', 'contabilidade-pro' ); ?></div>
 			</div>
 		<?php endif; ?>
 
@@ -113,7 +111,6 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Documentos pendentes', 'contabilidade-pro' ); ?></div>
 				<div style="font-family:'Fraunces',serif;font-size:26px"><?php echo esc_html( $doc_pendentes ); ?></div>
-				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Pedidos específicos da equipa', 'contabilidade-pro' ); ?></div>
 				<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
 			</div>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">

@@ -112,6 +112,17 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   "Lembretes", não "Tarefas" — os nomes internos no código continuam
   `tarefa`/`tarefas` por não serem visíveis ao utilizador; só renomear
   também o código se isto um dia crescer para uma gestão de tarefas real).
+- **Mensagens** (`inc/area-cliente-mensagens.php`): a única ferramenta que
+  foge ao padrão "admin-post.php + reload" — a lista tem de atualizar
+  sozinha, sem refresh. Por isso lê e escreve por REST (`GET`/`POST
+  cp/v1/mensagens`), com `assets/js/ac-mensagens.js` a fazer polling (a
+  cada 12s, pausado com `document.hidden`) e o envio por `fetch`, em vez
+  do formulário clássico — nenhuma outra ferramenta deve copiar este
+  padrão só porque está ali ao lado; é a exceção, não o novo normal.
+  Mesma lógica de resolução de empresa anti-adulteração das outras
+  ferramentas partilhadas (`cp_ac_mensagem_resolver_empresa()`, cópia de
+  `cp_ac_tarefa_resolver_empresa()`), e sem página própria na Área de
+  Cliente pela mesma razão que Lembretes — vive só no Dashboard.
 
 ## Backoffice
 
@@ -141,13 +152,15 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   upload real), repete exatamente o padrão já usado em
   `cp_ac_handle_pendente_resposta()`: só chamar
   `cp_push_notificar_equipa()` depois de o dado estar mesmo gravado.
-- **Excecão deliberada ao "não tem ecrã de gestão próprio"**: a secção
-  "Lembretes" do Backoffice é gestão a sério (criar/concluir lembretes de
-  qualquer empresa), decidida explicitamente porque é o mesmo
-  mecanismo partilhado com a Área de Cliente (`cp_ac_render_tarefas()`,
-  ver secção "Área de Cliente" acima), não um ecrã novo construído do
-  zero. Não tratar isto como precedente para adicionar outra gestão
-  aqui sem decisão igualmente explícita.
+- **Excecão deliberada ao "não tem ecrã de gestão próprio"**: as secções
+  "Lembretes" e "Mensagens" do Backoffice são gestão a sério (criar/
+  concluir lembretes, trocar mensagens, de qualquer empresa), decidido
+  explicitamente porque é o mesmo mecanismo partilhado com a Área de
+  Cliente (`cp_ac_render_tarefas()`/`cp_ac_render_mensagens()`, ver
+  secção "Área de Cliente" acima), não um ecrã novo construído do zero.
+  Partilham o mesmo seletor de empresa (`$bo_empresa_id`) — uma escolha
+  só, não uma por secção. Não tratar isto como precedente para
+  adicionar outra gestão aqui sem decisão igualmente explícita.
 
 ## Convenções gerais (nas três superfícies)
 

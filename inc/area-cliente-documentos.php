@@ -109,8 +109,8 @@ function cp_ac_render_documento_form() {
 		<div class="ac-dropzone">
 			<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
 			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
-			<input type="file" name="ficheiro" required style="font-size:12.5px;max-width:260px">
-			<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Carregar Documento', 'contabilidade-pro' ); ?></button>
+			<input type="file" name="ficheiro" required class="ac-file-input" style="font-size:12.5px;max-width:260px">
+			<button class="ac-btn ac-btn-ghost" type="submit"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
 		</div>
 	</form>
 	<?php

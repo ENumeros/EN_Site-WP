@@ -85,6 +85,16 @@ function cp_ac_registar_cpt_empresa() {
 }
 add_action( 'init', 'cp_ac_registar_cpt_empresa' );
 
+// "work_id - Nome", para a equipa confirmar rapidamente que está na
+// empresa certa (o code interno da app Work só interessa à equipa — o
+// cliente nunca vê isto, só o nome). Sem work_id (empresa ainda não
+// sincronizada), mostra só o nome.
+function cp_ac_empresa_label( $empresa_id ) {
+	$work_id = get_post_meta( $empresa_id, '_cp_work_id', true );
+	$nome    = get_the_title( $empresa_id );
+	return $work_id ? $work_id . ' - ' . $nome : $nome;
+}
+
 // ─── Associação Utilizador ↔ Empresas ──────────────────────────────────────
 // Lista de IDs de "cp_empresa" guardada no usermeta 'cp_empresas'.
 

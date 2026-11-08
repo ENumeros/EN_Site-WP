@@ -182,7 +182,7 @@ else :
 							<select name="empresa_id" id="cp-bo-empresa" onchange="this.form.submit()" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
 								<option value=""><?php esc_html_e( 'Escolha uma empresa…', 'contabilidade-pro' ); ?></option>
 								<?php foreach ( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) as $bo_empresa ) : ?>
-									<option value="<?php echo esc_attr( $bo_empresa->ID ); ?>" <?php selected( $bo_empresa_id, $bo_empresa->ID ); ?>><?php echo esc_html( $bo_empresa->post_title ); ?></option>
+									<option value="<?php echo esc_attr( $bo_empresa->ID ); ?>" <?php selected( $bo_empresa_id, $bo_empresa->ID ); ?>><?php echo esc_html( cp_ac_empresa_label( $bo_empresa->ID ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</form>

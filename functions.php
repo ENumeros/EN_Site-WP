@@ -13,6 +13,7 @@ require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
 require_once get_template_directory() . '/inc/area-cliente-tarefas.php';
 require_once get_template_directory() . '/inc/area-cliente-documentos.php';
 require_once get_template_directory() . '/inc/area-cliente-mensagens.php';
+require_once get_template_directory() . '/inc/area-cliente-visao-financeira.php';
 
 // ─── Barra de admin do WP: desligada na Área de Cliente/Backoffice ────────
 // Estas páginas têm a sua própria topbar (ac-topbar) — a barra nativa do
@@ -154,6 +155,24 @@ function cp_enqueue_assets() {
             ] ) . ';',
             'before'
         );
+
+        // Visão financeira: só carrega na própria vista — o JSON completo
+        // (todos os meses) vai inline, para trocar de mês sem pedir nada
+        // ao servidor (ver inc/area-cliente-visao-financeira.php).
+        if ( is_page( 'area-de-cliente' ) && isset( $_GET['vista'] ) && 'visao_financeira' === $_GET['vista'] ) {
+            wp_enqueue_script(
+                'cp-ac-visao-financeira',
+                get_template_directory_uri() . '/assets/js/ac-visao-financeira.js',
+                [],
+                '1.0.0',
+                true
+            );
+            wp_add_inline_script(
+                'cp-ac-visao-financeira',
+                'window.cpVisaoFinanceira = ' . wp_json_encode( cp_ac_visao_financeira( cp_ac_empresa_ativa() ) ) . ';',
+                'before'
+            );
+        }
 
         $chaves_vapid = cp_push_vapid_keys();
         wp_enqueue_script(

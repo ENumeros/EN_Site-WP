@@ -28,6 +28,11 @@ function cp_ac_ferramentas() {
 			'grupo' => '',
 			'icon'  => '<path d="M4 5.5h16v11H8l-4 3.5z"></path>',
 		],
+		'visao_financeira'   => [
+			'label' => __( 'Visão financeira', 'contabilidade-pro' ),
+			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
+			'icon'  => '<path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 19v-6l3.5 2.5L15 9l4 4"></path>',
+		],
 		'conta_corrente'     => [
 			'label' => __( 'Conta Corrente', 'contabilidade-pro' ),
 			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
@@ -326,6 +331,8 @@ function cp_ac_render_matriz_page() {
 		});
 		</script>
 		<?php endif; ?>
+
+		<?php do_action( 'cp_ac_matriz_extra', $empresas ); ?>
 	</div>
 	<?php
 }

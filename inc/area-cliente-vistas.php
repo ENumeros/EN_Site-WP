@@ -63,9 +63,9 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Saldo em conta corrente', 'contabilidade-pro' ); ?></div>
 				<?php if ( isset( $resumo['saldo_atual'] ) ) : ?>
-					<div style="font-family:'Fraunces',serif;font-size:26px;color:var(--ac-gold)"><?php echo esc_html( number_format_i18n( $resumo['saldo_atual'], 2 ) ); ?>&nbsp;€</div>
+					<div style="font-family:'Fraunces',serif;font-size:37px;color:var(--ac-gold)"><?php echo esc_html( number_format_i18n( $resumo['saldo_atual'], 2 ) ); ?>&nbsp;€</div>
 				<?php else : ?>
-					<div style="font-family:'Fraunces',serif;font-size:26px">0,00&nbsp;€</div>
+					<div style="font-family:'Fraunces',serif;font-size:37px">0,00&nbsp;€</div>
 				<?php endif; ?>
 				<div style="font-size:12.5px;color:var(--ac-muted)"><?php printf( /* translators: %d: número de documentos */ esc_html( _n( '%d documento por liquidar', '%d documentos por liquidar', $por_pagar, 'contabilidade-pro' ) ), $por_pagar ); ?></div>
 				<a href="<?php echo esc_url( cp_ac_vista_url( 'conta_corrente' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver conta corrente →', 'contabilidade-pro' ); ?></a>
@@ -75,7 +75,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<?php if ( $tem_calendario_fiscal ) : ?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Próximo prazo', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:26px">—</div>
+				<div style="font-family:'Fraunces',serif;font-size:37px">—</div>
 				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Sem prazos agendados', 'contabilidade-pro' ); ?></div>
 			</div>
 		<?php endif; ?>
@@ -111,12 +111,12 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Documentos pendentes', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:26px"><?php echo esc_html( $doc_pendentes ); ?></div>
+				<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $doc_pendentes ); ?></div>
 				<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
 			</div>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Movimentos a esclarecer', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:26px"><?php echo esc_html( $mov_pendentes ); ?></div>
+				<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $mov_pendentes ); ?></div>
 				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Linhas do extrato bancário', 'contabilidade-pro' ); ?></div>
 				<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
 			</div>
@@ -227,21 +227,21 @@ function cp_ac_vista_conta_corrente() {
 		<?php if ( isset( $resumo['saldo_atual'] ) ) : ?>
 		<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
 			<div class="ac-stat-label"><?php esc_html_e( 'Saldo atual', 'contabilidade-pro' ); ?></div>
-			<div style="font-family:'Fraunces',serif;font-size:25px;color:var(--ac-gold)"><?php echo esc_html( number_format_i18n( $resumo['saldo_atual'], 2 ) ); ?>&nbsp;€</div>
+			<div style="font-family:'Fraunces',serif;font-size:37px;color:var(--ac-gold)"><?php echo esc_html( number_format_i18n( $resumo['saldo_atual'], 2 ) ); ?>&nbsp;€</div>
 			<?php if ( ! empty( $resumo['saldo_nota'] ) ) : ?><div style="font-size:12.5px;color:var(--ac-muted)"><?php echo esc_html( $resumo['saldo_nota'] ); ?></div><?php endif; ?>
 		</div>
 		<?php endif; ?>
 		<?php if ( isset( $resumo['faturado_ano'] ) ) : ?>
 		<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
 			<div class="ac-stat-label"><?php esc_html_e( 'Faturado este ano', 'contabilidade-pro' ); ?></div>
-			<div style="font-family:'Fraunces',serif;font-size:25px"><?php echo esc_html( number_format_i18n( $resumo['faturado_ano'], 2 ) ); ?>&nbsp;€</div>
+			<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( number_format_i18n( $resumo['faturado_ano'], 2 ) ); ?>&nbsp;€</div>
 			<?php if ( ! empty( $resumo['faturado_nota'] ) ) : ?><div style="font-size:12.5px;color:var(--ac-muted)"><?php echo esc_html( $resumo['faturado_nota'] ); ?></div><?php endif; ?>
 		</div>
 		<?php endif; ?>
 		<?php if ( isset( $resumo['pago_ano'] ) ) : ?>
 		<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
 			<div class="ac-stat-label"><?php esc_html_e( 'Pago este ano', 'contabilidade-pro' ); ?></div>
-			<div style="font-family:'Fraunces',serif;font-size:25px"><?php echo esc_html( number_format_i18n( $resumo['pago_ano'], 2 ) ); ?>&nbsp;€</div>
+			<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( number_format_i18n( $resumo['pago_ano'], 2 ) ); ?>&nbsp;€</div>
 			<?php if ( ! empty( $resumo['pago_nota'] ) ) : ?><div style="font-size:12.5px;color:var(--ac-muted)"><?php echo esc_html( $resumo['pago_nota'] ); ?></div><?php endif; ?>
 		</div>
 		<?php endif; ?>

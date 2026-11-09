@@ -38,7 +38,7 @@ a:hover{color:var(--ac-navy)}
 /* Ecrãs isolados (login / sem empresa / seletor) */
 .ac-center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
 .ac-center-card{width:100%;max-width:420px;padding:40px 36px;text-align:center}
-.ac-mark{width:52px;height:52px;border-radius:50%;background:var(--ac-navy);color:var(--ac-on-navy);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin:0 auto 16px}
+.ac-center-logo{height:34px;width:auto;margin:0 auto 20px;display:block}
 
 /* Seletor de empresa */
 .ac-empresa-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--ac-line);border-radius:10px;margin-bottom:10px;font-weight:600;color:var(--ac-text)}
@@ -47,10 +47,9 @@ a:hover{color:var(--ac-navy)}
 /* Dashboard (app shell) */
 .ac-shell{display:flex;flex-wrap:wrap;min-height:100vh}
 .ac-sidebar{flex:0 0 240px;background:var(--ac-sidebar-bg);color:var(--ac-sidebar-text);padding:24px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;border-right:1px solid var(--ac-sidebar-border)}
-.ac-sidebar-logo{display:flex;align-items:center;gap:10px}
-.ac-sidebar-mark{width:34px;height:34px;border-radius:50%;background:var(--ac-gold);color:var(--ac-navy);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:14px;flex:none}
-.ac-sidebar-word{font-family:'Fraunces',serif;font-size:14px;line-height:1.25;color:var(--ac-on-navy)}
-.ac-sidebar-word small{display:block;font-family:'Public Sans',sans-serif;font-size:10px;color:var(--ac-sidebar-text-muted);font-weight:400;letter-spacing:.05em;text-transform:uppercase;margin-top:2px}
+.ac-sidebar-logo{display:flex;flex-direction:column;gap:5px}
+.ac-sidebar-logo-img{height:28px;width:auto;display:block}
+.ac-sidebar-logo-sub{font-family:'Public Sans',sans-serif;font-size:10px;color:var(--ac-sidebar-text-muted);font-weight:400;letter-spacing:.05em;text-transform:uppercase}
 .ac-nav-link{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:8px;color:var(--ac-sidebar-text);font-size:14px;font-weight:500;margin-bottom:2px;transition:background .15s ease,color .15s ease}
 .ac-nav-link:hover{background:var(--ac-sidebar-hover);color:var(--ac-on-navy)}
 .ac-nav-link.active{background:rgba(255,255,255,.12);color:var(--ac-on-navy)}
@@ -88,6 +87,14 @@ a:hover{color:var(--ac-navy)}
 
 /* Componentes partilhados pelas vistas (Tarefas, Conta Corrente, etc.) */
 .ac-stat-label{font-size:12px;font-weight:600;color:var(--ac-muted);text-transform:uppercase;letter-spacing:.03em}
+.ac-stat-vazio{display:flex;align-items:center;gap:8px;color:var(--ac-muted);margin-top:4px}
+.ac-stat-vazio svg{flex:none}
+.ac-stat-vazio span{font-size:14.5px;font-weight:600}
+.ac-stat-vazio.is-ok{color:var(--ac-badge-green-fg)}
+/* Grelha de estatísticas do Dashboard — largura máxima para não esticar
+   a 5-6 colunas finas em ecrãs largos (cartões ficam mais legíveis e
+   com menos espaço morto por baixo do conteúdo curto). */
+.ac-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:1080px}
 .ac-btn-ghost{background:var(--ac-surface);border-color:var(--ac-line);color:var(--ac-text)}
 .ac-btn-ghost:hover{background:var(--ac-bg)}
 .ac-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 2px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:none}

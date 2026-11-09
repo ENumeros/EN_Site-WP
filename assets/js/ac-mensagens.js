@@ -145,7 +145,7 @@
 				if ( listaConversasEl ) {
 					listaConversasEl.innerHTML = conversasCache.length
 						? conversasCache.map( linhaConversa ).join( '' )
-						: '<div class="ac-mensagens-vazio">Sem conversas — comece uma abaixo.</div>';
+						: '<div class="ac-mensagens-vazio">Sem conversas — comece uma acima.</div>';
 					marcarLinhaAtiva();
 				}
 				var temPorLer = dados.por_ler_total > 0;

@@ -39,7 +39,7 @@ if ( ! is_user_logged_in() ) :
 	?>
 	<div class="ac-center">
 		<div class="ac-card ac-center-card">
-			<div class="ac-mark">EN</div>
+			<img src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/logo.png' ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" class="ac-center-logo">
 			<h1 style="font-size:21px"><?php esc_html_e( 'Área de Cliente', 'contabilidade-pro' ); ?></h1>
 			<p style="color:var(--ac-muted);font-size:13px;margin:10px 0 26px"><?php esc_html_e( 'Entre Números — Contabilidade & Consultoria', 'contabilidade-pro' ); ?></p>
 			<a href="<?php echo esc_url( $login_url ); ?>" class="ac-btn ac-btn-primary" style="width:100%"><?php esc_html_e( 'Iniciar sessão', 'contabilidade-pro' ); ?></a>
@@ -95,8 +95,8 @@ else :
 			<div class="ac-sidebar-backdrop" id="ac-sidebar-backdrop"></div>
 			<nav class="ac-sidebar" id="ac-sidebar" aria-label="<?php esc_attr_e( 'Navegação da Área de Cliente', 'contabilidade-pro' ); ?>">
 				<div class="ac-sidebar-logo">
-					<div class="ac-sidebar-mark">EN</div>
-					<div class="ac-sidebar-word"><?php bloginfo( 'name' ); ?><small><?php esc_html_e( 'Área de Cliente', 'contabilidade-pro' ); ?></small></div>
+					<img src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/logo.png' ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" class="ac-sidebar-logo-img">
+					<div class="ac-sidebar-logo-sub"><?php esc_html_e( 'Área de Cliente', 'contabilidade-pro' ); ?></div>
 				</div>
 
 				<div class="ac-nav-group">

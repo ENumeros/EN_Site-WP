@@ -50,7 +50,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<?php return; ?>
 	<?php endif; ?>
 
-	<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+	<div class="ac-stats-grid">
 
 		<?php if ( $tem_conta_corrente ) :
 			$cc        = cp_ac_conta_corrente( $empresa_id );
@@ -75,8 +75,10 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<?php if ( $tem_calendario_fiscal ) : ?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Próximo prazo', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:37px">—</div>
-				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Sem prazos agendados', 'contabilidade-pro' ); ?></div>
+				<div class="ac-stat-vazio">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M3.5 10h17"></path></svg>
+					<span><?php esc_html_e( 'Sem prazos agendados', 'contabilidade-pro' ); ?></span>
+				</div>
 			</div>
 		<?php endif; ?>
 
@@ -93,7 +95,10 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 					<?php endif; ?>
 					<a href="<?php echo esc_url( cp_ac_vista_url( 'mapas_gestao' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Descarregar →', 'contabilidade-pro' ); ?></a>
 				<?php else : ?>
-					<div style="font-family:'Fraunces',serif;font-size:19px">—</div>
+					<div class="ac-stat-vazio">
+						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 17.5a4 4 0 0 1-.8-7.92 5 5 0 0 1 9.72-1.84A4.5 4.5 0 0 1 16.5 17.5h-9z"></path></svg>
+						<span><?php esc_html_e( 'Sem mapas publicados', 'contabilidade-pro' ); ?></span>
+					</div>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
@@ -101,7 +106,10 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<?php if ( $tem_documentos ) : ?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Extratos & SAF-T (mês corrente)', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:19px">—</div>
+				<div class="ac-stat-vazio">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path></svg>
+					<span><?php esc_html_e( 'Sem extratos este mês', 'contabilidade-pro' ); ?></span>
+				</div>
 			</div>
 		<?php endif; ?>
 
@@ -115,9 +123,9 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 					<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $doc_pendentes ); ?></div>
 					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
 				<?php else : ?>
-					<div style="display:flex;align-items:center;gap:8px;color:var(--ac-badge-green-fg);margin-top:4px">
+					<div class="ac-stat-vazio is-ok">
 						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>
-						<span style="font-size:14.5px;font-weight:600"><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
+						<span><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
 					</div>
 				<?php endif; ?>
 			</div>
@@ -128,9 +136,9 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 					<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Linhas do extrato bancário', 'contabilidade-pro' ); ?></div>
 					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
 				<?php else : ?>
-					<div style="display:flex;align-items:center;gap:8px;color:var(--ac-badge-green-fg);margin-top:4px">
+					<div class="ac-stat-vazio is-ok">
 						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>
-						<span style="font-size:14.5px;font-weight:600"><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
+						<span><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
 					</div>
 				<?php endif; ?>
 			</div>

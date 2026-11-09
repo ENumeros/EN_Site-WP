@@ -608,6 +608,13 @@ function cp_ac_render_mensagens_pagina( $empresa_id ) {
 		<div class="ac-mensagens-col-lista">
 			<div class="ac-card" style="padding:22px">
 				<div class="ac-sec-head">
+					<h3 style="font-size:16px"><?php esc_html_e( 'Nova conversa', 'contabilidade-pro' ); ?></h3>
+				</div>
+				<?php cp_ac_render_conversa_form( $empresa_id, 'cp-conversa-form-pagina' ); ?>
+			</div>
+
+			<div class="ac-card" style="padding:22px">
+				<div class="ac-sec-head">
 					<h3 style="font-size:16px"><?php esc_html_e( 'Conversas', 'contabilidade-pro' ); ?></h3>
 					<div style="display:flex;gap:6px">
 						<button type="button" class="ac-btn ac-btn-primary" style="padding:6px 12px;font-size:12.5px" data-cp-conversas-filtro="ativas"><?php esc_html_e( 'Ativas', 'contabilidade-pro' ); ?></button>
@@ -616,7 +623,7 @@ function cp_ac_render_mensagens_pagina( $empresa_id ) {
 				</div>
 				<div id="cp-conversas-lista">
 					<?php if ( empty( $conversas ) ) : ?>
-						<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem conversas — comece uma abaixo.', 'contabilidade-pro' ); ?></div>
+						<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem conversas — comece uma acima.', 'contabilidade-pro' ); ?></div>
 					<?php else : ?>
 						<?php foreach ( $conversas as $conversa ) : ?>
 							<div class="ac-conversa-row" data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>">
@@ -641,13 +648,6 @@ function cp_ac_render_mensagens_pagina( $empresa_id ) {
 						<?php endforeach; ?>
 					<?php endif; ?>
 				</div>
-			</div>
-
-			<div class="ac-card" style="padding:22px">
-				<div class="ac-sec-head">
-					<h3 style="font-size:16px"><?php esc_html_e( 'Nova conversa', 'contabilidade-pro' ); ?></h3>
-				</div>
-				<?php cp_ac_render_conversa_form( $empresa_id, 'cp-conversa-form-pagina' ); ?>
 			</div>
 		</div>
 

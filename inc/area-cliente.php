@@ -332,7 +332,15 @@ function cp_ac_render_matriz_page() {
 		</script>
 		<?php endif; ?>
 
-		<?php do_action( 'cp_ac_matriz_extra', $empresas ); ?>
+		<?php
+		// Passado como objeto (não array) de propósito: do_action() tem uma
+		// compatibilidade com PHP4 que desembrulha silenciosamente um array
+		// de 1 elemento quando esse elemento é um objeto — exatamente o caso
+		// de haver só 1 empresa — entregando o WP_Post sozinho ao callback
+		// em vez do array. Um objeto evita esse desembrulho em qualquer
+		// contagem de empresas.
+		do_action( 'cp_ac_matriz_extra', (object) [ 'empresas' => $empresas ] );
+		?>
 	</div>
 	<?php
 }

@@ -359,8 +359,9 @@ function cp_ac_vf_payload_exemplo( $cenario ) {
 	return [ 'atualizado_em' => current_time( 'mysql' ), 'meses' => $meses, 'series' => $series ];
 }
 
-function cp_ac_vf_debug_seed_ui( $empresas ) {
+function cp_ac_vf_debug_seed_ui( $ctx ) {
 	if ( ! current_user_can( 'manage_options' ) ) return;
+	$empresas = isset( $ctx->empresas ) ? $ctx->empresas : [];
 	if ( empty( $empresas ) ) return;
 
 	if ( isset( $_POST['cp_ac_vf_seed_nonce'] ) && wp_verify_nonce( $_POST['cp_ac_vf_seed_nonce'], 'cp_ac_vf_seed' ) ) {

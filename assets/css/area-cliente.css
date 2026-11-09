@@ -96,6 +96,28 @@ a:hover{color:var(--ac-navy)}
    a 5-6 colunas finas em ecrãs largos (cartões ficam mais legíveis e
    com menos espaço morto por baixo do conteúdo curto). */
 .ac-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:1080px}
+
+/* Dashboard: "A sua empresa" (conteúdo principal) + coluna lateral
+   discreta (conta corrente, lembretes) — ver cp_ac_vista_dashboard(). */
+.ac-dashboard-cols{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.ac-dashboard-main{flex:2 1 460px;min-width:320px;display:flex;flex-direction:column;gap:22px}
+.ac-dashboard-side{flex:1 1 280px;min-width:260px;display:flex;flex-direction:column;gap:14px}
+.ac-resumo-card{padding:6px 26px}
+.ac-resumo-head{font-size:12px;font-weight:600;color:var(--ac-muted);text-transform:uppercase;letter-spacing:.03em;padding:18px 0 6px}
+.ac-resumo-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--ac-hairline);color:inherit}
+.ac-resumo-row:last-child{border-bottom:none}
+a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
+.ac-resumo-row-left{display:flex;align-items:center;gap:10px;min-width:0}
+.ac-resumo-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac-muted)}
+.ac-resumo-dot.is-ok{background:var(--ac-badge-green-fg)}
+.ac-resumo-label{font-size:14px;font-weight:600;color:var(--ac-text)}
+.ac-resumo-value{font-size:13px;font-weight:600;color:var(--ac-muted);flex:none}
+.ac-resumo-value.is-ok{color:var(--ac-badge-green-fg)}
+.ac-cc-card{padding:20px}
+.ac-cc-amount{font-family:'Fraunces',serif;font-size:23px;color:var(--ac-text);margin-top:8px}
+.ac-cc-sub{font-size:12px;color:var(--ac-muted);margin-top:4px}
+.ac-cc-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--ac-muted)}
+.ac-cc-link:hover{color:var(--ac-navy)}
 .ac-btn-ghost{background:var(--ac-surface);border-color:var(--ac-line);color:var(--ac-text)}
 .ac-btn-ghost:hover{background:var(--ac-bg)}
 .ac-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 2px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:none}
@@ -241,6 +263,68 @@ a:hover{color:var(--ac-navy)}
 .ac-fab-menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:none;background:none;color:var(--ac-text);font-size:13.5px;font-weight:600;font-family:'Public Sans',sans-serif;cursor:pointer;text-align:left}
 .ac-fab-menu-item:hover{background:var(--ac-bg)}
 .ac-fab-menu-item svg{flex:none;color:var(--ac-blue)}
+
+/* Visão financeira (WORK-045) */
+.ac-vf-destaque-val{font-family:'Fraunces',serif;font-size:32px;line-height:1.1}
+.ac-vf-nav-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.ac-vf-slider{width:100%;accent-color:var(--ac-navy);margin:4px 0 14px}
+.ac-vf-meses-row{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px}
+.ac-vf-mes-btn{flex:1;min-width:44px;text-align:center;padding:8px 6px;border-radius:8px;border:none;background:none;color:var(--ac-muted);font-size:13px;font-weight:600;font-family:'Public Sans',sans-serif;cursor:pointer}
+.ac-vf-mes-btn:hover{background:var(--ac-bg)}
+.ac-vf-mes-btn.is-ativo{background:var(--ac-navy);color:var(--ac-on-navy)}
+.ac-vf-mes-btn:disabled{opacity:.35;cursor:default}
+.ac-vf-mes-btn:disabled:hover{background:none}
+
+.ac-vf-cascata{display:flex;align-items:flex-end;gap:14px;min-height:220px;overflow-x:auto;padding-bottom:4px}
+.ac-vf-barra-col{flex:0 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:none;font-family:inherit;padding:0}
+.ac-vf-barra-pista{height:170px;width:52px;display:flex;align-items:flex-end;position:relative}
+.ac-vf-barra{width:100%;border-radius:5px 5px 0 0;position:relative;transition:opacity .15s ease}
+.ac-vf-barra-col:hover .ac-vf-barra{opacity:.85}
+.ac-vf-barra-col.is-ativa .ac-vf-barra{outline:2px solid var(--ac-navy);outline-offset:1px}
+.ac-vf-barra-valor{font-size:11px;font-weight:600;color:var(--ac-muted);position:absolute;top:-20px;left:0;right:0;text-align:center;white-space:nowrap}
+.ac-vf-barra.tipo-vendas,.ac-vf-barra.tipo-rendimento{background:var(--ac-blue)}
+.ac-vf-barra.tipo-custo{background:#D9A441}
+.ac-vf-barra.tipo-subtotal{background:var(--ac-navy)}
+.ac-vf-barra.tipo-subtotal.is-negativo{background:var(--ac-badge-red-fg)}
+.ac-vf-barra-label{font-size:12px;font-weight:600;text-align:center;max-width:76px}
+.ac-vf-cascata-legenda{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid var(--ac-hairline);font-size:12px;color:var(--ac-muted)}
+.ac-vf-cascata-legenda span{display:inline-flex;align-items:center;gap:6px}
+.ac-vf-cascata-legenda i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+.ac-vf-duas-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.ac-vf-duas-col-vendas{grid-template-columns:1.5fr 1fr}
+.ac-vf-grid3-card{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.ac-vf-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:980px){.ac-vf-duas-col,.ac-vf-duas-col-vendas,.ac-vf-grid3-card{grid-template-columns:1fr}.ac-vf-grid3{grid-template-columns:1fr 1fr}}
+
+.ac-vf-vendas-grafico{display:flex;align-items:flex-end;gap:6px;height:160px;overflow-x:auto}
+.ac-vf-vendas-mes{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:34px}
+.ac-vf-vendas-par{display:flex;align-items:flex-end;gap:2px;height:130px;cursor:pointer}
+.ac-vf-vendas-bar{width:11px;border-radius:3px 3px 0 0}
+.ac-vf-vendas-bar.ano-anterior{background:var(--ac-line)}
+.ac-vf-vendas-bar.ano-atual{background:var(--ac-blue)}
+.ac-vf-vendas-mes.is-ativo .ano-atual{background:var(--ac-navy)}
+.ac-vf-vendas-mes-label{font-size:10.5px;color:var(--ac-muted);text-transform:lowercase}
+
+.ac-vf-linha-grafico svg{display:block;width:100%;height:auto}
+
+.ac-vf-autonomia-barra{position:relative;height:8px;border-radius:999px;background:var(--ac-line);margin:10px 0 4px;overflow:visible}
+.ac-vf-autonomia-fill{position:absolute;inset:0;border-radius:999px;background:var(--ac-navy);width:0}
+.ac-vf-autonomia-marca{position:absolute;top:-4px;bottom:-4px;left:30%;width:2px;background:var(--ac-muted)}
+
+.ac-vf-detalhe-composicao{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.ac-vf-detalhe-linha{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+.ac-vf-detalhe-linha .nome{color:var(--ac-text)}
+.ac-vf-detalhe-linha .valor{font-weight:600;flex:none}
+.ac-vf-detalhe-nota{font-size:12px;color:var(--ac-muted);margin-top:-5px}
+.ac-vf-detalhe-nota.is-destaque{color:var(--ac-badge-amber-fg)}
+
+.ac-vf-prazo{display:flex;align-items:center;gap:12px;padding:8px 0}
+.ac-vf-prazo-data{flex:none;width:46px;height:46px;border-radius:10px;background:var(--ac-bg);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ac-vf-prazo-data .dia{font-family:'Fraunces',serif;font-size:16px;line-height:1}
+.ac-vf-prazo-data .mes{font-size:9px;text-transform:uppercase;color:var(--ac-muted)}
+.ac-vf-prazo-titulo{font-size:13px;font-weight:600}
+.ac-vf-prazo-valor{font-size:12px;color:var(--ac-muted)}
 
 /* Modal (ex.: enviar documento) */
 .ac-modal-backdrop{position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:49}

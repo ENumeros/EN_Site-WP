@@ -31,6 +31,7 @@ function cp_ac_vazio( $titulo, $texto = '' ) {
 function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 	$empresa_id = cp_ac_empresa_ativa();
 
+	$tem_visao_financeira  = cp_ac_tem_ferramenta( 'visao_financeira' );
 	$tem_conta_corrente    = cp_ac_tem_ferramenta( 'conta_corrente' );
 	$tem_calendario_fiscal = cp_ac_tem_ferramenta( 'calendario_fiscal' );
 	$tem_mapas_gestao      = cp_ac_tem_ferramenta( 'mapas_gestao' );
@@ -45,157 +46,158 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php printf( /* translators: %s: nome da empresa */ esc_html__( 'Situação atual — %s', 'contabilidade-pro' ), esc_html( get_the_title( $empresa_id ) ) ); ?></div>
 	</div>
 
-	<?php if ( ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_pendentes && ! $tem_tarefas && ! $tem_mensagens ) : ?>
+	<?php if ( ! $tem_visao_financeira && ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_pendentes && ! $tem_tarefas && ! $tem_mensagens ) : ?>
 		<?php cp_ac_vazio( __( 'Ainda não há ferramentas ativadas para esta empresa.', 'contabilidade-pro' ), __( 'Contacte a Entre Números se estiver à espera de acesso a alguma funcionalidade.', 'contabilidade-pro' ) ); ?>
 		<?php return; ?>
 	<?php endif; ?>
 
-	<div class="ac-stats-grid">
+	<?php
+	$lembretes_sucesso  = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
+	$lembretes_erro     = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
+	$lembretes_titulos  = [
+		'tarefa_criada'     => __( 'Lembrete adicionado', 'contabilidade-pro' ),
+		'tarefa_atualizada' => __( 'Lembrete atualizado', 'contabilidade-pro' ),
+		'tarefa_apagada'    => __( 'Lembrete apagado', 'contabilidade-pro' ),
+	];
+	$documentos_sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
+	$documentos_erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
+	$documentos_titulos = [
+		'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
+		'documento_apagado' => __( 'Documento apagado', 'contabilidade-pro' ),
+	];
+	?>
 
-		<?php if ( $tem_conta_corrente ) :
-			$cc        = cp_ac_conta_corrente( $empresa_id );
-			$resumo    = isset( $cc['resumo'] ) ? $cc['resumo'] : [];
-			$linhas    = isset( $cc['linhas'] ) ? $cc['linhas'] : [];
-			$por_pagar = count( array_filter( $linhas, function ( $linha ) {
-				return ! in_array( strtolower( $linha['estado'] ), [ 'pago', 'paga' ], true );
-			} ) );
-			?>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Saldo em conta corrente', 'contabilidade-pro' ); ?></div>
-				<?php if ( isset( $resumo['saldo_atual'] ) ) : ?>
-					<div style="font-family:'Fraunces',serif;font-size:37px;color:var(--ac-gold)"><?php echo esc_html( number_format_i18n( $resumo['saldo_atual'], 2 ) ); ?>&nbsp;€</div>
-				<?php else : ?>
-					<div style="font-family:'Fraunces',serif;font-size:37px">0,00&nbsp;€</div>
-				<?php endif; ?>
-				<div style="font-size:12.5px;color:var(--ac-muted)"><?php printf( /* translators: %d: número de documentos */ esc_html( _n( '%d documento por liquidar', '%d documentos por liquidar', $por_pagar, 'contabilidade-pro' ) ), $por_pagar ); ?></div>
-				<a href="<?php echo esc_url( cp_ac_vista_url( 'conta_corrente' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver conta corrente →', 'contabilidade-pro' ); ?></a>
-			</div>
-		<?php endif; ?>
-
-		<?php if ( $tem_calendario_fiscal ) : ?>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Próximo prazo', 'contabilidade-pro' ); ?></div>
-				<div class="ac-stat-vazio">
-					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M3.5 10h17"></path></svg>
-					<span><?php esc_html_e( 'Sem prazos agendados', 'contabilidade-pro' ); ?></span>
-				</div>
-			</div>
-		<?php endif; ?>
-
-		<?php if ( $tem_mapas_gestao ) :
-			$mapas  = cp_ac_mapas_gestao( $empresa_id );
-			$ultimo = ! empty( $mapas ) ? $mapas[0] : null;
-			?>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Mapa de Gestão', 'contabilidade-pro' ); ?></div>
-				<?php if ( $ultimo ) : ?>
-					<div style="font-family:'Fraunces',serif;font-size:19px;line-height:1.3"><?php echo esc_html( $ultimo['titulo'] ); ?></div>
-					<?php if ( ! empty( $ultimo['publicado_em'] ) ) : ?>
-						<div style="font-size:12.5px;color:var(--ac-muted)"><?php printf( /* translators: %s: data */ esc_html__( 'Publicado a %s', 'contabilidade-pro' ), esc_html( mysql2date( get_option( 'date_format' ), $ultimo['publicado_em'] ) ) ); ?></div>
-					<?php endif; ?>
-					<a href="<?php echo esc_url( cp_ac_vista_url( 'mapas_gestao' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Descarregar →', 'contabilidade-pro' ); ?></a>
-				<?php else : ?>
-					<div class="ac-stat-vazio">
-						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 17.5a4 4 0 0 1-.8-7.92 5 5 0 0 1 9.72-1.84A4.5 4.5 0 0 1 16.5 17.5h-9z"></path></svg>
-						<span><?php esc_html_e( 'Sem mapas publicados', 'contabilidade-pro' ); ?></span>
-					</div>
-				<?php endif; ?>
-			</div>
-		<?php endif; ?>
-
-		<?php if ( $tem_documentos ) : ?>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Extratos & SAF-T (mês corrente)', 'contabilidade-pro' ); ?></div>
-				<div class="ac-stat-vazio">
-					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path></svg>
-					<span><?php esc_html_e( 'Sem extratos este mês', 'contabilidade-pro' ); ?></span>
-				</div>
-			</div>
-		<?php endif; ?>
-
-		<?php if ( $tem_pendentes ) :
-			$doc_pendentes = count( cp_ac_pendentes_documentos( $empresa_id ) );
-			$mov_pendentes = count( cp_ac_pendentes_movimentos( $empresa_id ) );
-			?>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Documentos pendentes', 'contabilidade-pro' ); ?></div>
-				<?php if ( $doc_pendentes > 0 ) : ?>
-					<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $doc_pendentes ); ?></div>
-					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
-				<?php else : ?>
-					<div class="ac-stat-vazio is-ok">
-						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>
-						<span><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
-					</div>
-				<?php endif; ?>
-			</div>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Movimentos a esclarecer', 'contabilidade-pro' ); ?></div>
-				<?php if ( $mov_pendentes > 0 ) : ?>
-					<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $mov_pendentes ); ?></div>
-					<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Linhas do extrato bancário', 'contabilidade-pro' ); ?></div>
-					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
-				<?php else : ?>
-					<div class="ac-stat-vazio is-ok">
-						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>
-						<span><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
-					</div>
-				<?php endif; ?>
-			</div>
-		<?php endif; ?>
-
-	</div>
-
-	<?php if ( $tem_tarefas ) :
-		$lembretes_sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
-		$lembretes_erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
-		?>
-		<div>
-			<h2 style="font-size:18px"><?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?></h2>
+	<?php if ( $tem_tarefas && isset( $lembretes_titulos[ $lembretes_sucesso ] ) ) : ?>
+		<div class="ac-status-banner green">
+			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
+			<div><div class="ac-status-title"><?php echo esc_html( $lembretes_titulos[ $lembretes_sucesso ] ); ?></div></div>
 		</div>
-
-		<?php if ( in_array( $lembretes_sucesso, [ 'tarefa_criada', 'tarefa_atualizada', 'tarefa_apagada' ], true ) ) :
-			$lembretes_titulos = [
-				'tarefa_criada'     => __( 'Lembrete adicionado', 'contabilidade-pro' ),
-				'tarefa_atualizada' => __( 'Lembrete atualizado', 'contabilidade-pro' ),
-				'tarefa_apagada'    => __( 'Lembrete apagado', 'contabilidade-pro' ),
-			];
-			?>
-			<div class="ac-status-banner green">
-				<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
-				<div><div class="ac-status-title"><?php echo esc_html( $lembretes_titulos[ $lembretes_sucesso ] ); ?></div></div>
-			</div>
-		<?php elseif ( $lembretes_erro ) : ?>
-			<div class="ac-status-banner amber">
-				<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
-				<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escreva um texto para o lembrete e tente novamente.', 'contabilidade-pro' ); ?></div></div>
-			</div>
-		<?php endif; ?>
-
-		<?php cp_ac_render_tarefas( $empresa_id ); ?>
+	<?php elseif ( $tem_tarefas && $lembretes_erro ) : ?>
+		<div class="ac-status-banner amber">
+			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escreva um texto para o lembrete e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+		</div>
 	<?php endif; ?>
 
-	<?php if ( $tem_documentos ) :
-		$documentos_sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
-		$documentos_erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
-		?>
-		<?php if ( in_array( $documentos_sucesso, [ 'documento_enviado', 'documento_apagado' ], true ) ) :
-			$documentos_titulos = [
-				'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
-				'documento_apagado' => __( 'Documento apagado', 'contabilidade-pro' ),
-			];
-			?>
-			<div class="ac-status-banner green">
-				<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
-				<div><div class="ac-status-title"><?php echo esc_html( $documentos_titulos[ $documentos_sucesso ] ); ?></div></div>
-			</div>
-		<?php elseif ( in_array( $documentos_erro, [ 'documento_em_falta', 'documento_invalido', 'documento_sem_empresa' ], true ) ) : ?>
-			<div class="ac-status-banner amber">
-				<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
-				<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ); ?></div></div>
-			</div>
-		<?php endif; ?>
+	<?php if ( $tem_documentos && isset( $documentos_titulos[ $documentos_sucesso ] ) ) : ?>
+		<div class="ac-status-banner green">
+			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
+			<div><div class="ac-status-title"><?php echo esc_html( $documentos_titulos[ $documentos_sucesso ] ); ?></div></div>
+		</div>
+	<?php elseif ( $tem_documentos && in_array( $documentos_erro, [ 'documento_em_falta', 'documento_invalido', 'documento_sem_empresa' ], true ) ) : ?>
+		<div class="ac-status-banner amber">
+			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+		</div>
+	<?php endif; ?>
 
+	<div class="ac-dashboard-cols">
+
+		<div class="ac-dashboard-main">
+			<div class="ac-card ac-resumo-card">
+				<div class="ac-resumo-head"><?php esc_html_e( 'A sua empresa', 'contabilidade-pro' ); ?></div>
+
+				<?php if ( $tem_visao_financeira ) :
+					$vf       = cp_ac_visao_financeira( $empresa_id );
+					$ultimo_m = ! empty( $vf['meses'] ) ? end( $vf['meses'] ) : null;
+					$valor    = $ultimo_m
+						? esc_html( number_format_i18n( $ultimo_m['destaques']['vendas'], 0 ) ) . '&nbsp;€'
+						: esc_html__( 'A preparar os seus números', 'contabilidade-pro' );
+					?>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'visao_financeira' ) ); ?>" class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot<?php echo $ultimo_m ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Visão financeira', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value<?php echo $ultimo_m ? ' is-ok' : ''; ?>"><?php echo $valor; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped above ?></span>
+					</a>
+				<?php endif; ?>
+
+				<?php if ( $tem_calendario_fiscal ) : ?>
+					<div class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Próximo prazo', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value"><?php esc_html_e( 'Sem prazos agendados', 'contabilidade-pro' ); ?></span>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( $tem_mapas_gestao ) :
+					$mapas  = cp_ac_mapas_gestao( $empresa_id );
+					$ultimo = ! empty( $mapas ) ? $mapas[0] : null;
+					?>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'mapas_gestao' ) ); ?>" class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot<?php echo $ultimo ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Mapa de Gestão', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value<?php echo $ultimo ? ' is-ok' : ''; ?>"><?php echo $ultimo ? esc_html( $ultimo['titulo'] ) : esc_html__( 'Sem mapas publicados', 'contabilidade-pro' ); ?></span>
+					</a>
+				<?php endif; ?>
+
+				<?php if ( $tem_documentos ) : ?>
+					<div class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Extratos & SAF-T (mês corrente)', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value"><?php esc_html_e( 'Sem extratos este mês', 'contabilidade-pro' ); ?></span>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( $tem_pendentes ) :
+					$doc_pendentes = count( cp_ac_pendentes_documentos( $empresa_id ) );
+					$mov_pendentes = count( cp_ac_pendentes_movimentos( $empresa_id ) );
+					?>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot<?php echo 0 === $doc_pendentes ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Documentos pendentes', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value<?php echo 0 === $doc_pendentes ? ' is-ok' : ''; ?>">
+							<?php echo $doc_pendentes > 0 ? esc_html( $doc_pendentes ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
+						</span>
+					</a>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot<?php echo 0 === $mov_pendentes ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Movimentos a esclarecer', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value<?php echo 0 === $mov_pendentes ? ' is-ok' : ''; ?>">
+							<?php echo $mov_pendentes > 0 ? esc_html( $mov_pendentes ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
+						</span>
+					</a>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<div class="ac-dashboard-side">
+
+			<?php if ( $tem_conta_corrente ) :
+				$cc        = cp_ac_conta_corrente( $empresa_id );
+				$resumo_cc = isset( $cc['resumo'] ) ? $cc['resumo'] : [];
+				$linhas    = isset( $cc['linhas'] ) ? $cc['linhas'] : [];
+				$por_pagar = count( array_filter( $linhas, function ( $linha ) {
+					return ! in_array( strtolower( $linha['estado'] ), [ 'pago', 'paga' ], true );
+				} ) );
+				?>
+				<div class="ac-card ac-cc-card">
+					<div class="ac-stat-label"><?php esc_html_e( 'Conta corrente', 'contabilidade-pro' ); ?></div>
+					<div class="ac-cc-amount"><?php echo esc_html( number_format_i18n( isset( $resumo_cc['saldo_atual'] ) ? $resumo_cc['saldo_atual'] : 0, 2 ) ); ?>&nbsp;€</div>
+					<div class="ac-cc-sub"><?php printf( /* translators: %d: número de documentos */ esc_html( _n( '%d documento por liquidar', '%d documentos por liquidar', $por_pagar, 'contabilidade-pro' ) ), $por_pagar ); ?></div>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'conta_corrente' ) ); ?>" class="ac-cc-link"><?php esc_html_e( 'Ver conta corrente →', 'contabilidade-pro' ); ?></a>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( $tem_tarefas ) : ?>
+				<div class="ac-resumo-head" style="padding-left:4px"><?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?></div>
+				<?php cp_ac_render_tarefas( $empresa_id ); ?>
+			<?php endif; ?>
+		</div>
+	</div>
+
+	<?php if ( $tem_documentos ) : ?>
 		<?php cp_ac_render_documento_modal(); ?>
 	<?php endif; ?>
 	<?php

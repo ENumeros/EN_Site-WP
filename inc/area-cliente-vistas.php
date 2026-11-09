@@ -111,14 +111,28 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			?>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Documentos pendentes', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $doc_pendentes ); ?></div>
-				<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
+				<?php if ( $doc_pendentes > 0 ) : ?>
+					<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $doc_pendentes ); ?></div>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
+				<?php else : ?>
+					<div style="display:flex;align-items:center;gap:8px;color:var(--ac-badge-green-fg);margin-top:4px">
+						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>
+						<span style="font-size:14.5px;font-weight:600"><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
+					</div>
+				<?php endif; ?>
 			</div>
 			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:8px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Movimentos a esclarecer', 'contabilidade-pro' ); ?></div>
-				<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $mov_pendentes ); ?></div>
-				<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Linhas do extrato bancário', 'contabilidade-pro' ); ?></div>
-				<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
+				<?php if ( $mov_pendentes > 0 ) : ?>
+					<div style="font-family:'Fraunces',serif;font-size:37px"><?php echo esc_html( $mov_pendentes ); ?></div>
+					<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Linhas do extrato bancário', 'contabilidade-pro' ); ?></div>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" style="font-size:12.5px;font-weight:600;margin-top:4px"><?php esc_html_e( 'Ver pendentes →', 'contabilidade-pro' ); ?></a>
+				<?php else : ?>
+					<div style="display:flex;align-items:center;gap:8px;color:var(--ac-badge-green-fg);margin-top:4px">
+						<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 12.5l2.5 2.5 4.5-5"></path></svg>
+						<span style="font-size:14.5px;font-weight:600"><?php esc_html_e( 'Tudo em dia', 'contabilidade-pro' ); ?></span>
+					</div>
+				<?php endif; ?>
 			</div>
 		<?php endif; ?>
 
@@ -580,8 +594,7 @@ function cp_ac_vista_mapas_gestao() {
 function cp_ac_vista_calendario_fiscal() {
 	?>
 	<div>
-		<h1 style="font-size:23px"><?php esc_html_e( 'Calendário Fiscal', 'contabilidade-pro' ); ?></h1>
-		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Prazos e obrigações fiscais acompanhados pela Entre Números.', 'contabilidade-pro' ); ?></div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'Calendário', 'contabilidade-pro' ); ?></h1>
 	</div>
 
 	<?php cp_ac_vazio( __( 'Sem prazos registados', 'contabilidade-pro' ), __( 'Os próximos prazos e obrigações fiscais da sua empresa vão aparecer aqui.', 'contabilidade-pro' ) ); ?>

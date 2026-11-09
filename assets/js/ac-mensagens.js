@@ -75,11 +75,28 @@
 
 	function linhaConversa( conversa ) {
 		var badge = conversa.por_ler ? '<span class="ac-conversa-badge">' + conversa.por_ler + '</span>' : '';
+		var arquivada = !! conversa.arquivada;
+		var arquivarLabel = arquivada ? 'Repor' : 'Arquivar';
+		var apagarBtn = conversa.pode_apagar
+			? (
+				'<button type="button" class="ac-conversa-btn ac-conversa-btn-apagar" data-cp-conversa-apagar data-conversa-id="' + conversa.id + '" aria-label="Apagar" title="Apagar">' +
+					'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>' +
+				'</button>'
+			)
+			: '';
 		return (
-			'<button type="button" class="ac-conversa-row" data-conversa-id="' + conversa.id + '">' +
-				'<span class="ac-conversa-row-head"><span class="ac-conversa-assunto">' + escapar( conversa.assunto ) + '</span>' + badge + '</span>' +
-				'<span class="ac-conversa-resumo">' + escapar( conversa.ultima_mensagem ) + '</span>' +
-			'</button>'
+			'<div class="ac-conversa-row" data-conversa-id="' + conversa.id + '">' +
+				'<button type="button" class="ac-conversa-row-click" data-conversa-id="' + conversa.id + '">' +
+					'<span class="ac-conversa-row-head"><span class="ac-conversa-assunto">' + escapar( conversa.assunto ) + '</span>' + badge + '</span>' +
+					'<span class="ac-conversa-resumo">' + escapar( conversa.ultima_mensagem ) + '</span>' +
+				'</button>' +
+				'<span class="ac-conversa-row-acoes">' +
+					'<button type="button" class="ac-conversa-btn" data-cp-conversa-arquivar data-conversa-id="' + conversa.id + '" data-arquivar="' + ( arquivada ? '0' : '1' ) + '" aria-label="' + arquivarLabel + '" title="' + arquivarLabel + '">' +
+						'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M9.5 12h5"></path></svg>' +
+					'</button>' +
+					apagarBtn +
+				'</span>' +
+			'</div>'
 		);
 	}
 
@@ -97,6 +114,7 @@
 		var timerConversas      = null;
 		var timerConversaAberta = null;
 		var conversaAbertaId    = null;
+		var estadoAtual         = 'ativas';
 
 		// ─── Lista de conversas + badges (avatar e link do dropdown) ───────
 
@@ -107,8 +125,22 @@
 			} );
 		}
 
+		// Separador "Ativas" / "Arquivadas" acima da lista — só existe na
+		// página de Mensagens da Área de Cliente (não no Backoffice).
+		var botoesFiltro = document.querySelectorAll( '[data-cp-conversas-filtro]' );
+		botoesFiltro.forEach( function ( botao ) {
+			botao.addEventListener( 'click', function () {
+				estadoAtual = botao.getAttribute( 'data-cp-conversas-filtro' );
+				botoesFiltro.forEach( function ( b ) {
+					b.classList.toggle( 'ac-btn-primary', b === botao );
+					b.classList.toggle( 'ac-btn-ghost', b !== botao );
+				} );
+				atualizarConversas();
+			} );
+		} );
+
 		function atualizarConversas() {
-			return pedirApi( 'GET', '/conversas?empresa_id=' + empresaId ).then( function ( dados ) {
+			return pedirApi( 'GET', '/conversas?empresa_id=' + empresaId + '&estado=' + estadoAtual ).then( function ( dados ) {
 				conversasCache = dados.conversas || [];
 				if ( listaConversasEl ) {
 					listaConversasEl.innerHTML = conversasCache.length
@@ -180,11 +212,57 @@
 		}
 
 		document.addEventListener( 'click', function ( evento ) {
-			var linha = evento.target.closest( '.ac-conversa-row' );
+			var linha = evento.target.closest( '.ac-conversa-row-click' );
 			if ( ! linha ) return;
 			var id = linha.getAttribute( 'data-conversa-id' );
 			var conversa = conversasCache.filter( function ( c ) { return c.id === id; } )[ 0 ];
 			if ( conversa ) abrirConversaPainel( id, conversa.assunto );
+		} );
+
+		// Arquivar/repor e apagar — tanto na lista da Área de Cliente (cada
+		// linha tem os seus botões) como no cabeçalho da conversa aberta no
+		// Backoffice (sem o painel próprio: recarrega a página, mesmo padrão
+		// já usado para trocar de empresa/conversa aqui).
+		document.addEventListener( 'click', function ( evento ) {
+			var botaoArquivar = evento.target.closest( '[data-cp-conversa-arquivar]' );
+			if ( botaoArquivar ) {
+				evento.preventDefault();
+				var conversaId = botaoArquivar.getAttribute( 'data-conversa-id' );
+				var arquivar   = botaoArquivar.getAttribute( 'data-arquivar' ) === '1';
+				pedirApi( 'POST', '/conversas/arquivar', { empresa_id: empresaId, conversa_id: conversaId, arquivar: arquivar } ).then( function () {
+					if ( ! painelConteudo ) { window.location.reload(); return; }
+					if ( conversaAbertaId === conversaId ) {
+						pararPollConversaAberta();
+						if ( painelVazio ) painelVazio.hidden = false;
+						if ( painelConteudo ) painelConteudo.hidden = true;
+					}
+					atualizarConversas();
+				} );
+				return;
+			}
+
+			var botaoApagar = evento.target.closest( '[data-cp-conversa-apagar]' );
+			if ( botaoApagar ) {
+				evento.preventDefault();
+				if ( ! window.confirm( 'Apagar esta conversa? Não pode ser desfeito.' ) ) return;
+				var conversaIdApagar = botaoApagar.getAttribute( 'data-conversa-id' );
+				pedirApi( 'POST', '/conversas/apagar', { empresa_id: empresaId, conversa_id: conversaIdApagar } ).then( function () {
+					if ( ! painelConteudo ) {
+						var urlBO = new URL( window.location.href );
+						urlBO.searchParams.delete( 'conversa_id' );
+						window.location.href = urlBO.toString();
+						return;
+					}
+					if ( conversaAbertaId === conversaIdApagar ) {
+						pararPollConversaAberta();
+						if ( painelVazio ) painelVazio.hidden = false;
+						if ( painelConteudo ) painelConteudo.hidden = true;
+					}
+					atualizarConversas();
+				} ).catch( function () {
+					window.alert( 'Não foi possível apagar — já há resposta nesta conversa.' );
+				} );
+			}
 		} );
 
 		// Veio de "Nova conversa" no "+" do Dashboard (navegação completa,

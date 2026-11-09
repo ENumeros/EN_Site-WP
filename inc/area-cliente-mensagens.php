@@ -55,7 +55,8 @@ function cp_ac_conversas_migrar_legado( $empresa_id ) {
 // mensagem e quantas ainda não foram lidas por $user_id (omitido =
 // utilizador atual). A "última mensagem" nunca é guardada à parte — é
 // sempre calculada a partir de _cp_mensagens, para nunca desalinhar.
-function cp_ac_conversas( $empresa_id, $user_id = null ) {
+// $estado filtra por 'ativas' (por omissão), 'arquivadas' ou 'todas'.
+function cp_ac_conversas( $empresa_id, $user_id = null, $estado = 'ativas' ) {
 	cp_ac_conversas_migrar_legado( $empresa_id );
 	$user_id   = $user_id ?: get_current_user_id();
 	$mensagens = cp_ac_mensagens( $empresa_id );
@@ -69,14 +70,66 @@ function cp_ac_conversas( $empresa_id, $user_id = null ) {
 		$conversa['ultima_mensagem']    = $ultima ? $ultima['texto'] : '';
 		$conversa['ultima_mensagem_em'] = $ultima ? $ultima['enviado_em'] : $conversa['criado_em'];
 		$conversa['por_ler']            = cp_ac_mensagens_por_ler( $conversa['id'], $da_conversa, $user_id );
+		$conversa['arquivada']          = ! empty( $conversa['arquivada'] );
 		return $conversa;
 	}, cp_ac_conversas_raw( $empresa_id ) );
+
+	if ( 'todas' !== $estado ) {
+		$quer_arquivadas = 'arquivadas' === $estado;
+		$conversas = array_values( array_filter( $conversas, function ( $conversa ) use ( $quer_arquivadas ) {
+			return $conversa['arquivada'] === $quer_arquivadas;
+		} ) );
+	}
 
 	usort( $conversas, function ( $a, $b ) {
 		return strcmp( $b['ultima_mensagem_em'], $a['ultima_mensagem_em'] );
 	} );
 
 	return $conversas;
+}
+
+// Arquivar/repor — nunca apaga nada, só deixa de aparecer no separador
+// "Ativas". Responder a uma conversa arquivada repõe-na automaticamente
+// (ver cp_ac_rest_mensagens_criar()).
+function cp_ac_conversa_arquivar( $empresa_id, $conversa_id, $arquivar ) {
+	$conversas = cp_ac_conversas_raw( $empresa_id );
+	$alterado  = false;
+	foreach ( $conversas as &$conversa ) {
+		if ( $conversa['id'] === $conversa_id ) {
+			$conversa['arquivada'] = (bool) $arquivar;
+			$alterado = true;
+			break;
+		}
+	}
+	unset( $conversa );
+	if ( $alterado ) update_post_meta( $empresa_id, '_cp_conversas', $conversas );
+	return $alterado;
+}
+
+// Só pode ser apagada enquanto só uma pessoa escreveu nela — assim que a
+// outra parte responde, a conversa já é uma troca que o outro lado viu e
+// fica para sempre (pode sempre ser arquivada, nunca apagada).
+function cp_ac_conversa_pode_apagar( $empresa_id, $conversa_id ) {
+	$mensagens = cp_ac_mensagens_conversa( $empresa_id, $conversa_id );
+	if ( empty( $mensagens ) ) return true;
+	$autores = array_unique( wp_list_pluck( $mensagens, 'autor_user_id' ) );
+	return count( $autores ) <= 1;
+}
+
+function cp_ac_conversa_apagar( $empresa_id, $conversa_id ) {
+	if ( ! cp_ac_conversa_pode_apagar( $empresa_id, $conversa_id ) ) return false;
+
+	$conversas = array_values( array_filter( cp_ac_conversas_raw( $empresa_id ), function ( $conversa ) use ( $conversa_id ) {
+		return $conversa['id'] !== $conversa_id;
+	} ) );
+	update_post_meta( $empresa_id, '_cp_conversas', $conversas );
+
+	$mensagens = array_values( array_filter( cp_ac_mensagens( $empresa_id ), function ( $mensagem ) use ( $conversa_id ) {
+		return $mensagem['conversa_id'] !== $conversa_id;
+	} ) );
+	update_post_meta( $empresa_id, '_cp_mensagens', $mensagens );
+
+	return true;
 }
 
 function cp_ac_conversa_adicionar( $empresa_id, $assunto, $user_id, $equipa ) {
@@ -215,6 +268,20 @@ function cp_ac_mensagens_rest_routes() {
 			'permission_callback' => 'cp_ac_mensagens_rest_permissao',
 		],
 	] );
+	register_rest_route( 'cp/v1', '/conversas/arquivar', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_conversa_arquivar',
+			'permission_callback' => 'cp_ac_mensagens_rest_permissao',
+		],
+	] );
+	register_rest_route( 'cp/v1', '/conversas/apagar', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_conversa_apagar',
+			'permission_callback' => 'cp_ac_mensagens_rest_permissao',
+		],
+	] );
 }
 add_action( 'rest_api_init', 'cp_ac_mensagens_rest_routes' );
 
@@ -236,17 +303,54 @@ function cp_ac_rest_conversas_listar( $request ) {
 	$empresa_id = cp_ac_mensagens_rest_resolver_empresa( $request, $user_id );
 	if ( is_wp_error( $empresa_id ) ) return $empresa_id;
 
-	$conversas = array_map( function ( $conversa ) {
-		$conversa['ultima_mensagem_ha'] = human_time_diff( strtotime( $conversa['ultima_mensagem_em'] ), current_time( 'timestamp' ) );
-		return $conversa;
-	}, cp_ac_conversas( $empresa_id, $user_id ) );
+	$estado = sanitize_key( (string) $request->get_param( 'estado' ) );
+	if ( ! in_array( $estado, [ 'ativas', 'arquivadas', 'todas' ], true ) ) $estado = 'ativas';
 
-	$por_ler_total = array_sum( wp_list_pluck( $conversas, 'por_ler' ) );
+	$conversas = array_map( function ( $conversa ) use ( $empresa_id ) {
+		$conversa['ultima_mensagem_ha'] = human_time_diff( strtotime( $conversa['ultima_mensagem_em'] ), current_time( 'timestamp' ) );
+		$conversa['pode_apagar']        = cp_ac_conversa_pode_apagar( $empresa_id, $conversa['id'] );
+		return $conversa;
+	}, cp_ac_conversas( $empresa_id, $user_id, $estado ) );
+
+	// O total de não lidas no badge é sempre das conversas ativas, mesmo a
+	// ver as arquivadas — uma conversa arquivada não pede atenção.
+	$por_ler_total = 'ativas' === $estado
+		? array_sum( wp_list_pluck( $conversas, 'por_ler' ) )
+		: array_sum( wp_list_pluck( cp_ac_conversas( $empresa_id, $user_id, 'ativas' ), 'por_ler' ) );
 
 	return rest_ensure_response( [
 		'conversas'     => $conversas,
 		'por_ler_total' => $por_ler_total,
 	] );
+}
+
+function cp_ac_rest_conversa_arquivar( $request ) {
+	$user_id    = get_current_user_id();
+	$empresa_id = cp_ac_mensagens_rest_resolver_empresa( $request, $user_id );
+	if ( is_wp_error( $empresa_id ) ) return $empresa_id;
+
+	$conversa_id = sanitize_text_field( (string) $request->get_param( 'conversa_id' ) );
+	if ( '' === $conversa_id || ! cp_ac_conversa_pertence( $conversa_id, $empresa_id ) ) {
+		return new WP_Error( 'cp_conversa_invalida', __( 'Conversa inválida.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+	}
+	$arquivar = (bool) $request->get_param( 'arquivar' );
+	cp_ac_conversa_arquivar( $empresa_id, $conversa_id, $arquivar );
+	return rest_ensure_response( [ 'ok' => true, 'arquivada' => $arquivar ] );
+}
+
+function cp_ac_rest_conversa_apagar( $request ) {
+	$user_id    = get_current_user_id();
+	$empresa_id = cp_ac_mensagens_rest_resolver_empresa( $request, $user_id );
+	if ( is_wp_error( $empresa_id ) ) return $empresa_id;
+
+	$conversa_id = sanitize_text_field( (string) $request->get_param( 'conversa_id' ) );
+	if ( '' === $conversa_id || ! cp_ac_conversa_pertence( $conversa_id, $empresa_id ) ) {
+		return new WP_Error( 'cp_conversa_invalida', __( 'Conversa inválida.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+	}
+	if ( ! cp_ac_conversa_apagar( $empresa_id, $conversa_id ) ) {
+		return new WP_Error( 'cp_conversa_tem_resposta', __( 'Já há resposta nesta conversa — não pode ser apagada.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+	}
+	return rest_ensure_response( [ 'ok' => true ] );
 }
 
 function cp_ac_rest_conversas_criar( $request ) {
@@ -322,6 +426,10 @@ function cp_ac_rest_mensagens_criar( $request ) {
 	}
 
 	$mensagem = cp_ac_mensagem_adicionar( $empresa_id, $conversa_id, $texto, $user_id, $equipa );
+
+	// Responder a uma conversa arquivada repõe-na — já não fazia sentido
+	// estar fora de "Ativas" com uma mensagem nova por ler.
+	cp_ac_conversa_arquivar( $empresa_id, $conversa_id, false );
 
 	$assunto = '';
 	foreach ( cp_ac_conversas_raw( $empresa_id ) as $conversa ) {
@@ -415,23 +523,47 @@ function cp_ac_render_mensagens_lista( $mensagens ) {
 // Backoffice: seletor de conversa (populado a partir de $empresa_id) +
 // a conversa escolhida (histórico completo + enviar), ou "Nova conversa".
 function cp_ac_render_mensagens( $empresa_id, $conversa_id = '' ) {
-	$conversas = cp_ac_conversas( $empresa_id );
+	$mostrar_arquivadas = ! empty( $_GET['cp_mostrar_arquivadas'] );
+	$conversas = cp_ac_conversas( $empresa_id, null, $mostrar_arquivadas ? 'todas' : 'ativas' );
 	?>
 	<div class="ac-card" style="padding:22px;margin-bottom:18px">
 		<form method="get" action="<?php echo esc_url( get_permalink() ); ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
 			<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
+			<?php if ( $mostrar_arquivadas ) : ?><input type="hidden" name="cp_mostrar_arquivadas" value="1"><?php endif; ?>
 			<label for="cp-bo-conversa" style="font-size:12.5px;font-weight:600"><?php esc_html_e( 'Conversa', 'contabilidade-pro' ); ?></label>
 			<select name="conversa_id" id="cp-bo-conversa" onchange="this.form.submit()" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
 				<option value=""><?php esc_html_e( 'Nova conversa…', 'contabilidade-pro' ); ?></option>
 				<?php foreach ( $conversas as $conversa ) : ?>
-					<option value="<?php echo esc_attr( $conversa['id'] ); ?>" <?php selected( $conversa_id, $conversa['id'] ); ?>><?php echo esc_html( $conversa['assunto'] ); ?><?php echo $conversa['por_ler'] ? ' (' . (int) $conversa['por_ler'] . ')' : ''; ?></option>
+					<option value="<?php echo esc_attr( $conversa['id'] ); ?>" <?php selected( $conversa_id, $conversa['id'] ); ?>><?php echo esc_html( $conversa['assunto'] ); ?><?php echo $conversa['por_ler'] ? ' (' . (int) $conversa['por_ler'] . ')' : ''; ?><?php echo $conversa['arquivada'] ? ' — ' . esc_html__( 'arquivada', 'contabilidade-pro' ) : ''; ?></option>
 				<?php endforeach; ?>
 			</select>
+			<a href="<?php echo esc_url( add_query_arg( [ 'empresa_id' => $empresa_id, 'cp_mostrar_arquivadas' => $mostrar_arquivadas ? false : '1' ] ) ); ?>" style="font-size:12.5px;font-weight:600;color:var(--ac-muted)">
+				<?php echo $mostrar_arquivadas ? esc_html__( 'Ocultar arquivadas', 'contabilidade-pro' ) : esc_html__( 'Mostrar arquivadas', 'contabilidade-pro' ); ?>
+			</a>
 		</form>
 	</div>
 
-	<?php if ( '' !== $conversa_id && cp_ac_conversa_pertence( $conversa_id, $empresa_id ) ) : ?>
+	<?php if ( '' !== $conversa_id && cp_ac_conversa_pertence( $conversa_id, $empresa_id ) ) :
+		$conversa_atual = null;
+		foreach ( cp_ac_conversas( $empresa_id, null, 'todas' ) as $c ) {
+			if ( $c['id'] === $conversa_id ) { $conversa_atual = $c; break; }
+		}
+		$pode_apagar = cp_ac_conversa_pode_apagar( $empresa_id, $conversa_id );
+		?>
 		<div class="ac-card" style="padding:22px">
+			<div class="ac-sec-head">
+				<h3 style="font-size:16px"><?php echo esc_html( $conversa_atual ? $conversa_atual['assunto'] : '' ); ?></h3>
+				<div style="display:flex;gap:8px">
+					<button type="button" class="ac-btn ac-btn-ghost" style="padding:7px 14px;font-size:12.5px" data-cp-conversa-arquivar data-conversa-id="<?php echo esc_attr( $conversa_id ); ?>" data-arquivar="<?php echo ( $conversa_atual && $conversa_atual['arquivada'] ) ? '0' : '1'; ?>">
+						<?php echo ( $conversa_atual && $conversa_atual['arquivada'] ) ? esc_html__( 'Repor', 'contabilidade-pro' ) : esc_html__( 'Arquivar', 'contabilidade-pro' ); ?>
+					</button>
+					<?php if ( $pode_apagar ) : ?>
+						<button type="button" class="ac-btn ac-btn-ghost" style="padding:7px 14px;font-size:12.5px;color:#B3432B" data-cp-conversa-apagar data-conversa-id="<?php echo esc_attr( $conversa_id ); ?>">
+							<?php esc_html_e( 'Apagar', 'contabilidade-pro' ); ?>
+						</button>
+					<?php endif; ?>
+				</div>
+			</div>
 			<?php cp_ac_render_mensagens_lista( cp_ac_mensagens_conversa( $empresa_id, $conversa_id ) ); ?>
 			<div style="margin-top:14px">
 				<?php cp_ac_render_mensagem_form( $empresa_id, $conversa_id, 'cp-mensagens-form' ); ?>
@@ -477,19 +609,35 @@ function cp_ac_render_mensagens_pagina( $empresa_id ) {
 			<div class="ac-card" style="padding:22px">
 				<div class="ac-sec-head">
 					<h3 style="font-size:16px"><?php esc_html_e( 'Conversas', 'contabilidade-pro' ); ?></h3>
+					<div style="display:flex;gap:6px">
+						<button type="button" class="ac-btn ac-btn-primary" style="padding:6px 12px;font-size:12.5px" data-cp-conversas-filtro="ativas"><?php esc_html_e( 'Ativas', 'contabilidade-pro' ); ?></button>
+						<button type="button" class="ac-btn ac-btn-ghost" style="padding:6px 12px;font-size:12.5px" data-cp-conversas-filtro="arquivadas"><?php esc_html_e( 'Arquivadas', 'contabilidade-pro' ); ?></button>
+					</div>
 				</div>
 				<div id="cp-conversas-lista">
 					<?php if ( empty( $conversas ) ) : ?>
 						<div class="ac-mensagens-vazio"><?php esc_html_e( 'Sem conversas — comece uma abaixo.', 'contabilidade-pro' ); ?></div>
 					<?php else : ?>
 						<?php foreach ( $conversas as $conversa ) : ?>
-							<button type="button" class="ac-conversa-row" data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>">
-								<span class="ac-conversa-row-head">
-									<span class="ac-conversa-assunto"><?php echo esc_html( $conversa['assunto'] ); ?></span>
-									<?php if ( $conversa['por_ler'] ) : ?><span class="ac-conversa-badge"><?php echo (int) $conversa['por_ler']; ?></span><?php endif; ?>
+							<div class="ac-conversa-row" data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>">
+								<button type="button" class="ac-conversa-row-click" data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>">
+									<span class="ac-conversa-row-head">
+										<span class="ac-conversa-assunto"><?php echo esc_html( $conversa['assunto'] ); ?></span>
+										<?php if ( $conversa['por_ler'] ) : ?><span class="ac-conversa-badge"><?php echo (int) $conversa['por_ler']; ?></span><?php endif; ?>
+									</span>
+									<span class="ac-conversa-resumo"><?php echo esc_html( wp_trim_words( $conversa['ultima_mensagem'], 10 ) ); ?></span>
+								</button>
+								<span class="ac-conversa-row-acoes">
+									<button type="button" class="ac-conversa-btn" data-cp-conversa-arquivar data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>" data-arquivar="<?php echo $conversa['arquivada'] ? '0' : '1'; ?>" aria-label="<?php echo $conversa['arquivada'] ? esc_attr__( 'Repor', 'contabilidade-pro' ) : esc_attr__( 'Arquivar', 'contabilidade-pro' ); ?>" title="<?php echo $conversa['arquivada'] ? esc_attr__( 'Repor', 'contabilidade-pro' ) : esc_attr__( 'Arquivar', 'contabilidade-pro' ); ?>">
+										<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18M4 7v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M9.5 12h5"></path></svg>
+									</button>
+									<?php if ( cp_ac_conversa_pode_apagar( $empresa_id, $conversa['id'] ) ) : ?>
+										<button type="button" class="ac-conversa-btn ac-conversa-btn-apagar" data-cp-conversa-apagar data-conversa-id="<?php echo esc_attr( $conversa['id'] ); ?>" aria-label="<?php esc_attr_e( 'Apagar', 'contabilidade-pro' ); ?>" title="<?php esc_attr_e( 'Apagar', 'contabilidade-pro' ); ?>">
+											<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+										</button>
+									<?php endif; ?>
 								</span>
-								<span class="ac-conversa-resumo"><?php echo esc_html( wp_trim_words( $conversa['ultima_mensagem'], 10 ) ); ?></span>
-							</button>
+							</div>
 						<?php endforeach; ?>
 					<?php endif; ?>
 				</div>

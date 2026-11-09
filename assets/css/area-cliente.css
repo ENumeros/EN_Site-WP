@@ -127,7 +127,9 @@ a:hover{color:var(--ac-navy)}
 .ac-todo-meta{font-size:12px;color:var(--ac-muted);margin-top:4px}
 .ac-req-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--ac-hairline);flex-wrap:wrap}
 .ac-req-row:last-child{border-bottom:none;padding-bottom:0}
-.ac-dropzone{border:1.5px dashed var(--ac-line);border-radius:12px;padding:30px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:var(--ac-bg)}
+.ac-dropzone{border:1.5px dashed var(--ac-hairline);border-radius:16px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--ac-bg)}
+.ac-dropzone-icon{width:44px;height:44px;border-radius:50%;background:var(--ac-surface);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,40,.06),0 4px 10px -4px rgba(16,24,40,.1);margin-bottom:4px}
+:root[data-theme="dark"] .ac-dropzone-icon{box-shadow:0 1px 2px rgba(0,0,0,.2),0 4px 10px -4px rgba(0,0,0,.3)}
 .ac-file-input{color:var(--ac-muted)}
 .ac-file-input::file-selector-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:9px;font-size:14px;font-weight:600;border:1px solid transparent;cursor:pointer;font-family:'Public Sans',sans-serif;background:var(--ac-navy);color:var(--ac-on-navy);margin-right:10px}
 .ac-file-input::file-selector-button:hover{background:var(--ac-navy-strong)}
@@ -160,14 +162,19 @@ a:hover{color:var(--ac-navy)}
 .ac-mensagem-campo{flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px;font-family:inherit;resize:vertical}
 
 /* Lista de conversas (dropdown do utilizador + seletor do Backoffice) */
-.ac-conversa-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:9px 12px;border-radius:8px;border:none;background:none;color:var(--ac-text);font-family:inherit;cursor:pointer}
+.ac-conversa-row{display:flex;align-items:center;gap:2px;width:100%;border-radius:8px}
 .ac-conversa-row:hover{background:var(--ac-bg)}
+.ac-conversa-row.is-ativa{background:var(--ac-bg)}
+.ac-conversa-row-click{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;text-align:left;padding:9px 4px 9px 12px;border-radius:8px;border:none;background:none;color:var(--ac-text);font-family:inherit;cursor:pointer}
 .ac-conversa-row-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ac-conversa-assunto{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ac-conversa-badge{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:#C0392B;color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .ac-conversa-badge[hidden]{display:none}
 .ac-conversa-resumo{font-size:12px;color:var(--ac-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ac-conversa-row.is-ativa{background:var(--ac-bg)}
+.ac-conversa-row-acoes{display:flex;gap:2px;flex:none;padding-right:8px}
+.ac-conversa-btn{width:26px;height:26px;border-radius:6px;border:none;background:none;color:var(--ac-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
+.ac-conversa-btn:hover{background:var(--ac-line);color:var(--ac-text)}
+.ac-conversa-btn-apagar:hover{color:#B3432B}
 
 /* Página de Mensagens: conversas à esquerda, conversa aberta à direita */
 .ac-mensagens-colunas{display:flex;align-items:flex-start;gap:20px}
@@ -230,7 +237,7 @@ a:hover{color:var(--ac-navy)}
 /* Modal (ex.: enviar documento) */
 .ac-modal-backdrop{position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:49}
 .ac-modal-backdrop[hidden]{display:none}
-.ac-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;max-width:calc(100vw - 48px);background:var(--ac-surface);border:1px solid var(--ac-line);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.3);padding:22px;z-index:50}
+.ac-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:360px;max-width:calc(100vw - 48px);background:var(--ac-surface);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.3);padding:22px;z-index:50}
 .ac-modal[hidden]{display:none}
 .ac-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .ac-modal-close{background:none;border:none;color:var(--ac-muted);cursor:pointer;padding:4px;display:flex}

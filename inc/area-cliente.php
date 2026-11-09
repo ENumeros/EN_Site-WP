@@ -34,7 +34,7 @@ function cp_ac_ferramentas() {
 			'icon'  => '<path d="M3 7.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M16 12.5h3v3h-3a1.5 1.5 0 0 1 0-3z"></path><path d="M3 9h15"></path>',
 		],
 		'calendario_fiscal'  => [
-			'label' => __( 'Calendário Fiscal', 'contabilidade-pro' ),
+			'label' => __( 'Calendário', 'contabilidade-pro' ),
 			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
 			'icon'  => '<rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M3.5 10h17"></path>',
 		],

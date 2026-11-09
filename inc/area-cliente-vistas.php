@@ -36,7 +36,10 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 	$tem_calendario_fiscal = cp_ac_tem_ferramenta( 'calendario_fiscal' );
 	$tem_mapas_gestao      = cp_ac_tem_ferramenta( 'mapas_gestao' );
 	$tem_documentos        = cp_ac_tem_ferramenta( 'documentos' );
-	$tem_pendentes         = cp_ac_tem_ferramenta( 'pendentes' );
+	$tem_documentos_falta  = cp_ac_tem_ferramenta( 'documentos_em_falta' );
+	$tem_movimentos        = cp_ac_tem_ferramenta( 'movimentos_a_esclarecer' );
+	$tem_extratos          = cp_ac_tem_ferramenta( 'extratos' );
+	$tem_saft              = cp_ac_tem_ferramenta( 'saft' );
 	$tem_tarefas           = cp_ac_tem_ferramenta( 'tarefas' );
 	$tem_mensagens         = cp_ac_tem_ferramenta( 'mensagens' );
 
@@ -46,7 +49,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php printf( /* translators: %s: nome da empresa */ esc_html__( 'Situação atual — %s', 'contabilidade-pro' ), esc_html( get_the_title( $empresa_id ) ) ); ?></div>
 	</div>
 
-	<?php if ( ! $tem_visao_financeira && ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_pendentes && ! $tem_tarefas && ! $tem_mensagens ) : ?>
+	<?php if ( ! $tem_visao_financeira && ! $tem_conta_corrente && ! $tem_calendario_fiscal && ! $tem_mapas_gestao && ! $tem_documentos && ! $tem_documentos_falta && ! $tem_movimentos && ! $tem_extratos && ! $tem_saft && ! $tem_tarefas && ! $tem_mensagens ) : ?>
 		<?php cp_ac_vazio( __( 'Ainda não há ferramentas ativadas para esta empresa.', 'contabilidade-pro' ), __( 'Contacte a Entre Números se estiver à espera de acesso a alguma funcionalidade.', 'contabilidade-pro' ) ); ?>
 		<?php return; ?>
 	<?php endif; ?>
@@ -136,36 +139,66 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 					</a>
 				<?php endif; ?>
 
-				<?php if ( $tem_documentos ) : ?>
-					<div class="ac-resumo-row">
-						<span class="ac-resumo-row-left">
-							<span class="ac-resumo-dot"></span>
-							<span class="ac-resumo-label"><?php esc_html_e( 'Extratos & SAF-T (mês corrente)', 'contabilidade-pro' ); ?></span>
-						</span>
-						<span class="ac-resumo-value"><?php esc_html_e( 'Sem extratos este mês', 'contabilidade-pro' ); ?></span>
-					</div>
-				<?php endif; ?>
-
-				<?php if ( $tem_pendentes ) :
-					$doc_pendentes = count( cp_ac_pendentes_documentos( $empresa_id ) );
-					$mov_pendentes = count( cp_ac_pendentes_movimentos( $empresa_id ) );
+				<?php if ( $tem_documentos_falta ) :
+					$pendentes_por_resolver = count( array_filter( cp_ac_pendentes_documentos( $empresa_id ), function ( $item ) use ( $empresa_id ) {
+						return ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+					} ) );
 					?>
-					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" class="ac-resumo-row">
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'documentos_em_falta' ) ); ?>" class="ac-resumo-row">
 						<span class="ac-resumo-row-left">
-							<span class="ac-resumo-dot<?php echo 0 === $doc_pendentes ? ' is-ok' : ''; ?>"></span>
-							<span class="ac-resumo-label"><?php esc_html_e( 'Documentos pendentes', 'contabilidade-pro' ); ?></span>
+							<span class="ac-resumo-dot<?php echo 0 === $pendentes_por_resolver ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Documentos em falta', 'contabilidade-pro' ); ?></span>
 						</span>
-						<span class="ac-resumo-value<?php echo 0 === $doc_pendentes ? ' is-ok' : ''; ?>">
-							<?php echo $doc_pendentes > 0 ? esc_html( $doc_pendentes ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
+						<span class="ac-resumo-value<?php echo 0 === $pendentes_por_resolver ? ' is-ok' : ''; ?>">
+							<?php echo $pendentes_por_resolver > 0 ? esc_html( $pendentes_por_resolver ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
 						</span>
 					</a>
-					<a href="<?php echo esc_url( cp_ac_vista_url( 'pendentes' ) ); ?>" class="ac-resumo-row">
+				<?php endif; ?>
+
+				<?php if ( $tem_movimentos ) :
+					$movimentos_por_resolver = count( array_filter( cp_ac_pendentes_movimentos( $empresa_id ), function ( $item ) use ( $empresa_id ) {
+						return ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+					} ) );
+					?>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'movimentos_a_esclarecer' ) ); ?>" class="ac-resumo-row">
 						<span class="ac-resumo-row-left">
-							<span class="ac-resumo-dot<?php echo 0 === $mov_pendentes ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-dot<?php echo 0 === $movimentos_por_resolver ? ' is-ok' : ''; ?>"></span>
 							<span class="ac-resumo-label"><?php esc_html_e( 'Movimentos a esclarecer', 'contabilidade-pro' ); ?></span>
 						</span>
-						<span class="ac-resumo-value<?php echo 0 === $mov_pendentes ? ' is-ok' : ''; ?>">
-							<?php echo $mov_pendentes > 0 ? esc_html( $mov_pendentes ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
+						<span class="ac-resumo-value<?php echo 0 === $movimentos_por_resolver ? ' is-ok' : ''; ?>">
+							<?php echo $movimentos_por_resolver > 0 ? esc_html( $movimentos_por_resolver ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
+						</span>
+					</a>
+				<?php endif; ?>
+
+				<?php if ( $tem_extratos ) :
+					$extratos_por_resolver = count( array_filter( cp_ac_extratos( $empresa_id ), function ( $item ) use ( $empresa_id ) {
+						return 'sem_dados' !== $item['estado'] && ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+					} ) );
+					?>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'extratos' ) ); ?>" class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot<?php echo 0 === $extratos_por_resolver ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'Extratos', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value<?php echo 0 === $extratos_por_resolver ? ' is-ok' : ''; ?>">
+							<?php echo $extratos_por_resolver > 0 ? esc_html( $extratos_por_resolver ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
+						</span>
+					</a>
+				<?php endif; ?>
+
+				<?php if ( $tem_saft ) :
+					$saft_por_resolver = count( array_filter( cp_ac_saft( $empresa_id ), function ( $item ) use ( $empresa_id ) {
+						return 'sem_dados' !== $item['estado'] && ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+					} ) );
+					?>
+					<a href="<?php echo esc_url( cp_ac_vista_url( 'saft' ) ); ?>" class="ac-resumo-row">
+						<span class="ac-resumo-row-left">
+							<span class="ac-resumo-dot<?php echo 0 === $saft_por_resolver ? ' is-ok' : ''; ?>"></span>
+							<span class="ac-resumo-label"><?php esc_html_e( 'SAF-T', 'contabilidade-pro' ); ?></span>
+						</span>
+						<span class="ac-resumo-value<?php echo 0 === $saft_por_resolver ? ' is-ok' : ''; ?>">
+							<?php echo $saft_por_resolver > 0 ? esc_html( $saft_por_resolver ) : esc_html__( 'Tudo em dia', 'contabilidade-pro' ); ?>
 						</span>
 					</a>
 				<?php endif; ?>
@@ -424,51 +457,51 @@ function cp_ac_vista_documentos() {
 	<?php endif; ?>
 
 	<?php cp_ac_render_documentos( $empresa_id ); ?>
-
-	<div class="ac-card" style="padding:22px">
-		<div class="ac-sec-head">
-			<div>
-				<h3 style="font-size:16px"><?php esc_html_e( 'Extratos Bancários & SAF-T', 'contabilidade-pro' ); ?></h3>
-				<div class="ac-sec-sub"><?php esc_html_e( 'Todos os meses, carregue o extrato bancário e o ficheiro SAF-T da sua contabilidade.', 'contabilidade-pro' ); ?></div>
-			</div>
-		</div>
-		<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não há meses registados.', 'contabilidade-pro' ); ?></div>
-	</div>
 	<?php
+	// Extratos bancários e SAF-T têm vista própria — ver cp_ac_vista_extratos()
+	// e cp_ac_vista_saft() mais abaixo.
 }
 
-// ─── Pendentes ──────────────────────────────────────────────────────────────
+// ─── Util: banner de sucesso/erro partilhado pelas vistas de resposta ──────
+// (Documentos em Falta, Movimentos a Esclarecer, Extratos, SAF-T — todas
+// submetem pelo mesmo admin-post `cp_pendente_responder`.)
 
-function cp_ac_vista_pendentes() {
-	$empresa_id = cp_ac_empresa_ativa();
-	$documentos = cp_ac_pendentes_documentos( $empresa_id );
-	$movimentos = cp_ac_pendentes_movimentos( $empresa_id );
-	$sucesso    = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
-	$erro       = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
-	?>
-	<div>
-		<h1 style="font-size:23px"><?php esc_html_e( 'Pendentes', 'contabilidade-pro' ); ?></h1>
-		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'O que a Entre Números precisa de si, em dois grupos: documentos e movimentos bancários.', 'contabilidade-pro' ); ?></div>
-	</div>
-
-	<?php if ( 'resposta_enviada' === $sucesso ) : ?>
+function cp_ac_render_banner_resposta_pendente() {
+	$sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
+	$erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
+	if ( 'resposta_enviada' === $sucesso ) :
+		?>
 		<div class="ac-status-banner green">
 			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
 			<div><div class="ac-status-title"><?php esc_html_e( 'Resposta enviada', 'contabilidade-pro' ); ?></div><div class="ac-status-sub green"><?php esc_html_e( 'A nossa equipa foi notificada.', 'contabilidade-pro' ); ?></div></div>
 		</div>
-	<?php elseif ( $erro ) : ?>
+		<?php
+	elseif ( $erro ) :
+		?>
 		<div class="ac-status-banner amber">
 			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
-			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível enviar', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escreva uma resposta ou anexe um ficheiro, e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível enviar', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escreva uma resposta, anexe um ficheiro, ou marque "sem dados", e tente novamente.', 'contabilidade-pro' ); ?></div></div>
 		</div>
-	<?php endif; ?>
+		<?php
+	endif;
+}
+
+// ─── Documentos em Falta ────────────────────────────────────────────────────
+
+function cp_ac_vista_documentos_em_falta() {
+	$empresa_id = cp_ac_empresa_ativa();
+	$documentos = cp_ac_pendentes_documentos( $empresa_id );
+	?>
+	<div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'Documentos em Falta', 'contabilidade-pro' ); ?></h1>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Documentos que a nossa equipa precisa especificamente de si.', 'contabilidade-pro' ); ?></div>
+	</div>
+
+	<?php cp_ac_render_banner_resposta_pendente(); ?>
 
 	<div class="ac-card" style="padding:22px">
 		<div class="ac-sec-head">
-			<div>
-				<h3 style="font-size:16px"><?php esc_html_e( 'Documentos Pendentes', 'contabilidade-pro' ); ?></h3>
-				<div class="ac-sec-sub"><?php esc_html_e( 'Documentos que a nossa equipa precisa especificamente de si.', 'contabilidade-pro' ); ?></div>
-			</div>
+			<div></div>
 			<?php if ( ! empty( $documentos ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $documentos ) ); ?> <?php esc_html_e( 'pendentes', 'contabilidade-pro' ); ?></span><?php endif; ?>
 		</div>
 		<?php if ( empty( $documentos ) ) : ?>
@@ -502,13 +535,25 @@ function cp_ac_vista_pendentes() {
 			<?php endforeach; ?>
 		<?php endif; ?>
 	</div>
+	<?php
+}
+
+// ─── Movimentos a Esclarecer ────────────────────────────────────────────────
+
+function cp_ac_vista_movimentos_a_esclarecer() {
+	$empresa_id = cp_ac_empresa_ativa();
+	$movimentos = cp_ac_pendentes_movimentos( $empresa_id );
+	?>
+	<div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'Movimentos a Esclarecer', 'contabilidade-pro' ); ?></h1>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Linhas do extrato bancário — pode responder por texto, por anexo, ou ambos.', 'contabilidade-pro' ); ?></div>
+	</div>
+
+	<?php cp_ac_render_banner_resposta_pendente(); ?>
 
 	<div class="ac-card" style="padding:22px">
 		<div class="ac-sec-head">
-			<div>
-				<h3 style="font-size:16px"><?php esc_html_e( 'Movimentos a Esclarecer', 'contabilidade-pro' ); ?></h3>
-				<div class="ac-sec-sub"><?php esc_html_e( 'Linhas do extrato bancário — pode responder por texto, por anexo, ou ambos.', 'contabilidade-pro' ); ?></div>
-			</div>
+			<div></div>
 			<?php if ( ! empty( $movimentos ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $movimentos ) ); ?> <?php esc_html_e( 'por responder', 'contabilidade-pro' ); ?></span><?php endif; ?>
 		</div>
 		<?php if ( empty( $movimentos ) ) : ?>
@@ -561,6 +606,125 @@ function cp_ac_vista_pendentes() {
 		<?php endif; ?>
 	</div>
 	<?php
+}
+
+// ─── Extratos ───────────────────────────────────────────────────────────────
+// Grelha mês × conta. Cada célula é um item de cp_ac_extratos() (ou está em
+// branco, se essa conta ainda não tinha pedido nesse mês). "Sem movimento"
+// pode já vir marcado pela Work (estado 'sem_dados') ou ser marcado aqui
+// pelo cliente, como alternativa a carregar o ficheiro.
+
+function cp_ac_vista_extratos() {
+	$empresa_id = cp_ac_empresa_ativa();
+	$itens      = cp_ac_extratos( $empresa_id );
+	$contas     = cp_ac_contas_bancarias( $empresa_id );
+	?>
+	<div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'Extratos', 'contabilidade-pro' ); ?></h1>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Um extrato por mês, por conta bancária.', 'contabilidade-pro' ); ?></div>
+	</div>
+
+	<?php cp_ac_render_banner_resposta_pendente(); ?>
+
+	<?php if ( empty( $itens ) || empty( $contas ) ) : ?>
+		<?php cp_ac_vazio( __( 'Sem extratos pedidos de momento', 'contabilidade-pro' ), __( 'Os extratos que a Entre Números precisar vão aparecer aqui, mês a mês.', 'contabilidade-pro' ) ); ?>
+	<?php else :
+		// Agrupar por mês, mais recente primeiro; dentro de cada mês, uma
+		// coluna por conta (na ordem em que as contas foram vistas).
+		$por_mes = [];
+		foreach ( $itens as $item ) {
+			$por_mes[ $item['mes'] ][ $item['conta_id'] ] = $item;
+		}
+		krsort( $por_mes );
+		?>
+		<div class="ac-table-wrap">
+			<table class="ac-table">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Mês', 'contabilidade-pro' ); ?></th>
+						<?php foreach ( $contas as $conta_nome ) : ?>
+							<th><?php echo esc_html( $conta_nome ); ?></th>
+						<?php endforeach; ?>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $por_mes as $mes => $itens_do_mes ) : ?>
+						<tr>
+							<td style="font-weight:600;white-space:nowrap"><?php echo esc_html( $mes ); ?></td>
+							<?php foreach ( $contas as $conta_id => $conta_nome ) : ?>
+								<td><?php cp_ac_render_celula_checklist( empty( $itens_do_mes[ $conta_id ] ) ? null : $itens_do_mes[ $conta_id ], $empresa_id, 'extrato' ); ?></td>
+							<?php endforeach; ?>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+	<?php endif; ?>
+	<?php
+}
+
+// ─── SAF-T ──────────────────────────────────────────────────────────────────
+// Mesma lógica de Extratos, mas um item por mês (sem conta).
+
+function cp_ac_vista_saft() {
+	$empresa_id = cp_ac_empresa_ativa();
+	$itens      = cp_ac_saft( $empresa_id );
+	usort( $itens, function ( $a, $b ) { return strcmp( $b['mes'], $a['mes'] ); } );
+	?>
+	<div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'SAF-T', 'contabilidade-pro' ); ?></h1>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'O ficheiro SAF-T da sua contabilidade, mês a mês.', 'contabilidade-pro' ); ?></div>
+	</div>
+
+	<?php cp_ac_render_banner_resposta_pendente(); ?>
+
+	<?php if ( empty( $itens ) ) : ?>
+		<?php cp_ac_vazio( __( 'Sem SAF-T pedido de momento', 'contabilidade-pro' ), __( 'Os pedidos de SAF-T da Entre Números vão aparecer aqui, mês a mês.', 'contabilidade-pro' ) ); ?>
+	<?php else : ?>
+		<div class="ac-card" style="padding:22px">
+			<?php foreach ( $itens as $item ) : ?>
+				<div class="ac-req-row">
+					<div style="font-size:14px;font-weight:600"><?php echo esc_html( $item['mes'] ); ?></div>
+					<?php cp_ac_render_celula_checklist( $item, $empresa_id, 'saft' ); ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
+	<?php endif; ?>
+	<?php
+}
+
+// ─── Util: célula/linha de estado partilhada por Extratos e SAF-T ─────────
+// Três estados possíveis: 'sem_dados' (já veio assim da Work, ou o cliente
+// marcou), 'enviado' (o cliente já respondeu com ficheiro) e, por omissão,
+// pendente (mostra o formulário de resposta).
+
+function cp_ac_render_celula_checklist( $item, $empresa_id, $tipo ) {
+	if ( ! $item ) {
+		echo '<span style="color:var(--ac-muted);font-size:12.5px">—</span>';
+		return;
+	}
+	$resposta = cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+	$estado   = $resposta ? $resposta['estado'] : $item['estado'];
+
+	if ( 'sem_dados' === $estado ) : ?>
+		<span class="ac-badge ac-badge-blue"><?php esc_html_e( 'Sem dados este mês', 'contabilidade-pro' ); ?></span>
+	<?php elseif ( $resposta ) : ?>
+		<div style="display:flex;align-items:center;gap:10px">
+			<span class="ac-badge ac-badge-green"><?php esc_html_e( 'Enviado', 'contabilidade-pro' ); ?></span>
+			<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:6px 12px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
+		</div>
+	<?php else : ?>
+		<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+			<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
+			<input type="hidden" name="action" value="cp_pendente_responder">
+			<input type="hidden" name="tipo" value="<?php echo esc_attr( $tipo ); ?>">
+			<input type="hidden" name="item_id" value="<?php echo esc_attr( $item['id'] ); ?>">
+			<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
+			<input type="file" name="anexo" style="font-size:12px;max-width:160px">
+			<button class="ac-btn ac-btn-primary" type="submit" style="padding:6px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
+			<button class="ac-btn ac-btn-ghost" type="submit" name="sem_dados" value="1" style="padding:6px 12px"><?php echo 'extrato' === $tipo ? esc_html__( 'Não houve movimento', 'contabilidade-pro' ) : esc_html__( 'Sem SAF-T este mês', 'contabilidade-pro' ); ?></button>
+		</form>
+	<?php endif;
 }
 
 // ─── Mapas de Gestão ────────────────────────────────────────────────────────

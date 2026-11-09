@@ -48,10 +48,25 @@ function cp_ac_ferramentas() {
 			'grupo' => __( 'Documentos', 'contabilidade-pro' ),
 			'icon'  => '<path d="M7.5 17.5a4 4 0 0 1-.8-7.92 5 5 0 0 1 9.72-1.84A4.5 4.5 0 0 1 16.5 17.5h-9z"></path><path d="M12 14v-5M9.5 11.5 12 9l2.5 2.5"></path>',
 		],
-		'pendentes'          => [
-			'label' => __( 'Pendentes', 'contabilidade-pro' ),
+		'documentos_em_falta'     => [
+			'label' => __( 'Documentos em Falta', 'contabilidade-pro' ),
 			'grupo' => __( 'Documentos', 'contabilidade-pro' ),
 			'icon'  => '<path d="M4 12h4l1.5 3h5L16 12h4"></path><path d="M5.5 6h13L20 12v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6z"></path>',
+		],
+		'movimentos_a_esclarecer' => [
+			'label' => __( 'Movimentos a Esclarecer', 'contabilidade-pro' ),
+			'grupo' => __( 'Documentos', 'contabilidade-pro' ),
+			'icon'  => '<path d="M4 7h16M4 12h10M4 17h7"></path><path d="M17 14l3 3-3 3"></path>',
+		],
+		'extratos'                => [
+			'label' => __( 'Extratos', 'contabilidade-pro' ),
+			'grupo' => __( 'Documentos', 'contabilidade-pro' ),
+			'icon'  => '<path d="M5 4h14v16l-3.5-2-3.5 2-3.5-2-3.5 2z"></path><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4"></path>',
+		],
+		'saft'                    => [
+			'label' => __( 'SAF-T', 'contabilidade-pro' ),
+			'grupo' => __( 'Documentos', 'contabilidade-pro' ),
+			'icon'  => '<path d="M7.5 17.5a4 4 0 0 1-.8-7.92 5 5 0 0 1 9.72-1.84A4.5 4.5 0 0 1 16.5 17.5h-9z"></path><path d="M9.5 13.5h5"></path>',
 		],
 		'mapas_gestao'       => [
 			'label' => __( 'Mapas de Gestão', 'contabilidade-pro' ),
@@ -772,14 +787,22 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
     update_post_meta( $empresa_id, '_cp_pendentes_documentos', $documentos );
     update_post_meta( $empresa_id, '_cp_pendentes_movimentos', $movimentos );
 
-    $ha_novidade = array_diff( wp_list_pluck( $documentos, 'id' ), $ids_documentos_antes )
-        || array_diff( wp_list_pluck( $movimentos, 'id' ), $ids_movimentos_antes );
-    if ( $ha_novidade && cp_ac_empresa_tem_ferramenta( $empresa_id, 'pendentes' ) ) {
+    $ha_documento_novo = (bool) array_diff( wp_list_pluck( $documentos, 'id' ), $ids_documentos_antes );
+    $ha_movimento_novo = (bool) array_diff( wp_list_pluck( $movimentos, 'id' ), $ids_movimentos_antes );
+    if ( $ha_documento_novo && cp_ac_empresa_tem_ferramenta( $empresa_id, 'documentos_em_falta' ) ) {
         cp_push_notificar_empresa(
             $empresa_id,
-            __( 'Novos pendentes', 'contabilidade-pro' ),
-            __( 'Tem documentos ou movimentos novos à espera de resposta.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'pendentes', home_url( '/area-de-cliente/' ) )
+            __( 'Novos documentos em falta', 'contabilidade-pro' ),
+            __( 'Tem documentos novos à espera de resposta.', 'contabilidade-pro' ),
+            add_query_arg( 'vista', 'documentos_em_falta', home_url( '/area-de-cliente/' ) )
+        );
+    }
+    if ( $ha_movimento_novo && cp_ac_empresa_tem_ferramenta( $empresa_id, 'movimentos_a_esclarecer' ) ) {
+        cp_push_notificar_empresa(
+            $empresa_id,
+            __( 'Novos movimentos a esclarecer', 'contabilidade-pro' ),
+            __( 'Tem movimentos bancários novos à espera de resposta.', 'contabilidade-pro' ),
+            add_query_arg( 'vista', 'movimentos_a_esclarecer', home_url( '/area-de-cliente/' ) )
         );
     }
 
@@ -825,12 +848,23 @@ function cp_ac_handle_pendente_resposta() {
 
     $empresa_id = cp_ac_empresa_ativa();
     $item_id    = isset( $_POST['item_id'] ) ? sanitize_text_field( wp_unslash( $_POST['item_id'] ) ) : '';
-    $tipo       = isset( $_POST['tipo'] ) && 'documento' === $_POST['tipo'] ? 'documento' : 'movimento';
+    $tipo_in    = isset( $_POST['tipo'] ) ? sanitize_key( wp_unslash( $_POST['tipo'] ) ) : '';
+    $tipo       = in_array( $tipo_in, [ 'documento', 'extrato', 'saft' ], true ) ? $tipo_in : 'movimento';
     $texto      = isset( $_POST['texto'] ) ? sanitize_textarea_field( wp_unslash( $_POST['texto'] ) ) : '';
+    // "Sem dados este mês" só faz sentido em Extratos e SAF-T — um mês sem
+    // movimento bancário ou sem SAF-T é uma situação real, não um
+    // esquecimento (ver inc/area-cliente-vistas.php, vistas Extratos/SAF-T).
+    $sem_dados  = in_array( $tipo, [ 'extrato', 'saft' ], true ) && ! empty( $_POST['sem_dados'] );
     $voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
 
     // O item tem mesmo de pertencer à empresa ativa do utilizador.
-    $ids_validos = wp_list_pluck( 'documento' === $tipo ? cp_ac_pendentes_documentos( $empresa_id ) : cp_ac_pendentes_movimentos( $empresa_id ), 'id' );
+    $listas_por_tipo = [
+        'documento' => 'cp_ac_pendentes_documentos',
+        'movimento' => 'cp_ac_pendentes_movimentos',
+        'extrato'   => 'cp_ac_extratos',
+        'saft'      => 'cp_ac_saft',
+    ];
+    $ids_validos = wp_list_pluck( call_user_func( $listas_por_tipo[ $tipo ], $empresa_id ), 'id' );
     if ( ! $empresa_id || '' === $item_id || ! in_array( $item_id, $ids_validos, true ) ) {
         wp_safe_redirect( add_query_arg( 'cp_erro', 'pendente_invalido', $voltar ) );
         exit;
@@ -839,7 +873,7 @@ function cp_ac_handle_pendente_resposta() {
     $anexo_id  = 0;
     $anexo_url = '';
     $anexo_nome = '';
-    if ( ! empty( $_FILES['anexo'] ) && UPLOAD_ERR_NO_FILE !== $_FILES['anexo']['error'] ) {
+    if ( ! $sem_dados && ! empty( $_FILES['anexo'] ) && UPLOAD_ERR_NO_FILE !== $_FILES['anexo']['error'] ) {
         if ( ! function_exists( 'wp_handle_upload' ) ) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -854,7 +888,7 @@ function cp_ac_handle_pendente_resposta() {
         }
     }
 
-    if ( '' === $texto && ! $anexo_id ) {
+    if ( ! $sem_dados && '' === $texto && ! $anexo_id ) {
         wp_safe_redirect( add_query_arg( 'cp_erro', 'resposta_vazia', $voltar ) );
         exit;
     }
@@ -871,7 +905,9 @@ function cp_ac_handle_pendente_resposta() {
         'anexo_id'      => $anexo_id,
         'anexo_url'     => $anexo_url,
         'anexo_nome'    => $anexo_nome,
+        'estado'        => $sem_dados ? 'sem_dados' : 'enviado',
         'respondido_em' => current_time( 'mysql' ),
+        'respondido_por' => 'cliente',
     ];
     update_post_meta( $empresa_id, '_cp_pendentes_respostas', $respostas );
 
@@ -890,6 +926,138 @@ function cp_ac_handle_pendente_resposta() {
     exit;
 }
 add_action( 'admin_post_cp_pendente_responder', 'cp_ac_handle_pendente_resposta' );
+
+
+// ════════════════════════════════════════════════════════════════════════
+// Extratos & SAF-T (Work → Área de Cliente → Work)
+// ════════════════════════════════════════════════════════════════════════
+// Mesmo mecanismo de Pendentes acima (a Work envia a checklist do que
+// espera, substituindo sempre tudo; o cliente responde no site; a resposta
+// fica em '_cp_pendentes_respostas', partilhada com documentos/movimentos,
+// até a Work a ir buscar e confirmar). A Work pode já vir com um item
+// marcado 'estado' => 'sem_dados' quando a equipa já sabe, do lado dela,
+// que não há nada a enviar nesse mês — poupa o cliente de ter de marcar.
+// Extratos tem uma dimensão a mais: conta_id/conta_nome (um extrato por
+// mês, por conta). SAF-T é só por mês.
+
+function cp_ac_extratos( $empresa_id ) {
+    $itens = get_post_meta( $empresa_id, '_cp_extratos', true );
+    return is_array( $itens ) ? $itens : [];
+}
+
+function cp_ac_saft( $empresa_id ) {
+    $itens = get_post_meta( $empresa_id, '_cp_saft', true );
+    return is_array( $itens ) ? $itens : [];
+}
+
+// Contas bancárias da empresa, derivadas dos próprios itens de Extratos —
+// não há um registo à parte para manter sincronizado; cada item que a Work
+// envia já traz conta_id/conta_nome.
+function cp_ac_contas_bancarias( $empresa_id ) {
+    $contas = [];
+    foreach ( cp_ac_extratos( $empresa_id ) as $item ) {
+        if ( empty( $item['conta_id'] ) ) continue;
+        $contas[ $item['conta_id'] ] = isset( $item['conta_nome'] ) ? $item['conta_nome'] : $item['conta_id'];
+    }
+    return $contas;
+}
+
+function cp_ac_rest_routes_extratos_saft() {
+    register_rest_route( 'cp/v1', '/extratos', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_extratos',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id'  => [ 'required' => true, 'type' => 'string' ],
+                'extratos' => [ 'required' => false, 'type' => 'array' ],
+            ],
+        ],
+    ] );
+    register_rest_route( 'cp/v1', '/saft', [
+        [
+            'methods'             => 'POST',
+            'callback'            => 'cp_ac_rest_sincronizar_saft',
+            'permission_callback' => 'cp_ac_rest_permissao',
+            'args'                => [
+                'work_id' => [ 'required' => true, 'type' => 'string' ],
+                'saft'    => [ 'required' => false, 'type' => 'array' ],
+            ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_extratos_saft' );
+
+// Valida e normaliza um item de checklist (Extratos ou SAF-T): id/mes
+// obrigatórios, mes no formato AAAA-MM, estado 'pendente' por omissão ou
+// 'sem_dados' quando a Work já o marcou assim. $campos_extra dá os campos
+// específicos de cada tipo (ex.: conta_id/conta_nome, só em Extratos).
+function cp_ac_normalizar_item_checklist( $item, array $campos_extra = [] ) {
+    if ( empty( $item['id'] ) || empty( $item['mes'] ) || ! preg_match( '/^\d{4}-\d{2}$/', $item['mes'] ) ) {
+        return null;
+    }
+    $normalizado = [
+        'id'     => sanitize_text_field( $item['id'] ),
+        'mes'    => sanitize_text_field( $item['mes'] ),
+        'estado' => isset( $item['estado'] ) && 'sem_dados' === $item['estado'] ? 'sem_dados' : 'pendente',
+    ];
+    foreach ( $campos_extra as $campo ) {
+        $normalizado[ $campo ] = isset( $item[ $campo ] ) ? sanitize_text_field( $item[ $campo ] ) : '';
+    }
+    return $normalizado;
+}
+
+function cp_ac_rest_sincronizar_extratos( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $ids_antes = wp_list_pluck( cp_ac_extratos( $empresa_id ), 'id' );
+
+    $extratos = [];
+    foreach ( (array) $request->get_param( 'extratos' ) as $item ) {
+        $normalizado = cp_ac_normalizar_item_checklist( $item, [ 'conta_id', 'conta_nome' ] );
+        if ( $normalizado ) $extratos[] = $normalizado;
+    }
+    update_post_meta( $empresa_id, '_cp_extratos', $extratos );
+
+    $ha_novidade = array_diff( wp_list_pluck( $extratos, 'id' ), $ids_antes );
+    if ( $ha_novidade && cp_ac_empresa_tem_ferramenta( $empresa_id, 'extratos' ) ) {
+        cp_push_notificar_empresa(
+            $empresa_id,
+            __( 'Novos extratos pedidos', 'contabilidade-pro' ),
+            __( 'Há extratos bancários novos à espera de si.', 'contabilidade-pro' ),
+            add_query_arg( 'vista', 'extratos', home_url( '/area-de-cliente/' ) )
+        );
+    }
+
+    return rest_ensure_response( [ 'ok' => true, 'total' => count( $extratos ) ] );
+}
+
+function cp_ac_rest_sincronizar_saft( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+    $ids_antes = wp_list_pluck( cp_ac_saft( $empresa_id ), 'id' );
+
+    $saft = [];
+    foreach ( (array) $request->get_param( 'saft' ) as $item ) {
+        $normalizado = cp_ac_normalizar_item_checklist( $item );
+        if ( $normalizado ) $saft[] = $normalizado;
+    }
+    update_post_meta( $empresa_id, '_cp_saft', $saft );
+
+    $ha_novidade = array_diff( wp_list_pluck( $saft, 'id' ), $ids_antes );
+    if ( $ha_novidade && cp_ac_empresa_tem_ferramenta( $empresa_id, 'saft' ) ) {
+        cp_push_notificar_empresa(
+            $empresa_id,
+            __( 'Novo SAF-T pedido', 'contabilidade-pro' ),
+            __( 'Há um SAF-T novo à espera de si.', 'contabilidade-pro' ),
+            add_query_arg( 'vista', 'saft', home_url( '/area-de-cliente/' ) )
+        );
+    }
+
+    return rest_ensure_response( [ 'ok' => true, 'total' => count( $saft ) ] );
+}
 
 
 // ════════════════════════════════════════════════════════════════════════

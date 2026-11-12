@@ -316,6 +316,7 @@ img { max-width: 100%; display: block; }
 /* Faixa escura com foto, como "Como trabalhamos" na página inicial
    (alternância da homepage: escuro → claro → escuro → claro → azul). */
 .section--admin-support { position: relative; overflow: hidden; background: var(--c-navy); padding: clamp(72px, 8vw, 120px) 0; }
+.section--admin-support .how-bg__overlay { background: rgba(31,55,82,0.72); } /* filtro mais claro que o da homepage (0.88) */
 .admin-support { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 28px; }
 .admin-support__icon {
   flex: 0 0 auto;

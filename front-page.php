@@ -33,23 +33,24 @@
                 <h2 class="section__title"><?php esc_html_e( 'O que fazemos', 'contabilidade-pro' ); ?></h2>
             </div>
 
-            <div class="services-grid">
-                <div class="service-card service-card--cta">
-                    <div class="service-card__num service-card__num--light" aria-hidden="true">01</div>
-                    <h3 class="service-card__title service-card__title--light"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h3>
-                    <p class="service-card__desc service-card__desc--light"><?php esc_html_e( 'Organização contabilística completa com um acompanhamento próximo, para que possa focar-se no que realmente importa: o seu negócio.', 'contabilidade-pro' ); ?></p>
-                </div>
-
-                <div class="service-card-cta-wrap">
-                    <div class="service-card">
-                        <div class="service-card__num service-card__num--gold" aria-hidden="true">02</div>
-                        <h3 class="service-card__title"><?php esc_html_e( 'Muito mais do que Contabilidade', 'contabilidade-pro' ); ?></h3>
-                        <p class="service-card__desc"><?php esc_html_e( 'Vai abrir empresa? Quer mudar de contabilista? Ou só precisa de uma segunda opinião? Estamos aqui para o orientar.', 'contabilidade-pro' ); ?></p>
-                    </div>
-                    <a href="<?php echo esc_url( home_url( '/servicos' ) ); ?>" class="service-card__link">
-                        <?php esc_html_e( 'Ver todos os serviços →', 'contabilidade-pro' ); ?>
-                    </a>
-                </div>
+            <!-- Painéis que se expandem ao passar o rato (ou com foco);
+                 em ecrãs táteis/mobile o texto fica sempre visível. -->
+            <div class="svc-panels">
+                <a class="svc-panel svc-panel--navy" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
+                    <span class="svc-panel__bar" aria-hidden="true"></span>
+                    <h3 class="svc-panel__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h3>
+                    <p class="svc-panel__desc"><?php esc_html_e( 'Organização contabilística completa com um acompanhamento próximo, para que possa focar-se no que realmente importa: o seu negócio.', 'contabilidade-pro' ); ?></p>
+                </a>
+                <a class="svc-panel" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
+                    <span class="svc-panel__bar" aria-hidden="true"></span>
+                    <h3 class="svc-panel__title"><?php esc_html_e( 'Muito mais do que Contabilidade', 'contabilidade-pro' ); ?></h3>
+                    <p class="svc-panel__desc"><?php esc_html_e( 'Vai abrir empresa? Quer mudar de contabilista? Ou só precisa de uma segunda opinião? Estamos aqui para o orientar.', 'contabilidade-pro' ); ?></p>
+                </a>
+            </div>
+            <div class="svc-panels__more">
+                <a href="<?php echo esc_url( home_url( '/servicos' ) ); ?>" class="svc-panels__link">
+                    <?php esc_html_e( 'Ver todos os serviços →', 'contabilidade-pro' ); ?>
+                </a>
             </div>
         </div>
     </section>

@@ -227,45 +227,58 @@ img { max-width: 100%; display: block; }
 /* ─── Serviços ────────────────────────────────────────────────────────── */
 
 .section--services { border-top: 1px solid var(--c-line); background: var(--c-bg); }
-.services-grid { display: flex; flex-wrap: wrap; gap: 24px; }
-.service-card {
-  flex: 1 1 260px;
-  min-width: 220px;
+/* Painéis que se expandem: o painel com o rato/foco alarga-se e revela o
+   texto; o traço dourado alonga-se. Sem hover (tátil) ou em mobile, o texto
+   fica sempre visível. */
+.svc-panels { display: flex; gap: 16px; min-height: 280px; }
+.svc-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 32px 30px;
   border: 1px solid var(--c-line);
   border-radius: 4px;
-  padding: 28px 26px;
   background: var(--c-surface);
-}
-.service-card__num { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: 14px; margin-bottom: 14px; }
-.service-card__num--gold { color: var(--c-accent); }
-.service-card__num--brand { color: var(--c-brand); }
-.service-card__num--light { color: var(--c-accent); }
-.service-card__title { font-family: var(--font-serif); font-weight: 500; font-size: 19px; color: var(--c-heading); margin: 0 0 8px; line-height: 1.25; }
-.service-card__title--light { color: #fff; }
-.service-card__desc { font-size: 14.5px; line-height: 1.55; color: var(--c-text-secondary); margin: 0; }
-.service-card__desc--light { color: #CBD4E3; }
-.service-card-cta-wrap { position: relative; flex: 1 1 260px; min-width: 220px; }
-.service-card--cta {
-  box-sizing: border-box;
-  height: 100%;
-  border: 1px solid var(--c-navy);
-  background: var(--c-navy);
-  border-radius: 4px;
-  padding: 28px 26px;
-  display: block;
+  color: var(--c-text-secondary);
   text-decoration: none;
+  overflow: hidden;
+  transition: flex-grow 0.45s ease;
 }
-.service-card__link {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 12px;
-  font-size: 14.5px;
-  font-weight: 600;
-  color: var(--c-heading);
-  text-decoration: none;
+.svc-panel--navy { background: var(--c-navy); border-color: var(--c-navy); color: #CBD4E3; }
+.svc-panel__bar { display: block; width: 28px; height: 2px; background: var(--c-accent); margin-bottom: 16px; transition: width 0.4s ease; }
+.svc-panel__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(21px, 2vw, 26px); line-height: 1.2; color: var(--c-heading); margin: 0; }
+.svc-panel--navy .svc-panel__title { color: #fff; }
+.svc-panel__desc {
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 520px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease 0.1s, margin-top 0.3s ease;
 }
-.service-card__link:hover { text-decoration: underline; }
+.svc-panel:hover, .svc-panel:focus-visible { flex-grow: 2.4; opacity: 1; } /* anula o a:hover global (opacity 0.75) */
+.svc-panel:hover .svc-panel__bar, .svc-panel:focus-visible .svc-panel__bar { width: 56px; }
+.svc-panel:hover .svc-panel__desc, .svc-panel:focus-visible .svc-panel__desc { max-height: 120px; opacity: 1; margin-top: 12px; }
+.svc-panel:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
+.svc-panels__more { display: flex; justify-content: flex-end; margin-top: 14px; }
+.svc-panels__link { font-size: 14.5px; font-weight: 600; color: var(--c-heading); text-decoration: none; }
+.svc-panels__link:hover { text-decoration: underline; }
+
+@media (hover: none), (max-width: 760px) {
+  .svc-panel__desc { max-height: none; opacity: 1; margin-top: 12px; }
+}
+@media (max-width: 760px) {
+  .svc-panels { flex-direction: column; min-height: 0; }
+  .svc-panel { flex: 0 0 auto; padding: 26px 24px; }
+  .svc-panel:hover, .svc-panel:focus-visible { flex-grow: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .svc-panel, .svc-panel__bar, .svc-panel__desc { transition: none; }
+}
 
 /* ─── Página de Serviços ──────────────────────────────────────────────── */
 
@@ -316,7 +329,6 @@ img { max-width: 100%; display: block; }
 /* Faixa escura com foto, como "Como trabalhamos" na página inicial
    (alternância da homepage: escuro → claro → escuro → claro → azul). */
 .section--admin-support { position: relative; overflow: hidden; background: var(--c-navy); padding: clamp(72px, 8vw, 120px) 0; }
-.section--admin-support .how-bg__overlay { background: rgba(31,55,82,0.72); } /* filtro mais claro que o da homepage (0.88) */
 .admin-support { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 28px; }
 .admin-support__icon {
   flex: 0 0 auto;
@@ -375,7 +387,7 @@ img { max-width: 100%; display: block; }
 .section--how { position: relative; padding: clamp(110px, 14vw, 200px) 0; overflow: hidden; }
 .how-bg { position: absolute; inset: 0; z-index: 0; }
 .how-bg__photo { width: 100%; height: 100%; object-fit: cover; display: block; }
-.how-bg__overlay { position: absolute; inset: 0; background: rgba(31,55,82,0.88); }
+.how-bg__overlay { position: absolute; inset: 0; background: rgba(31,55,82,0.72); }
 .how-grid { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 40px; }
 .how-intro__text { font-size: 16px; line-height: 1.6; color: #CBD4E3; margin: 16px 0 0; max-width: 520px; }
 .how-steps {

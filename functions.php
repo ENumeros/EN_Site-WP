@@ -71,7 +71,7 @@ function cp_enqueue_assets() {
         'cp-main',
         get_template_directory_uri() . '/assets/js/main.js',
         [],
-        '2.0.1',
+        '2.0.1-' . filemtime( get_template_directory() . '/assets/js/main.js' ),
         true
     );
     if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {

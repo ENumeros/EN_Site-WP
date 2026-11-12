@@ -479,9 +479,52 @@ img { max-width: 100%; display: block; }
 
 /* ─── Mobile ──────────────────────────────────────────────────────────── */
 
+.site-nav__cta { display: none; }
+
 @media (max-width: 760px) {
-  .site-nav__list { display: none; }
-  .hamburger { display: flex; flex-direction: column; gap: 4px; background: none; border: none; cursor: pointer; }
-  .hamburger span { width: 22px; height: 2px; background: var(--c-ink); display: block; }
+  /* Cabeçalho compacto: logótipo + modo escuro + menu numa só linha. */
+  .site-header { position: relative; z-index: 50; }
+  .site-header__inner { flex-wrap: nowrap; padding-top: 14px; padding-bottom: 14px; }
+  .site-header__logo img { height: 44px; width: auto; }
+  .site-header__actions { gap: 10px; flex-shrink: 0; }
+  .site-header__actions .btn { display: none; }
+
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .hamburger span { width: 22px; height: 2px; background: var(--c-ink); display: block; transition: transform 0.2s ease, opacity 0.2s ease; }
+  .hamburger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* Menu fechado por defeito; abre como painel por baixo do cabeçalho. */
+  .site-nav { display: none; }
+  .site-nav.is-open {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 8px clamp(20px, 5vw, 80px) 24px;
+    background: var(--c-bg);
+    border-bottom: 1px solid var(--c-line);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  }
+  .site-nav.is-open .site-nav__list { flex-direction: column; gap: 0; font-size: 17px; }
+  .site-nav.is-open .site-nav__list a { display: block; padding: 14px 0; border-bottom: 1px solid var(--c-line); }
+  .site-nav.is-open .site-nav__cta { display: inline-flex; justify-content: center; }
+
   .how-steps { grid-template-columns: 1fr; }
 }

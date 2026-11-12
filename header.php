@@ -53,6 +53,9 @@
                 'fallback_cb'     => 'cp_fallback_menu',
             ] );
             ?>
+            <a href="#contacto" class="btn btn--primary site-nav__cta">
+                <?php esc_html_e( 'Marcar reunião', 'contabilidade-pro' ); ?>
+            </a>
         </nav>
 
         <div class="site-header__actions">

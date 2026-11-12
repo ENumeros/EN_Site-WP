@@ -293,7 +293,7 @@ img { max-width: 100%; display: block; }
    com o bloco "O nosso serviço principal" por cima da imagem. */
 /* A altura do hero da página inicial vem do seu próprio texto (~480px a
    768px de largura, ~650px a partir de 1280px); esta curva acompanha-a. */
-.hero--servicos .hero__banner { display: flex; min-height: clamp(380px, calc(32.8vw + 167px), 596px); /* ~60px abaixo do hero da homepage */ }
+.hero--servicos .hero__banner { display: flex; min-height: clamp(342px, calc(32.8vw + 129px), 558px); /* ~98px (≈2,5 cm) abaixo do hero da homepage */ }
 .hero--servicos .hero__content { flex: 1; height: auto; width: 100%; box-sizing: border-box; }
 .hero--servicos .hero__content > * { max-width: 760px; }
 .hero--servicos .service-main__title { font-size: clamp(32px, 4.2vw, 54px); line-height: 1.15; }

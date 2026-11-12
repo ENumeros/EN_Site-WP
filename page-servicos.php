@@ -62,6 +62,10 @@
          APOIO ADMINISTRATIVO (faixa a toda a largura, secção própria)
     ═══════════════════════════════════════════════════════ -->
     <section class="section section--admin-support">
+        <div class="how-bg">
+            <img class="how-bg__photo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/sobre-bg.webp' ); ?>" alt="" loading="lazy">
+            <div class="how-bg__overlay" aria-hidden="true"></div>
+        </div>
         <div class="container">
             <div class="admin-support">
                 <div class="admin-support__icon" aria-hidden="true">

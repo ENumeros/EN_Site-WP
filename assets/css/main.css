@@ -313,8 +313,10 @@ img { max-width: 100%; display: block; }
 
 /* ─── Apoio Administrativo (secção própria) ─────────────────────────────── */
 
-.section--admin-support { background: var(--c-surface); padding: clamp(48px, 5.5vw, 76px) 0; }
-.admin-support { display: flex; align-items: flex-start; gap: 28px; }
+/* Faixa escura com foto, como "Como trabalhamos" na página inicial
+   (alternância da homepage: escuro → claro → escuro → claro → azul). */
+.section--admin-support { position: relative; overflow: hidden; background: var(--c-navy); padding: clamp(72px, 8vw, 120px) 0; }
+.admin-support { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 28px; }
 .admin-support__icon {
   flex: 0 0 auto;
   width: 64px;
@@ -327,15 +329,16 @@ img { max-width: 100%; display: block; }
   justify-content: center;
 }
 .admin-support__eyebrow { display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-accent); margin-bottom: 8px; }
-.admin-support__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(26px, 3vw, 34px); color: var(--c-heading); margin: 0 0 14px; }
-.admin-support__desc { font-size: 16px; line-height: 1.7; color: var(--c-text-secondary); margin: 0 0 18px; max-width: 640px; }
-.admin-support__link { font-size: 14.5px; font-weight: 600; color: var(--c-heading); text-decoration: none; }
+.admin-support__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(26px, 3vw, 34px); color: #fff; margin: 0 0 14px; }
+.admin-support__desc { font-size: 16px; line-height: 1.7; color: #CBD4E3; margin: 0 0 18px; max-width: 640px; }
+.admin-support__link { font-size: 14.5px; font-weight: 600; color: #fff; text-decoration: none; }
 .admin-support__link:hover { text-decoration: underline; }
 @media (max-width: 600px) { .admin-support { flex-direction: column; } }
 
 /* ─── Restantes serviços (segundo plano) ────────────────────────────────── */
 
-.section--services-compact { background: var(--c-bg); padding: clamp(48px, 5vw, 72px) 0; }
+/* Faixa clara, como "O que fazemos" / "Quem somos" na página inicial. */
+.section--services-compact { background: var(--c-bg); padding: clamp(56px, 6vw, 88px) 0; }
 .services-compact__heading { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-muted); margin: 0 0 20px; }
 .services-compact-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--c-line); border-bottom: 1px solid var(--c-line); }
 .services-compact-item { padding: 24px 28px; border-right: 1px solid var(--c-line); }

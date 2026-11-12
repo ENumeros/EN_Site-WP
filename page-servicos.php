@@ -7,7 +7,7 @@
     ═══════════════════════════════════════════════════════ -->
     <section class="services-hero">
         <div class="service-main-bg">
-            <img class="service-main-bg__photo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/servicos-bg.webp' ); ?>" alt="Faturação digital em ecrã de portátil">
+            <img class="service-main-bg__photo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/servicos-bg.webp' ); ?>" alt="Análise de gráficos financeiros num portátil e telemóvel">
             <div class="service-main-bg__overlay" aria-hidden="true"></div>
         </div>
         <div class="container">

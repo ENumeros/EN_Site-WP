@@ -7,9 +7,53 @@
  * post cp_empresa) e marcados com '_cp_doc_cliente' para os distinguir de
  * qualquer outro anexo que o post possa vir a ter. Mesmo padrão de
  * admin-post.php + nonce usado em Pendentes e Lembretes — sem REST, sem JS.
+ *
+ * Daqui seguem para o ERP (Contabilidade Digital da CentralGest) pela Work:
+ * a Work vai buscar os novos (GET cp/v1/documentos/novos), descarrega-os e
+ * confirma (POST cp/v1/documentos/confirmar). A confirmação só marca o
+ * anexo como recebido ('_cp_doc_work_recebido') — **não apaga nada**: o
+ * WordPress guarda o ficheiro até haver indicação em contrário (decisão de
+ * 2026-11-12). Ao cliente só interessa saber que está enviado; o estado na
+ * CentralGest é controlado do lado da Work.
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+// Só PDF e imagens (decisão de 2026-11-12). A Work volta a validar.
+function cp_ac_documento_mimes_permitidos() {
+	return [
+		'pdf'          => 'application/pdf',
+		'jpg|jpeg|jpe' => 'image/jpeg',
+		'png'          => 'image/png',
+	];
+}
+
+// Tamanho máximo por ficheiro, em MB. Ainda por avaliar: 10 MB é um ponto
+// de partida, ajustável pelo filtro sem mexer no código. O limite real
+// também depende do upload_max_filesize do PHP no alojamento.
+function cp_ac_documento_max_bytes() {
+	return (int) apply_filters( 'cp_ac_documento_max_mb', 10 ) * MB_IN_BYTES;
+}
+
+function cp_ac_documento_erro_texto( $erro ) {
+	$textos = [
+		'documento_em_falta'    => __( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ),
+		'documento_invalido'    => __( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ),
+		'documento_sem_empresa' => __( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ),
+		'documento_tipo'        => __( 'Só são aceites ficheiros PDF ou imagens (JPG, PNG).', 'contabilidade-pro' ),
+		'documento_grande'      => sprintf(
+			/* translators: %s: tamanho máximo, ex. "10 MB" */
+			__( 'O ficheiro é demasiado grande. O máximo é %s.', 'contabilidade-pro' ),
+			size_format( cp_ac_documento_max_bytes() )
+		),
+		'documento_ja_recebido' => __( 'Este documento já foi recebido pela contabilidade e não pode ser apagado.', 'contabilidade-pro' ),
+	];
+	return isset( $textos[ $erro ] ) ? $textos[ $erro ] : '';
+}
+
+function cp_ac_documento_recebido_work( $anexo_id ) {
+	return '' !== (string) get_post_meta( $anexo_id, '_cp_doc_work_recebido', true );
+}
 
 function cp_ac_documentos( $empresa_id ) {
 	return get_posts( [
@@ -24,8 +68,11 @@ function cp_ac_documentos( $empresa_id ) {
 }
 
 // Quem enviou o documento, ou qualquer elemento da equipa, pode apagá-lo.
+// Depois de a Work o receber, só a equipa: o documento já seguiu para a
+// contabilidade e apagá-lo aqui não o tirava da CentralGest.
 function cp_ac_documento_pode_apagar( $anexo, $user_id ) {
-	return cp_backoffice_utilizador_tem_acesso( $user_id ) || (int) $anexo->post_author === (int) $user_id;
+	if ( cp_backoffice_utilizador_tem_acesso( $user_id ) ) return true;
+	return (int) $anexo->post_author === (int) $user_id && ! cp_ac_documento_recebido_work( $anexo->ID );
 }
 
 function cp_ac_handle_documento_upload() {
@@ -46,12 +93,23 @@ function cp_ac_handle_documento_upload() {
 		exit;
 	}
 
+	if ( UPLOAD_ERR_INI_SIZE === $_FILES['ficheiro']['error'] || UPLOAD_ERR_FORM_SIZE === $_FILES['ficheiro']['error']
+		|| (int) $_FILES['ficheiro']['size'] > cp_ac_documento_max_bytes() ) {
+		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_grande', $voltar ) );
+		exit;
+	}
+	$tipo = wp_check_filetype_and_ext( $_FILES['ficheiro']['tmp_name'], $_FILES['ficheiro']['name'], cp_ac_documento_mimes_permitidos() );
+	if ( empty( $tipo['type'] ) ) {
+		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_tipo', $voltar ) );
+		exit;
+	}
+
 	if ( ! function_exists( 'wp_handle_upload' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 	}
-	$anexo_id = media_handle_upload( 'ficheiro', $empresa_id, [], [ 'test_form' => false ] );
+	$anexo_id = media_handle_upload( 'ficheiro', $empresa_id, [], [ 'test_form' => false, 'mimes' => cp_ac_documento_mimes_permitidos() ] );
 	if ( is_wp_error( $anexo_id ) ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_invalido', $voltar ) );
 		exit;
@@ -86,8 +144,13 @@ function cp_ac_handle_documento_apagar() {
 	$voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
 	$anexo      = $anexo_id ? get_post( $anexo_id ) : null;
 
-	if ( ! $anexo || (int) $anexo->post_parent !== (int) $empresa_id || ! cp_ac_documento_pode_apagar( $anexo, get_current_user_id() ) ) {
+	if ( ! $anexo || (int) $anexo->post_parent !== (int) $empresa_id || '1' !== get_post_meta( $anexo_id, '_cp_doc_cliente', true ) ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_invalido', $voltar ) );
+		exit;
+	}
+	if ( ! cp_ac_documento_pode_apagar( $anexo, get_current_user_id() ) ) {
+		$codigo = cp_ac_documento_recebido_work( $anexo_id ) ? 'documento_ja_recebido' : 'documento_invalido';
+		wp_safe_redirect( add_query_arg( 'cp_erro', $codigo, $voltar ) );
 		exit;
 	}
 
@@ -96,6 +159,72 @@ function cp_ac_handle_documento_apagar() {
 	exit;
 }
 add_action( 'admin_post_cp_documento_apagar', 'cp_ac_handle_documento_apagar' );
+
+// ─── REST para a Work (Área de Cliente → Work → CentralGest) ────────────────
+
+function cp_ac_rest_routes_documentos() {
+	register_rest_route( 'cp/v1', '/documentos/novos', [
+		[
+			'methods'             => 'GET',
+			'callback'            => 'cp_ac_rest_documentos_novos',
+			'permission_callback' => 'cp_ac_rest_permissao',
+			'args'                => [
+				'work_id' => [ 'required' => true, 'type' => 'string' ],
+			],
+		],
+	] );
+	register_rest_route( 'cp/v1', '/documentos/confirmar', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_documentos_confirmar',
+			'permission_callback' => 'cp_ac_rest_permissao',
+			'args'                => [
+				'work_id' => [ 'required' => true, 'type' => 'string' ],
+				'ids'     => [ 'required' => true, 'type' => 'array' ],
+			],
+		],
+	] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_documentos' );
+
+// Documentos do cliente que a Work ainda não confirmou, mais antigo primeiro.
+function cp_ac_rest_documentos_novos( $request ) {
+	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+	$documentos = [];
+	foreach ( array_reverse( cp_ac_documentos( $empresa_id ) ) as $doc ) {
+		if ( cp_ac_documento_recebido_work( $doc->ID ) ) continue;
+		$caminho      = get_attached_file( $doc->ID );
+		$documentos[] = [
+			'id'         => (string) $doc->ID,
+			'nome'       => $caminho ? wp_basename( $caminho ) : get_the_title( $doc ),
+			'url'        => wp_get_attachment_url( $doc->ID ),
+			'mime'       => get_post_mime_type( $doc ),
+			'tamanho'    => ( $caminho && file_exists( $caminho ) ) ? filesize( $caminho ) : null,
+			'enviado_em' => get_post_time( 'Y-m-d H:i:s', false, $doc ),
+		];
+	}
+	return rest_ensure_response( [ 'documentos' => $documentos ] );
+}
+
+// Marca como recebidos pela Work. Não apaga: o ficheiro fica no WordPress.
+function cp_ac_rest_documentos_confirmar( $request ) {
+	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+	$validos     = array_map( 'intval', wp_list_pluck( cp_ac_documentos( $empresa_id ), 'ID' ) );
+	$confirmados = 0;
+	foreach ( (array) $request->get_param( 'ids' ) as $id ) {
+		$id = absint( $id );
+		if ( ! $id || ! in_array( $id, $validos, true ) ) continue;
+		if ( ! cp_ac_documento_recebido_work( $id ) ) {
+			update_post_meta( $id, '_cp_doc_work_recebido', current_time( 'mysql' ) );
+		}
+		$confirmados++;
+	}
+	return rest_ensure_response( [ 'ok' => true, 'confirmados' => $confirmados ] );
+}
 
 // ─── UI partilhada ──────────────────────────────────────────────────────────
 
@@ -111,8 +240,9 @@ function cp_ac_render_documento_form() {
 				<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
 			</div>
 			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
-			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Fatura, extrato ou outro ficheiro', 'contabilidade-pro' ); ?></div>
-			<input type="file" name="ficheiro" required class="ac-file-input" style="font-size:12.5px;max-width:260px">
+			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Fatura, despesa ou outro documento', 'contabilidade-pro' ); ?></div>
+			<input type="file" name="ficheiro" required accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-file-input" style="font-size:12.5px;max-width:260px">
+			<div style="font-size:11.5px;color:var(--ac-muted)"><?php printf( /* translators: %s: tamanho máximo */ esc_html__( 'PDF ou imagem, até %s', 'contabilidade-pro' ), esc_html( size_format( cp_ac_documento_max_bytes() ) ) ); ?></div>
 			<button class="ac-btn ac-btn-primary" type="submit" style="margin-top:4px"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
 		</div>
 	</form>

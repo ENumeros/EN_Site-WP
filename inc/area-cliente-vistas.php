@@ -87,10 +87,10 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
 			<div><div class="ac-status-title"><?php echo esc_html( $documentos_titulos[ $documentos_sucesso ] ); ?></div></div>
 		</div>
-	<?php elseif ( $tem_documentos && in_array( $documentos_erro, [ 'documento_em_falta', 'documento_invalido', 'documento_sem_empresa' ], true ) ) : ?>
+	<?php elseif ( $tem_documentos && '' !== cp_ac_documento_erro_texto( $documentos_erro ) ) : ?>
 		<div class="ac-status-banner amber">
 			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
-			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php echo esc_html( cp_ac_documento_erro_texto( $documentos_erro ) ); ?></div></div>
 		</div>
 	<?php endif; ?>
 
@@ -449,10 +449,10 @@ function cp_ac_vista_documentos() {
 			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
 			<div><div class="ac-status-title"><?php echo esc_html( $titulos[ $sucesso ] ); ?></div></div>
 		</div>
-	<?php elseif ( in_array( $erro, [ 'documento_em_falta', 'documento_invalido', 'documento_sem_empresa' ], true ) ) : ?>
+	<?php elseif ( '' !== cp_ac_documento_erro_texto( $erro ) ) : ?>
 		<div class="ac-status-banner amber">
 			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
-			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível concluir o pedido', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php echo esc_html( cp_ac_documento_erro_texto( $erro ) ); ?></div></div>
 		</div>
 	<?php endif; ?>
 

@@ -143,6 +143,18 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   empresa: abrir uma conversa marca só essa como lida; o badge do avatar
   soma as não lidas de todas as conversas da empresa ativa.
 
+- **Documentos** (`inc/area-cliente-documentos.php`): o upload do cliente
+  segue para o ERP (Contabilidade Digital da CentralGest) **pela Work**. O
+  WordPress nunca fala com a CentralGest. A Work faz polling a
+  `GET cp/v1/documentos/novos` e confirma em `POST cp/v1/documentos/confirmar`.
+  **Exceção ao "o WordPress apaga a sua cópia"** descrito acima: aqui a
+  confirmação só grava `_cp_doc_work_recebido` no anexo e **não apaga
+  nada** até haver indicação em contrário (decisão de 2026-11-12). Depois
+  de recebido, o cliente já não pode apagar o documento, só a equipa. Ao
+  cliente só se mostra "enviado"; o estado na CentralGest é controlado na
+  Work. Só PDF/JPG/PNG (`cp_ac_documento_mimes_permitidos()`), até 10 MB
+  (filtro `cp_ac_documento_max_mb`, valor ainda por avaliar).
+
 ## Backoffice
 
 - **Âmbito desta fase, de propósito limitado**: central de notificações

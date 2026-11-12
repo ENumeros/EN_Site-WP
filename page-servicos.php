@@ -3,33 +3,25 @@
 <main id="main" class="site-main">
 
     <!-- ═══════════════════════════════════════════════════════
-         CABEÇALHO
+         CABEÇALHO — CONTABILIDADE, O SERVIÇO PRINCIPAL
+         (imagem com o mesmo tamanho do hero da página inicial)
     ═══════════════════════════════════════════════════════ -->
-    <section class="services-hero">
-        <div class="service-main-bg">
-            <img class="service-main-bg__photo" src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/servicos-bg.webp' ); ?>" alt="Análise de gráficos financeiros num portátil e telemóvel">
-            <div class="service-main-bg__overlay" aria-hidden="true"></div>
-        </div>
-        <div class="container">
-            <h1 class="services-hero__title"><?php esc_html_e( 'Serviços', 'contabilidade-pro' ); ?></h1>
-            <p class="services-hero__text"><?php esc_html_e( 'Tudo o que a sua empresa precisa em contabilidade, fiscalidade e gestão de pessoas, num só gabinete.', 'contabilidade-pro' ); ?></p>
-        </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════
-         CONTABILIDADE — SERVIÇO PRINCIPAL (faixa a toda a largura)
-    ═══════════════════════════════════════════════════════ -->
-    <section class="section section--service-main">
-        <div class="container">
-            <div class="service-main">
-                <div class="service-main__icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
-                </div>
-                <div class="service-main__content">
-                    <span class="service-main__eyebrow"><?php esc_html_e( 'O nosso serviço principal', 'contabilidade-pro' ); ?></span>
-                    <h2 class="service-main__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h2>
-                    <p class="service-main__desc"><?php esc_html_e( 'Tratamos de toda a organização contabilística com rigor e um acompanhamento próximo, para que possa focar-se no que realmente importa: a gestão do seu negócio.', 'contabilidade-pro' ); ?></p>
-                    <a href="<?php echo esc_url( home_url( '/#contacto' ) ); ?>" class="service-main__link"><?php esc_html_e( 'Falar sobre Contabilidade →', 'contabilidade-pro' ); ?></a>
+    <section class="hero hero--servicos" aria-labelledby="servicos-titulo">
+        <h1 id="servicos-titulo" class="screen-reader-text"><?php esc_html_e( 'Serviços', 'contabilidade-pro' ); ?></h1>
+        <div class="hero__banner">
+            <img class="hero__bg" src="<?php echo esc_url( get_template_directory_uri() . '/assets/img/servicos-bg.webp' ); ?>" alt="Análise de gráficos financeiros num portátil e telemóvel">
+            <div class="hero__overlay" aria-hidden="true"></div>
+            <div class="hero__content">
+                <div class="service-main">
+                    <div class="service-main__icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
+                    </div>
+                    <div class="service-main__content">
+                        <span class="service-main__eyebrow"><?php esc_html_e( 'O nosso serviço principal', 'contabilidade-pro' ); ?></span>
+                        <h2 class="service-main__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h2>
+                        <p class="service-main__desc"><?php esc_html_e( 'Tratamos de toda a organização contabilística com rigor e um acompanhamento próximo, para que possa focar-se no que realmente importa: a gestão do seu negócio.', 'contabilidade-pro' ); ?></p>
+                        <a href="<?php echo esc_url( home_url( '/#contacto' ) ); ?>" class="service-main__link"><?php esc_html_e( 'Falar sobre Contabilidade →', 'contabilidade-pro' ); ?></a>
+                    </div>
                 </div>
             </div>
         </div>

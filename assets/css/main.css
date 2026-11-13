@@ -19,6 +19,10 @@
 
   --font-serif: 'Fraunces', serif;
   --font-sans: 'Public Sans', system-ui, sans-serif;
+
+  /* Espaçamento vertical partilhado pelas secções da homepage e dos Serviços */
+  --sec-pad-light: clamp(48px, 5vw, 64px);  /* secções claras */
+  --sec-pad-photo: clamp(72px, 9.4vw, 120px); /* faixas com foto + filtro azul */
 }
 
 :root[data-theme="dark"] {
@@ -226,7 +230,7 @@ img { max-width: 100%; display: block; }
 
 /* ─── Serviços ────────────────────────────────────────────────────────── */
 
-.section--services { border-top: 1px solid var(--c-line); background: var(--c-bg); }
+.section--services { border-top: 1px solid var(--c-line); background: var(--c-bg); padding: var(--sec-pad-light) 0; }
 /* Painéis que se expandem: o painel com o rato/foco alarga-se e revela o
    texto; o traço dourado alonga-se. Sem hover (tátil) ou em mobile, o texto
    fica sempre visível. */
@@ -305,7 +309,7 @@ img { max-width: 100%; display: block; }
 
 /* ─── Numa situação particular? ──────────────────────────────────────── */
 
-.section--client-focus { background: var(--c-bg); padding: clamp(56px, 6vw, 88px) 0; }
+.section--client-focus { background: var(--c-bg); padding: var(--sec-pad-light) 0; }
 .service-main__icon {
   flex: 0 0 auto;
   width: 64px;
@@ -328,7 +332,7 @@ img { max-width: 100%; display: block; }
 
 /* Faixa escura com foto, como "Como trabalhamos" na página inicial
    (alternância da homepage: escuro → claro → escuro → claro → azul). */
-.section--admin-support { position: relative; overflow: hidden; background: var(--c-navy); padding: clamp(72px, 8vw, 120px) 0; }
+.section--admin-support { position: relative; overflow: hidden; background: var(--c-navy); padding: var(--sec-pad-photo) 0; }
 .admin-support { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 28px; }
 .admin-support__icon {
   flex: 0 0 auto;
@@ -342,7 +346,7 @@ img { max-width: 100%; display: block; }
   justify-content: center;
 }
 .admin-support__eyebrow { display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-accent); margin-bottom: 8px; }
-.admin-support__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(26px, 3vw, 34px); color: #fff; margin: 0 0 14px; }
+.admin-support__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(24px, 2.6vw, 32px); color: #fff; margin: 0 0 14px; }
 .admin-support__desc { font-size: 16px; line-height: 1.7; color: #CBD4E3; margin: 0 0 18px; max-width: 640px; }
 .admin-support__link { font-size: 14.5px; font-weight: 600; color: #fff; text-decoration: none; }
 .admin-support__link:hover { text-decoration: underline; }
@@ -351,8 +355,8 @@ img { max-width: 100%; display: block; }
 /* ─── Restantes serviços (segundo plano) ────────────────────────────────── */
 
 /* Faixa clara, como "O que fazemos" / "Quem somos" na página inicial. */
-.section--services-compact { background: var(--c-bg); padding: clamp(56px, 6vw, 88px) 0; }
-.services-compact__heading { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-muted); margin: 0 0 20px; }
+.section--services-compact { background: var(--c-bg); padding: var(--sec-pad-light) 0; }
+.services-compact__heading { margin: 0 0 24px; } /* usa .section__title, como os restantes títulos */
 .services-compact-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .services-compact-item {
   display: flex;
@@ -433,7 +437,7 @@ img { max-width: 100%; display: block; }
 
 /* ─── Como trabalhamos ────────────────────────────────────────────────── */
 
-.section--how { position: relative; padding: clamp(110px, 14vw, 200px) 0; overflow: hidden; }
+.section--how { position: relative; padding: var(--sec-pad-photo) 0; overflow: hidden; }
 .how-bg { position: absolute; inset: 0; z-index: 0; }
 .how-bg__photo { width: 100%; height: 100%; object-fit: cover; display: block; }
 .how-bg__overlay { position: absolute; inset: 0; background: rgba(31,55,82,0.72); }
@@ -449,7 +453,7 @@ img { max-width: 100%; display: block; }
 
 /* ─── Sobre ───────────────────────────────────────────────────────────── */
 
-.section--about { padding: clamp(28px, 2.5vw, 40px) 0; }
+.section--about { padding: var(--sec-pad-light) 0; }
 .about-grid { display: flex; align-items: center; }
 .about__text-col { flex: 1 1 auto; max-width: 640px; }
 .about__text-col .section__title { margin-bottom: 24px; }

@@ -82,7 +82,7 @@
     ═══════════════════════════════════════════════════════ -->
     <section class="section section--services-compact">
         <div class="container">
-            <h2 class="services-compact__heading"><?php esc_html_e( 'Também tratamos de', 'contabilidade-pro' ); ?></h2>
+            <h2 class="section__title services-compact__heading"><?php esc_html_e( 'Também tratamos de', 'contabilidade-pro' ); ?></h2>
             <div class="services-compact-list">
                 <?php
                 $all_services = [

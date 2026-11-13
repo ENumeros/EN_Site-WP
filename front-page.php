@@ -37,7 +37,7 @@
                  mesma linguagem dos cartões da página de Serviços (traço
                  dourado no topo). Em ecrãs táteis/mobile o texto fica sempre visível. -->
             <div class="svc-panels">
-                <a class="svc-panel svc-panel--navy" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
+                <a class="svc-panel" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
                     <div class="svc-panel__head">
                         <h3 class="svc-panel__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h3>
                     </div>

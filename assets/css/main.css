@@ -250,13 +250,12 @@ img { max-width: 100%; display: block; }
   color: var(--c-text-secondary);
   text-decoration: none;
   overflow: hidden;
-  transition: flex-grow 0.45s ease, border-color 0.25s ease;
+  transition: flex-grow 0.45s ease, border-color 0.25s ease, background-color 0.3s ease, color 0.3s ease;
 }
 .svc-panel::before { content: ""; position: absolute; top: 0; left: 0; height: 3px; width: 0; background: var(--c-accent); transition: width 0.4s ease; }
-.svc-panel--navy { background: var(--c-navy); border-color: var(--c-navy); color: #CBD4E3; }
 .svc-panel__head { margin-top: auto; }
 .svc-panel__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(21px, 2vw, 26px); line-height: 1.2; color: var(--c-heading); margin: 0; }
-.svc-panel--navy .svc-panel__title { color: #fff; }
+.svc-panel__title { transition: color 0.3s ease; }
 .svc-panel__desc {
   font-size: 15px;
   line-height: 1.65;
@@ -267,8 +266,10 @@ img { max-width: 100%; display: block; }
   overflow: hidden;
   transition: max-height 0.4s ease, opacity 0.3s ease 0.1s, margin-top 0.3s ease;
 }
-.svc-panel:hover, .svc-panel:focus-visible { flex-grow: 2.4; opacity: 1; } /* anula o a:hover global (opacity 0.75) */
-.svc-panel:not(.svc-panel--navy):hover, .svc-panel:not(.svc-panel--navy):focus-visible { border-color: rgba(201,162,39,0.55); }
+/* Como nos cartões dos Serviços: branco em repouso, azul de marca com o
+   rato/foco (além de se alargar). */
+.svc-panel:hover, .svc-panel:focus-visible { flex-grow: 2.4; background: var(--c-navy); border-color: var(--c-navy); color: #CBD4E3; opacity: 1; } /* anula o a:hover global (opacity 0.75) */
+.svc-panel:hover .svc-panel__title, .svc-panel:focus-visible .svc-panel__title { color: #fff; }
 .svc-panel:hover::before, .svc-panel:focus-visible::before { width: 100%; }
 .svc-panel:hover .svc-panel__desc, .svc-panel:focus-visible .svc-panel__desc { max-height: 120px; opacity: 1; margin-top: 18px; }
 .svc-panels__more { display: flex; justify-content: flex-end; margin-top: 20px; }
@@ -287,7 +288,7 @@ img { max-width: 100%; display: block; }
   .svc-panel__title { font-size: 19px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .svc-panel, .svc-panel::before, .svc-panel__desc { transition: none; }
+  .svc-panel, .svc-panel::before, .svc-panel__title, .svc-panel__desc { transition: none; }
 }
 
 /* ─── Página de Serviços ──────────────────────────────────────────────── */

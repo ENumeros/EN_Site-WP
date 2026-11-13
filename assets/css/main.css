@@ -232,8 +232,8 @@ img { max-width: 100%; display: block; }
 
 .section--services { border-top: 1px solid var(--c-line); background: var(--c-bg); padding: var(--sec-pad-light) 0; }
 /* Painéis que se expandem: o painel com o rato/foco alarga-se e revela o
-   texto. Mesma linguagem dos cartões da página de Serviços (ícone em
-   círculo dourado, traço dourado no topo); a ação "Ver todos os serviços"
+   texto. Mesma linguagem dos cartões da página de Serviços (traço dourado
+   no topo); a ação "Ver todos os serviços"
    fica uma só vez, por baixo dos painéis.
    Sem hover (tátil) ou em mobile, o texto fica sempre visível. */
 .svc-panels { display: flex; gap: 16px; min-height: 280px; }
@@ -254,18 +254,7 @@ img { max-width: 100%; display: block; }
 }
 .svc-panel::before { content: ""; position: absolute; top: 0; left: 0; height: 3px; width: 0; background: var(--c-accent); transition: width 0.4s ease; }
 .svc-panel--navy { background: var(--c-navy); border-color: var(--c-navy); color: #CBD4E3; }
-.svc-panel__head { display: flex; align-items: center; gap: 16px; margin-top: auto; }
-.svc-panel__icon {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(201,162,39,0.14);
-  color: var(--c-accent);
-}
+.svc-panel__head { margin-top: auto; }
 .svc-panel__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(21px, 2vw, 26px); line-height: 1.2; color: var(--c-heading); margin: 0; }
 .svc-panel--navy .svc-panel__title { color: #fff; }
 .svc-panel__desc {
@@ -400,8 +389,7 @@ img { max-width: 100%; display: block; }
 .services-compact-item:hover .services-compact-item__desc, .services-compact-item:focus-visible .services-compact-item__desc { color: #CBD4E3; }
 .services-compact-item:hover::before, .services-compact-item:focus-visible::before { width: 100%; }
 .services-compact-item:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
-.services-compact-item__head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.services-compact-item__icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; background: rgba(201,162,39,0.14); color: var(--c-accent); }
+.services-compact-item__head { margin-bottom: 10px; }
 .services-compact-item__title { font-family: var(--font-serif); font-size: 18px; font-weight: 500; line-height: 1.25; color: var(--c-heading); margin: 0; }
 .services-compact-item__desc { flex: 1; font-size: 14px; line-height: 1.6; color: var(--c-text-secondary); margin: 0; }
 @media (max-width: 760px) {
@@ -419,7 +407,7 @@ img { max-width: 100%; display: block; }
 .situacao-card {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   column-gap: 16px;
   padding: 30px;
@@ -438,21 +426,8 @@ img { max-width: 100%; display: block; }
 .situacao-card:hover .situacao-card__desc, .situacao-card:focus-visible .situacao-card__desc { color: #CBD4E3; }
 .situacao-card:hover::before, .situacao-card:focus-visible::before { width: 100%; }
 .situacao-card:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
-.situacao-card__icon {
-  grid-column: 1;
-  grid-row: 1;
-  align-self: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(201,162,39,0.14);
-  color: var(--c-accent);
-}
-.situacao-card__title { grid-column: 2; grid-row: 1; align-self: center; font-family: var(--font-serif); font-weight: 500; font-size: 21px; color: var(--c-heading); margin: 0; line-height: 1.25; }
-.situacao-card__desc { grid-column: 1 / -1; grid-row: 2; font-size: 15px; line-height: 1.65; color: var(--c-text-secondary); margin: 18px 0 0; }
+.situacao-card__title { grid-column: 1; grid-row: 1; font-family: var(--font-serif); font-weight: 500; font-size: 21px; color: var(--c-heading); margin: 0; line-height: 1.25; }
+.situacao-card__desc { grid-column: 1 / -1; grid-row: 2; font-size: 15px; line-height: 1.65; color: var(--c-text-secondary); margin: 12px 0 0; }
 .situacao-card__go {
   flex: 0 0 auto;
   display: inline-flex;

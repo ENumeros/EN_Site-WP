@@ -34,19 +34,17 @@
             </div>
 
             <!-- Painéis que se expandem ao passar o rato (ou com foco), com a
-                 mesma linguagem dos cartões da página de Serviços: ícone em
-                 círculo dourado e traço dourado no topo. Em ecrãs táteis/mobile o texto fica sempre visível. -->
+                 mesma linguagem dos cartões da página de Serviços (traço
+                 dourado no topo). Em ecrãs táteis/mobile o texto fica sempre visível. -->
             <div class="svc-panels">
                 <a class="svc-panel svc-panel--navy" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
                     <div class="svc-panel__head">
-                        <span class="svc-panel__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg></span>
                         <h3 class="svc-panel__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h3>
                     </div>
                     <p class="svc-panel__desc"><?php esc_html_e( 'Organização contabilística completa com um acompanhamento próximo, para que possa focar-se no que realmente importa: o seu negócio.', 'contabilidade-pro' ); ?></p>
                 </a>
                 <a class="svc-panel" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
                     <div class="svc-panel__head">
-                        <span class="svc-panel__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></span>
                         <h3 class="svc-panel__title"><?php esc_html_e( 'Muito mais do que Contabilidade', 'contabilidade-pro' ); ?></h3>
                     </div>
                     <p class="svc-panel__desc"><?php esc_html_e( 'Vai abrir empresa? Quer mudar de contabilista? Ou só precisa de uma segunda opinião? Estamos aqui para o orientar.', 'contabilidade-pro' ); ?></p>

@@ -233,7 +233,8 @@ img { max-width: 100%; display: block; }
 .section--services { border-top: 1px solid var(--c-line); background: var(--c-bg); padding: var(--sec-pad-light) 0; }
 /* Painéis que se expandem: o painel com o rato/foco alarga-se e revela o
    texto. Mesma linguagem dos cartões da página de Serviços (ícone em
-   círculo dourado, rodapé com seta em círculo, traço dourado no topo).
+   círculo dourado, traço dourado no topo); a ação "Ver todos os serviços"
+   fica uma só vez, por baixo dos painéis.
    Sem hover (tátil) ou em mobile, o texto fica sempre visível. */
 .svc-panels { display: flex; gap: 16px; min-height: 280px; }
 .svc-panel {
@@ -242,7 +243,7 @@ img { max-width: 100%; display: block; }
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 30px 30px 24px;
+  padding: 30px;
   border: 1px solid var(--c-line);
   border-radius: 4px;
   background: var(--c-surface);
@@ -277,24 +278,14 @@ img { max-width: 100%; display: block; }
   overflow: hidden;
   transition: max-height 0.4s ease, opacity 0.3s ease 0.1s, margin-top 0.3s ease;
 }
-.svc-panel__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 22px;
-  padding-top: 16px;
-  border-top: 1px solid var(--c-line);
-  font-size: 14.5px;
-  font-weight: 600;
-  color: var(--c-heading);
-}
-.svc-panel--navy .svc-panel__footer { color: #fff; border-top-color: rgba(255,255,255,0.15); }
 .svc-panel:hover, .svc-panel:focus-visible { flex-grow: 2.4; opacity: 1; } /* anula o a:hover global (opacity 0.75) */
 .svc-panel:not(.svc-panel--navy):hover, .svc-panel:not(.svc-panel--navy):focus-visible { border-color: rgba(201,162,39,0.55); }
 .svc-panel:hover::before, .svc-panel:focus-visible::before { width: 100%; }
 .svc-panel:hover .svc-panel__desc, .svc-panel:focus-visible .svc-panel__desc { max-height: 120px; opacity: 1; margin-top: 18px; }
-.svc-panel:hover .situacao-card__go, .svc-panel:focus-visible .situacao-card__go { background: var(--c-accent); color: var(--c-navy); transform: translateX(3px); }
+.svc-panels__more { display: flex; justify-content: flex-end; margin-top: 20px; }
+.svc-panels__link { display: inline-flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; color: var(--c-heading); text-decoration: none; }
+.svc-panels__link:hover, .svc-panels__link:focus-visible { opacity: 1; } /* anula o a:hover global */
+.svc-panels__link:hover .situacao-card__go, .svc-panels__link:focus-visible .situacao-card__go { background: var(--c-accent); color: var(--c-navy); transform: translateX(3px); }
 .svc-panel:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
 
 @media (hover: none), (max-width: 760px) {

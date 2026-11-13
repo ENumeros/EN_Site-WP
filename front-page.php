@@ -35,8 +35,7 @@
 
             <!-- Painéis que se expandem ao passar o rato (ou com foco), com a
                  mesma linguagem dos cartões da página de Serviços: ícone em
-                 círculo dourado, rodapé com seta em círculo e traço dourado no
-                 topo. Em ecrãs táteis/mobile o texto fica sempre visível. -->
+                 círculo dourado e traço dourado no topo. Em ecrãs táteis/mobile o texto fica sempre visível. -->
             <div class="svc-panels">
                 <a class="svc-panel svc-panel--navy" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
                     <div class="svc-panel__head">
@@ -44,7 +43,6 @@
                         <h3 class="svc-panel__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h3>
                     </div>
                     <p class="svc-panel__desc"><?php esc_html_e( 'Organização contabilística completa com um acompanhamento próximo, para que possa focar-se no que realmente importa: o seu negócio.', 'contabilidade-pro' ); ?></p>
-                    <span class="svc-panel__footer"><?php esc_html_e( 'Saber mais sobre contabilidade', 'contabilidade-pro' ); ?> <span class="situacao-card__go" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
                 </a>
                 <a class="svc-panel" href="<?php echo esc_url( home_url( '/servicos' ) ); ?>">
                     <div class="svc-panel__head">
@@ -52,7 +50,14 @@
                         <h3 class="svc-panel__title"><?php esc_html_e( 'Muito mais do que Contabilidade', 'contabilidade-pro' ); ?></h3>
                     </div>
                     <p class="svc-panel__desc"><?php esc_html_e( 'Vai abrir empresa? Quer mudar de contabilista? Ou só precisa de uma segunda opinião? Estamos aqui para o orientar.', 'contabilidade-pro' ); ?></p>
-                    <span class="svc-panel__footer"><?php esc_html_e( 'Ver todos os serviços', 'contabilidade-pro' ); ?> <span class="situacao-card__go" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
+                </a>
+            </div>
+            <!-- Os dois painéis levam ao mesmo sítio, por isso a ação fica
+                 uma só vez, fora dos cartões. -->
+            <div class="svc-panels__more">
+                <a href="<?php echo esc_url( home_url( '/servicos' ) ); ?>" class="svc-panels__link">
+                    <?php esc_html_e( 'Ver todos os serviços', 'contabilidade-pro' ); ?>
+                    <span class="situacao-card__go" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
                 </a>
             </div>
         </div>

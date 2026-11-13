@@ -35,6 +35,33 @@ function cp_ac_documento_max_bytes() {
 	return (int) apply_filters( 'cp_ac_documento_max_mb', 10 ) * MB_IN_BYTES;
 }
 
+// Quantos ficheiros de uma vez. O PHP também limita (max_file_uploads, 20
+// por omissão, e post_max_size para o total do pedido).
+function cp_ac_documento_max_ficheiros() {
+	return max( 1, min( (int) apply_filters( 'cp_ac_documento_max_ficheiros', 20 ), (int) ini_get( 'max_file_uploads' ) ?: 20 ) );
+}
+
+// Título do aviso verde depois de enviar ou apagar (Dashboard e Documentos).
+// Com vários ficheiros, $n diz quantos foram aceites e $recusados quantos não.
+function cp_ac_documento_sucesso_titulo( $sucesso, $n = 1, $recusados = 0 ) {
+	if ( 'documento_apagado' === $sucesso ) return __( 'Documento apagado', 'contabilidade-pro' );
+	if ( 'documento_enviado' !== $sucesso ) return '';
+	$n = max( 1, (int) $n );
+	$titulo = 1 === $n
+		? __( 'Documento enviado', 'contabilidade-pro' )
+		/* translators: %d: número de documentos */
+		: sprintf( __( '%d documentos enviados', 'contabilidade-pro' ), $n );
+	if ( $recusados > 0 ) {
+		$titulo .= ' · ' . sprintf(
+			/* translators: 1: número de ficheiros recusados, 2: tamanho máximo */
+			_n( '%1$d ficheiro não foi aceite (só PDF ou imagem, até %2$s)', '%1$d ficheiros não foram aceites (só PDF ou imagem, até %2$s)', (int) $recusados, 'contabilidade-pro' ),
+			(int) $recusados,
+			size_format( cp_ac_documento_max_bytes() )
+		);
+	}
+	return $titulo;
+}
+
 function cp_ac_documento_erro_texto( $erro ) {
 	$textos = [
 		'documento_em_falta'    => __( 'Escolha um ficheiro e tente novamente.', 'contabilidade-pro' ),
@@ -48,6 +75,11 @@ function cp_ac_documento_erro_texto( $erro ) {
 		),
 		'documento_ja_recebido' => __( 'Este documento já foi recebido pela contabilidade e não pode ser apagado.', 'contabilidade-pro' ),
 		'documento_destino'     => __( 'Escolha a pasta, o ano e o mês do documento.', 'contabilidade-pro' ),
+		'documento_demasiados'  => sprintf(
+			/* translators: %d: número máximo de ficheiros */
+			__( 'Pode enviar até %d ficheiros de cada vez.', 'contabilidade-pro' ),
+			cp_ac_documento_max_ficheiros()
+		),
 	];
 	return isset( $textos[ $erro ] ) ? $textos[ $erro ] : '';
 }
@@ -129,8 +161,13 @@ function cp_ac_handle_documento_upload() {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_sem_empresa', $voltar ) );
 		exit;
 	}
-	if ( empty( $_FILES['ficheiro'] ) || UPLOAD_ERR_NO_FILE === $_FILES['ficheiro']['error'] ) {
+	$ficheiros = cp_ac_documento_ficheiros_do_pedido( $_FILES );
+	if ( ! $ficheiros ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_em_falta', $voltar ) );
+		exit;
+	}
+	if ( count( $ficheiros ) > cp_ac_documento_max_ficheiros() ) {
+		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_demasiados', $voltar ) );
 		exit;
 	}
 	$pasta_id = isset( $_POST['pasta_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pasta_id'] ) ) : '';
@@ -141,46 +178,101 @@ function cp_ac_handle_documento_upload() {
 		exit;
 	}
 
-	if ( UPLOAD_ERR_INI_SIZE === $_FILES['ficheiro']['error'] || UPLOAD_ERR_FORM_SIZE === $_FILES['ficheiro']['error']
-		|| (int) $_FILES['ficheiro']['size'] > cp_ac_documento_max_bytes() ) {
-		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_grande', $voltar ) );
-		exit;
-	}
-	$tipo = wp_check_filetype_and_ext( $_FILES['ficheiro']['tmp_name'], $_FILES['ficheiro']['name'], cp_ac_documento_mimes_permitidos() );
-	if ( empty( $tipo['type'] ) ) {
-		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_tipo', $voltar ) );
-		exit;
-	}
-
 	if ( ! function_exists( 'wp_handle_upload' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 	}
-	$anexo_id = media_handle_upload( 'ficheiro', $empresa_id, [], [ 'test_form' => false, 'mimes' => cp_ac_documento_mimes_permitidos() ] );
-	if ( is_wp_error( $anexo_id ) ) {
-		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_invalido', $voltar ) );
+
+	// Cada ficheiro passa a ser um anexo próprio, todos com o mesmo destino.
+	// A Work recebe-os e envia-os para a CentralGest um a um. Um ficheiro
+	// recusado não impede os outros.
+	$aceites   = [];
+	$primeiro_erro = '';
+	foreach ( $ficheiros as $ficheiro ) {
+		$erro = cp_ac_documento_validar_ficheiro( $ficheiro );
+		if ( '' === $erro ) {
+			$_FILES['cp_doc_ficheiro'] = $ficheiro;
+			$anexo_id = media_handle_upload( 'cp_doc_ficheiro', $empresa_id, [], [ 'test_form' => false, 'mimes' => cp_ac_documento_mimes_permitidos() ] );
+			unset( $_FILES['cp_doc_ficheiro'] );
+			$erro = is_wp_error( $anexo_id ) ? 'documento_invalido' : '';
+		}
+		if ( '' !== $erro ) {
+			if ( '' === $primeiro_erro ) $primeiro_erro = $erro;
+			continue;
+		}
+		update_post_meta( $anexo_id, '_cp_doc_cliente', '1' );
+		update_post_meta( $anexo_id, '_cp_doc_pasta', $pasta_id );
+		update_post_meta( $anexo_id, '_cp_doc_ano', $ano );
+		update_post_meta( $anexo_id, '_cp_doc_mes', $mes );
+		$aceites[] = $anexo_id;
+	}
+
+	if ( ! $aceites ) {
+		wp_safe_redirect( add_query_arg( 'cp_erro', $primeiro_erro, $voltar ) );
 		exit;
 	}
-	update_post_meta( $anexo_id, '_cp_doc_cliente', '1' );
-	update_post_meta( $anexo_id, '_cp_doc_pasta', $pasta_id );
-	update_post_meta( $anexo_id, '_cp_doc_ano', $ano );
-	update_post_meta( $anexo_id, '_cp_doc_mes', $mes );
 
+	// Uma só notificação por envio, mesmo com vários ficheiros.
 	cp_push_notificar_equipa(
 		__( 'Novo documento de cliente', 'contabilidade-pro' ),
-		sprintf(
-			/* translators: 1: nome da empresa, 2: nome do ficheiro */
-			__( '%1$s enviou "%2$s".', 'contabilidade-pro' ),
-			get_the_title( $empresa_id ),
-			get_the_title( $anexo_id )
-		),
+		1 === count( $aceites )
+			? sprintf(
+				/* translators: 1: nome da empresa, 2: nome do ficheiro */
+				__( '%1$s enviou "%2$s".', 'contabilidade-pro' ),
+				get_the_title( $empresa_id ),
+				get_the_title( $aceites[0] )
+			)
+			: sprintf(
+				/* translators: 1: nome da empresa, 2: número de documentos */
+				__( '%1$s enviou %2$d documentos.', 'contabilidade-pro' ),
+				get_the_title( $empresa_id ),
+				count( $aceites )
+			),
 		home_url( '/backoffice/' ) . '?empresa_id=' . $empresa_id,
 		$empresa_id
 	);
 
-	wp_safe_redirect( add_query_arg( 'cp_sucesso', 'documento_enviado', $voltar ) );
+	$args = [ 'cp_sucesso' => 'documento_enviado', 'cp_n' => count( $aceites ) ];
+	$recusados = count( $ficheiros ) - count( $aceites );
+	if ( $recusados ) $args['cp_recusados'] = $recusados;
+	wp_safe_redirect( add_query_arg( $args, $voltar ) );
 	exit;
+}
+
+// Os ficheiros do campo "ficheiros[]" (vários de uma vez), um array por
+// ficheiro no formato de $_FILES. Aceita também o campo antigo "ficheiro"
+// (um só), para formulários que ainda estejam abertos noutro separador.
+function cp_ac_documento_ficheiros_do_pedido( $files ) {
+	$lista = [];
+	if ( ! empty( $files['ficheiros'] ) && is_array( $files['ficheiros']['name'] ) ) {
+		foreach ( array_keys( $files['ficheiros']['name'] ) as $i ) {
+			$lista[] = [
+				'name'     => $files['ficheiros']['name'][ $i ],
+				'type'     => $files['ficheiros']['type'][ $i ],
+				'tmp_name' => $files['ficheiros']['tmp_name'][ $i ],
+				'error'    => (int) $files['ficheiros']['error'][ $i ],
+				'size'     => (int) $files['ficheiros']['size'][ $i ],
+			];
+		}
+	} elseif ( ! empty( $files['ficheiro'] ) && ! is_array( $files['ficheiro']['name'] ) ) {
+		$lista[] = $files['ficheiro'];
+	}
+	return array_values( array_filter( $lista, function ( $f ) {
+		return UPLOAD_ERR_NO_FILE !== (int) $f['error'];
+	} ) );
+}
+
+// '' se o ficheiro pode seguir, senão o código de erro (ver
+// cp_ac_documento_erro_texto).
+function cp_ac_documento_validar_ficheiro( $ficheiro ) {
+	if ( UPLOAD_ERR_INI_SIZE === (int) $ficheiro['error'] || UPLOAD_ERR_FORM_SIZE === (int) $ficheiro['error']
+		|| (int) $ficheiro['size'] > cp_ac_documento_max_bytes() ) {
+		return 'documento_grande';
+	}
+	if ( UPLOAD_ERR_OK !== (int) $ficheiro['error'] ) return 'documento_invalido';
+	$tipo = wp_check_filetype_and_ext( $ficheiro['tmp_name'], $ficheiro['name'], cp_ac_documento_mimes_permitidos() );
+	return empty( $tipo['type'] ) ? 'documento_tipo' : '';
 }
 add_action( 'admin_post_cp_documento_upload', 'cp_ac_handle_documento_upload' );
 
@@ -334,9 +426,9 @@ function cp_ac_render_documento_form() {
 			<div class="ac-dropzone-icon">
 				<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
 			</div>
-			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
-			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Fatura, despesa ou outro documento', 'contabilidade-pro' ); ?></div>
-			<input type="file" name="ficheiro" required accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-file-input" style="font-size:12.5px;max-width:260px">
+			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar documentos', 'contabilidade-pro' ); ?></div>
+			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Faturas, despesas ou outros documentos — pode escolher vários de uma vez', 'contabilidade-pro' ); ?></div>
+			<input type="file" name="ficheiros[]" multiple required accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-file-input" style="font-size:12.5px;max-width:260px" data-cp-doc-max="<?php echo esc_attr( cp_ac_documento_max_ficheiros() ); ?>">
 			<div class="ac-doc-destino">
 				<label class="ac-doc-campo ac-doc-campo-pasta">
 					<span><?php esc_html_e( 'Pasta', 'contabilidade-pro' ); ?></span>
@@ -363,7 +455,7 @@ function cp_ac_render_documento_form() {
 					</select>
 				</label>
 			</div>
-			<div style="font-size:11.5px;color:var(--ac-muted)"><?php printf( /* translators: %s: tamanho máximo */ esc_html__( 'PDF ou imagem, até %s', 'contabilidade-pro' ), esc_html( size_format( cp_ac_documento_max_bytes() ) ) ); ?></div>
+			<div style="font-size:11.5px;color:var(--ac-muted)"><?php printf( /* translators: 1: tamanho máximo, 2: número máximo de ficheiros */ esc_html__( 'PDF ou imagem, até %1$s cada, no máximo %2$d de cada vez. Todos vão para a mesma pasta, mês e ano.', 'contabilidade-pro' ), esc_html( size_format( cp_ac_documento_max_bytes() ) ), (int) cp_ac_documento_max_ficheiros() ); ?></div>
 			<button class="ac-btn ac-btn-primary" type="submit" style="margin-top:4px"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
 		</div>
 	</form>
@@ -397,6 +489,13 @@ function cp_ac_render_documento_form_script( $ano_atual, $mes_atual ) {
 			pasta.addEventListener('change', atualizar);
 			ano.addEventListener('change', atualizar);
 			atualizar();
+			// Mais ficheiros do que o permitido: avisa antes de enviar.
+			var ficheiros = form.querySelector('[data-cp-doc-max]');
+			if (ficheiros) ficheiros.addEventListener('change', function () {
+				var max = parseInt(ficheiros.getAttribute('data-cp-doc-max'), 10) || 20;
+				ficheiros.setCustomValidity(ficheiros.files.length > max ? <?php echo wp_json_encode( cp_ac_documento_erro_texto( 'documento_demasiados' ) ); ?> : '');
+				ficheiros.reportValidity();
+			});
 		}
 		document.querySelectorAll('form').forEach(ligar);
 	})();

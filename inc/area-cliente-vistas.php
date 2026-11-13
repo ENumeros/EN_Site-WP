@@ -64,10 +64,11 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 	];
 	$documentos_sucesso = isset( $_GET['cp_sucesso'] ) ? sanitize_key( wp_unslash( $_GET['cp_sucesso'] ) ) : '';
 	$documentos_erro    = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
-	$documentos_titulos = [
-		'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
-		'documento_apagado' => __( 'Documento apagado', 'contabilidade-pro' ),
-	];
+	$documentos_titulo  = cp_ac_documento_sucesso_titulo(
+		$documentos_sucesso,
+		isset( $_GET['cp_n'] ) ? absint( $_GET['cp_n'] ) : 1,
+		isset( $_GET['cp_recusados'] ) ? absint( $_GET['cp_recusados'] ) : 0
+	);
 	?>
 
 	<?php if ( $tem_tarefas && isset( $lembretes_titulos[ $lembretes_sucesso ] ) ) : ?>
@@ -82,10 +83,10 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 		</div>
 	<?php endif; ?>
 
-	<?php if ( $tem_documentos && isset( $documentos_titulos[ $documentos_sucesso ] ) ) : ?>
+	<?php if ( $tem_documentos && '' !== $documentos_titulo ) : ?>
 		<div class="ac-status-banner green">
 			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
-			<div><div class="ac-status-title"><?php echo esc_html( $documentos_titulos[ $documentos_sucesso ] ); ?></div></div>
+			<div><div class="ac-status-title"><?php echo esc_html( $documentos_titulo ); ?></div></div>
 		</div>
 	<?php elseif ( $tem_documentos && '' !== cp_ac_documento_erro_texto( $documentos_erro ) ) : ?>
 		<div class="ac-status-banner amber">
@@ -439,15 +440,17 @@ function cp_ac_vista_documentos() {
 		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Envie e acompanhe os documentos correntes da sua contabilidade.', 'contabilidade-pro' ); ?></div>
 	</div>
 
-	<?php if ( in_array( $sucesso, [ 'documento_enviado', 'documento_apagado' ], true ) ) :
-		$titulos = [
-			'documento_enviado' => __( 'Documento enviado', 'contabilidade-pro' ),
-			'documento_apagado' => __( 'Documento apagado', 'contabilidade-pro' ),
-		];
+	<?php
+	$titulo_sucesso = cp_ac_documento_sucesso_titulo(
+		$sucesso,
+		isset( $_GET['cp_n'] ) ? absint( $_GET['cp_n'] ) : 1,
+		isset( $_GET['cp_recusados'] ) ? absint( $_GET['cp_recusados'] ) : 0
+	);
+	if ( '' !== $titulo_sucesso ) :
 		?>
 		<div class="ac-status-banner green">
 			<div class="ac-status-icon green"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"></path></svg></div>
-			<div><div class="ac-status-title"><?php echo esc_html( $titulos[ $sucesso ] ); ?></div></div>
+			<div><div class="ac-status-title"><?php echo esc_html( $titulo_sucesso ); ?></div></div>
 		</div>
 	<?php elseif ( '' !== cp_ac_documento_erro_texto( $erro ) ) : ?>
 		<div class="ac-status-banner amber">

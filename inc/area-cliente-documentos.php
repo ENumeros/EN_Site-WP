@@ -337,22 +337,31 @@ function cp_ac_render_documento_form() {
 			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
 			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Fatura, despesa ou outro documento', 'contabilidade-pro' ); ?></div>
 			<input type="file" name="ficheiro" required accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-file-input" style="font-size:12.5px;max-width:260px">
-			<div class="ac-doc-destino" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
-				<select name="pasta_id" required data-cp-doc-pasta aria-label="<?php esc_attr_e( 'Pasta', 'contabilidade-pro' ); ?>" style="font-size:12.5px">
-					<?php foreach ( $pastas as $pasta ) : ?>
-						<option value="<?php echo esc_attr( $pasta['id'] ); ?>" data-anos="<?php echo esc_attr( implode( ',', array_map( 'intval', (array) $pasta['anos'] ) ) ); ?>"><?php echo esc_html( $pasta['nome'] ); ?></option>
-					<?php endforeach; ?>
-				</select>
-				<select name="mes" required data-cp-doc-mes aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>" style="font-size:12.5px">
-					<?php foreach ( cp_ac_documento_nomes_meses() as $n => $nome_mes ) : ?>
-						<option value="<?php echo esc_attr( $n ); ?>" <?php selected( $n, $mes_atual ); ?>><?php echo esc_html( $nome_mes ); ?></option>
-					<?php endforeach; ?>
-				</select>
-				<select name="ano" required data-cp-doc-ano aria-label="<?php esc_attr_e( 'Ano', 'contabilidade-pro' ); ?>" style="font-size:12.5px">
-					<?php foreach ( $anos as $a ) : if ( $a > $ano_atual ) continue; ?>
-						<option value="<?php echo esc_attr( $a ); ?>" <?php selected( $a, $ano_atual ); ?>><?php echo esc_html( $a ); ?></option>
-					<?php endforeach; ?>
-				</select>
+			<div class="ac-doc-destino">
+				<label class="ac-doc-campo ac-doc-campo-pasta">
+					<span><?php esc_html_e( 'Pasta', 'contabilidade-pro' ); ?></span>
+					<select name="pasta_id" required data-cp-doc-pasta>
+						<?php foreach ( $pastas as $pasta ) : ?>
+							<option value="<?php echo esc_attr( $pasta['id'] ); ?>" data-anos="<?php echo esc_attr( implode( ',', array_map( 'intval', (array) $pasta['anos'] ) ) ); ?>"><?php echo esc_html( $pasta['nome'] ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+				<label class="ac-doc-campo">
+					<span><?php esc_html_e( 'Mês', 'contabilidade-pro' ); ?></span>
+					<select name="mes" required data-cp-doc-mes>
+						<?php foreach ( cp_ac_documento_nomes_meses() as $n => $nome_mes ) : ?>
+							<option value="<?php echo esc_attr( $n ); ?>" <?php selected( $n, $mes_atual ); ?>><?php echo esc_html( $nome_mes ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+				<label class="ac-doc-campo">
+					<span><?php esc_html_e( 'Ano', 'contabilidade-pro' ); ?></span>
+					<select name="ano" required data-cp-doc-ano>
+						<?php foreach ( $anos as $a ) : if ( $a > $ano_atual ) continue; ?>
+							<option value="<?php echo esc_attr( $a ); ?>" <?php selected( $a, $ano_atual ); ?>><?php echo esc_html( $a ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
 			</div>
 			<div style="font-size:11.5px;color:var(--ac-muted)"><?php printf( /* translators: %s: tamanho máximo */ esc_html__( 'PDF ou imagem, até %s', 'contabilidade-pro' ), esc_html( size_format( cp_ac_documento_max_bytes() ) ) ); ?></div>
 			<button class="ac-btn ac-btn-primary" type="submit" style="margin-top:4px"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
@@ -424,11 +433,47 @@ function cp_ac_render_documento_modal() {
 	<?php
 }
 
+// Grupos da lista de documentos: um por pasta, pela ordem das pastas que a
+// Work enviou, e no fim "Outros documentos" (enviados antes de haver pastas,
+// ou de uma pasta que entretanto deixou de existir). Dentro de cada grupo,
+// do ano/mês mais recente para o mais antigo.
+function cp_ac_documentos_por_pasta( $empresa_id ) {
+	$grupos = [];
+	foreach ( cp_ac_documento_pastas( $empresa_id ) as $pasta ) {
+		$grupos[ (string) $pasta['id'] ] = [ 'nome' => $pasta['nome'], 'docs' => [] ];
+	}
+	$outros = [ 'nome' => __( 'Outros documentos', 'contabilidade-pro' ), 'docs' => [] ];
+	foreach ( cp_ac_documentos( $empresa_id ) as $doc ) {
+		$pasta = (string) get_post_meta( $doc->ID, '_cp_doc_pasta', true );
+		if ( isset( $grupos[ $pasta ] ) ) {
+			$grupos[ $pasta ]['docs'][] = $doc;
+		} else {
+			$outros['docs'][] = $doc;
+		}
+	}
+	$grupos[''] = $outros;
+	foreach ( $grupos as &$grupo ) {
+		usort( $grupo['docs'], function ( $a, $b ) {
+			$chave = function ( $d ) {
+				return sprintf( '%04d%02d', (int) get_post_meta( $d->ID, '_cp_doc_ano', true ), (int) get_post_meta( $d->ID, '_cp_doc_mes', true ) )
+					. get_post_time( 'YmdHis', true, $d );
+			};
+			return strcmp( $chave( $b ), $chave( $a ) );
+		} );
+	}
+	unset( $grupo );
+	return array_filter( $grupos, function ( $g ) { return ! empty( $g['docs'] ); } );
+}
+
+function cp_ac_documento_nome_ficheiro( $doc ) {
+	$caminho = get_attached_file( $doc->ID );
+	return $caminho ? wp_basename( $caminho ) : get_the_title( $doc );
+}
+
 function cp_ac_render_documentos( $empresa_id ) {
-	$documentos = cp_ac_documentos( $empresa_id );
-	$user_id    = get_current_user_id();
-	$nomes_mes  = cp_ac_documento_nomes_meses();
-	$pastas     = wp_list_pluck( cp_ac_documento_pastas( $empresa_id ), 'nome', 'id' );
+	$grupos    = cp_ac_documentos_por_pasta( $empresa_id );
+	$user_id   = get_current_user_id();
+	$nomes_mes = cp_ac_documento_nomes_meses();
 	?>
 	<div class="ac-card" style="padding:22px">
 		<div class="ac-sec-head">
@@ -440,43 +485,115 @@ function cp_ac_render_documentos( $empresa_id ) {
 
 		<?php cp_ac_render_documento_form(); ?>
 
-		<?php if ( empty( $documentos ) ) : ?>
+		<?php if ( empty( $grupos ) ) : ?>
 			<div style="margin-top:16px;color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não enviou nenhum documento.', 'contabilidade-pro' ); ?></div>
 		<?php else : ?>
-			<div style="margin-top:6px">
-				<?php foreach ( $documentos as $doc ) : ?>
-					<div class="ac-req-row">
-						<div>
-							<div style="font-size:13.5px;font-weight:600"><?php echo esc_html( get_the_title( $doc ) ); ?></div>
-							<div style="font-size:12px;color:var(--ac-muted)">
-								<?php printf( /* translators: %s: há quanto tempo */ esc_html__( 'enviado há %s', 'contabilidade-pro' ), esc_html( human_time_diff( get_post_time( 'U', true, $doc ), current_time( 'U', true ) ) ) ); ?>
-								<?php
-								$doc_pasta = (string) get_post_meta( $doc->ID, '_cp_doc_pasta', true );
-								$doc_mes   = (int) get_post_meta( $doc->ID, '_cp_doc_mes', true );
-								$doc_ano   = (int) get_post_meta( $doc->ID, '_cp_doc_ano', true );
-								if ( isset( $pastas[ $doc_pasta ] ) && $doc_mes && $doc_ano ) {
-									echo ' · ' . esc_html( $pastas[ $doc_pasta ] . ' · ' . $nomes_mes[ $doc_mes ] . ' ' . $doc_ano );
-								}
-								?>
+			<?php foreach ( $grupos as $grupo ) : ?>
+				<section class="ac-doc-grupo">
+					<div class="ac-doc-grupo-head">
+						<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+						<span><?php echo esc_html( $grupo['nome'] ); ?></span>
+						<span class="ac-doc-grupo-n"><?php echo esc_html( count( $grupo['docs'] ) ); ?></span>
+					</div>
+					<div class="ac-doc-cab" aria-hidden="true">
+						<span><?php esc_html_e( 'Ficheiro', 'contabilidade-pro' ); ?></span>
+						<span><?php esc_html_e( 'Enviado em', 'contabilidade-pro' ); ?></span>
+						<span><?php esc_html_e( 'Ano / Mês', 'contabilidade-pro' ); ?></span>
+						<span></span>
+					</div>
+					<?php foreach ( $grupo['docs'] as $doc ) :
+						$nome    = cp_ac_documento_nome_ficheiro( $doc );
+						$url     = wp_get_attachment_url( $doc->ID );
+						$e_pdf   = 'application/pdf' === get_post_mime_type( $doc );
+						$doc_mes = (int) get_post_meta( $doc->ID, '_cp_doc_mes', true );
+						$doc_ano = (int) get_post_meta( $doc->ID, '_cp_doc_ano', true );
+						?>
+						<div class="ac-doc-linha">
+							<div class="ac-doc-nome">
+								<span class="ac-doc-icone" aria-hidden="true">
+									<?php if ( $e_pdf ) : ?>
+										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M9 13h6M9 17h4"></path></svg>
+									<?php else : ?>
+										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="m21 16-5-5-9 9"></path></svg>
+									<?php endif; ?>
+								</span>
+								<span class="ac-doc-nome-texto" title="<?php echo esc_attr( $nome ); ?>"><?php echo esc_html( $nome ); ?></span>
+							</div>
+							<?php $periodo = ( $doc_ano && isset( $nomes_mes[ $doc_mes ] ) ) ? $nomes_mes[ $doc_mes ] . ' ' . $doc_ano : ''; ?>
+							<div class="ac-doc-dado ac-doc-dado-data" data-periodo="<?php echo esc_attr( $periodo ? ' · ' . $periodo : '' ); ?>"><?php echo esc_html( get_post_time( 'd/m/Y', false, $doc ) ); ?></div>
+							<div class="ac-doc-dado ac-doc-dado-periodo"><?php echo $periodo ? esc_html( $periodo ) : '—'; ?></div>
+							<div class="ac-doc-acoes">
+								<button type="button" class="ac-btn ac-btn-ghost ac-doc-ver" data-cp-fab-target="cp-doc-viewer"
+									data-cp-doc-url="<?php echo esc_url( $url ); ?>" data-cp-doc-tipo="<?php echo $e_pdf ? 'pdf' : 'imagem'; ?>"
+									data-cp-doc-nome="<?php echo esc_attr( $nome ); ?>"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></button>
+								<?php if ( cp_ac_documento_pode_apagar( $doc, $user_id ) ) : ?>
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Apagar este documento?', 'contabilidade-pro' ) ); ?>');">
+										<?php wp_nonce_field( 'cp_documento_apagar', 'cp_documento_nonce' ); ?>
+										<input type="hidden" name="action" value="cp_documento_apagar">
+										<input type="hidden" name="anexo_id" value="<?php echo esc_attr( $doc->ID ); ?>">
+										<button type="submit" class="ac-todo-btn ac-todo-btn-del" title="<?php esc_attr_e( 'Apagar', 'contabilidade-pro' ); ?>" aria-label="<?php esc_attr_e( 'Apagar', 'contabilidade-pro' ); ?>">
+											<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg>
+										</button>
+									</form>
+								<?php endif; ?>
 							</div>
 						</div>
-						<div style="display:flex;align-items:center;gap:6px">
-							<a href="<?php echo esc_url( wp_get_attachment_url( $doc->ID ) ); ?>" target="_blank" rel="noopener" class="ac-btn ac-btn-ghost" style="padding:8px 14px;font-size:12.5px"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a>
-							<?php if ( cp_ac_documento_pode_apagar( $doc, $user_id ) ) : ?>
-								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Apagar este documento?', 'contabilidade-pro' ) ); ?>');">
-									<?php wp_nonce_field( 'cp_documento_apagar', 'cp_documento_nonce' ); ?>
-									<input type="hidden" name="action" value="cp_documento_apagar">
-									<input type="hidden" name="anexo_id" value="<?php echo esc_attr( $doc->ID ); ?>">
-									<button type="submit" class="ac-todo-btn ac-todo-btn-del" aria-label="<?php esc_attr_e( 'Apagar', 'contabilidade-pro' ); ?>">
-										<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
-									</button>
-								</form>
-							<?php endif; ?>
-						</div>
-					</div>
-				<?php endforeach; ?>
-			</div>
+					<?php endforeach; ?>
+				</section>
+			<?php endforeach; ?>
+			<?php cp_ac_render_documento_viewer(); ?>
 		<?php endif; ?>
 	</div>
+	<?php
+}
+
+// Visualizador na própria página: o PDF no leitor do browser (iframe) e as
+// imagens diretamente. Abre e fecha como as outras modais (ac-fab.js: botão
+// com data-cp-fab-target, fechar, clicar fora, Escape); este script só põe e
+// tira o conteúdo. O Chrome em Android não mostra PDFs embutidos: aí abre
+// noutro separador.
+function cp_ac_render_documento_viewer() {
+	?>
+	<div id="cp-doc-viewer-backdrop" class="ac-modal-backdrop" data-cp-fab-modal hidden></div>
+	<div id="cp-doc-viewer" class="ac-modal ac-modal-doc" role="dialog" aria-modal="true" aria-labelledby="cp-doc-viewer-title" hidden>
+		<div class="ac-modal-head">
+			<h3 id="cp-doc-viewer-title" class="ac-doc-viewer-titulo"></h3>
+			<div class="ac-doc-viewer-acoes">
+				<a class="ac-btn ac-btn-ghost ac-doc-viewer-abrir" href="#" target="_blank" rel="noopener"><?php esc_html_e( 'Abrir noutro separador', 'contabilidade-pro' ); ?></a>
+				<button type="button" class="ac-modal-close" data-cp-fab-modal-close aria-label="<?php esc_attr_e( 'Fechar', 'contabilidade-pro' ); ?>">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+				</button>
+			</div>
+		</div>
+		<div class="ac-doc-viewer-corpo"></div>
+	</div>
+	<script>
+	(function () {
+		var modal = document.getElementById('cp-doc-viewer');
+		if (!modal) return;
+		var corpo = modal.querySelector('.ac-doc-viewer-corpo'), titulo = modal.querySelector('.ac-doc-viewer-titulo'), abrir = modal.querySelector('.ac-doc-viewer-abrir');
+		var android = /Android/i.test(navigator.userAgent);
+		document.querySelectorAll('.ac-doc-ver').forEach(function (botao) {
+			botao.addEventListener('click', function (evento) {
+				var url = botao.getAttribute('data-cp-doc-url'), tipo = botao.getAttribute('data-cp-doc-tipo');
+				if (tipo === 'pdf' && android) {
+					evento.stopImmediatePropagation();
+					window.open(url, '_blank', 'noopener');
+					return;
+				}
+				titulo.textContent = botao.getAttribute('data-cp-doc-nome');
+				abrir.href = url;
+				corpo.innerHTML = '';
+				var el;
+				if (tipo === 'pdf') { el = document.createElement('iframe'); el.title = titulo.textContent; }
+				else { el = document.createElement('img'); el.alt = titulo.textContent; }
+				el.src = url;
+				corpo.appendChild(el);
+			}, true);
+		});
+		// Ao fechar (ac-fab.js põe hidden), tira o documento da página.
+		new MutationObserver(function () { if (modal.hidden) corpo.innerHTML = ''; }).observe(modal, { attributes: true, attributeFilter: ['hidden'] });
+	})();
+	</script>
 	<?php
 }

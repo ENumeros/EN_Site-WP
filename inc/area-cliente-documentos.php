@@ -510,22 +510,22 @@ function cp_ac_render_documentos( $empresa_id ) {
 						?>
 						<div class="ac-doc-linha">
 							<div class="ac-doc-nome">
-								<span class="ac-doc-icone" aria-hidden="true">
+								<button type="button" class="ac-doc-icone ac-doc-ver" data-cp-fab-target="cp-doc-viewer"
+									data-cp-doc-url="<?php echo esc_url( $url ); ?>" data-cp-doc-tipo="<?php echo $e_pdf ? 'pdf' : 'imagem'; ?>"
+									data-cp-doc-nome="<?php echo esc_attr( $nome ); ?>"
+									title="<?php esc_attr_e( 'Ver documento', 'contabilidade-pro' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: nome do ficheiro */ __( 'Ver %s', 'contabilidade-pro' ), $nome ) ); ?>">
 									<?php if ( $e_pdf ) : ?>
 										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M9 13h6M9 17h4"></path></svg>
 									<?php else : ?>
 										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="m21 16-5-5-9 9"></path></svg>
 									<?php endif; ?>
-								</span>
+								</button>
 								<span class="ac-doc-nome-texto" title="<?php echo esc_attr( $nome ); ?>"><?php echo esc_html( $nome ); ?></span>
 							</div>
 							<?php $periodo = ( $doc_ano && isset( $nomes_mes[ $doc_mes ] ) ) ? $nomes_mes[ $doc_mes ] . ' ' . $doc_ano : ''; ?>
 							<div class="ac-doc-dado ac-doc-dado-data" data-periodo="<?php echo esc_attr( $periodo ? ' · ' . $periodo : '' ); ?>"><?php echo esc_html( get_post_time( 'd/m/Y', false, $doc ) ); ?></div>
 							<div class="ac-doc-dado ac-doc-dado-periodo"><?php echo $periodo ? esc_html( $periodo ) : '—'; ?></div>
 							<div class="ac-doc-acoes">
-								<button type="button" class="ac-btn ac-btn-ghost ac-doc-ver" data-cp-fab-target="cp-doc-viewer"
-									data-cp-doc-url="<?php echo esc_url( $url ); ?>" data-cp-doc-tipo="<?php echo $e_pdf ? 'pdf' : 'imagem'; ?>"
-									data-cp-doc-nome="<?php echo esc_attr( $nome ); ?>"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></button>
 								<?php if ( cp_ac_documento_pode_apagar( $doc, $user_id ) ) : ?>
 									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Apagar este documento?', 'contabilidade-pro' ) ); ?>');">
 										<?php wp_nonce_field( 'cp_documento_apagar', 'cp_documento_nonce' ); ?>

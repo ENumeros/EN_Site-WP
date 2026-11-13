@@ -177,17 +177,18 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-doc-grupo-head{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--ac-text);padding-bottom:10px;border-bottom:1px solid var(--ac-line)}
 .ac-doc-grupo-head svg{color:var(--ac-blue);flex:none}
 .ac-doc-grupo-n{font-size:11.5px;font-weight:600;color:var(--ac-muted);background:var(--ac-bg);border-radius:999px;padding:2px 9px}
-.ac-doc-cab,.ac-doc-linha{display:grid;grid-template-columns:minmax(0,1fr) 110px 140px 118px;align-items:center;gap:14px}
+.ac-doc-cab,.ac-doc-linha{display:grid;grid-template-columns:minmax(0,1fr) 110px 140px 40px;align-items:center;gap:14px}
 .ac-doc-cab{padding:8px 0 2px;font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--ac-muted)}
 .ac-doc-linha{padding:10px 0;border-bottom:1px solid var(--ac-hairline)}
 .ac-doc-linha:last-child{border-bottom:none}
 .ac-doc-nome{display:flex;align-items:center;gap:10px;min-width:0}
-.ac-doc-icone{width:32px;height:32px;border-radius:8px;background:var(--ac-bg);color:var(--ac-blue);display:flex;align-items:center;justify-content:center;flex:none}
+.ac-doc-icone{width:32px;height:32px;border-radius:8px;background:var(--ac-bg);color:var(--ac-blue);display:flex;align-items:center;justify-content:center;flex:none;border:1px solid transparent;padding:0;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.ac-doc-icone:hover{border-color:var(--ac-blue);color:var(--ac-text)}
+.ac-doc-icone:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(126,144,181,.3)}
 .ac-doc-nome-texto{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ac-doc-dado{font-size:12.5px;color:var(--ac-muted);white-space:nowrap}
 .ac-doc-acoes{display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .ac-doc-acoes form{margin:0}
-.ac-doc-ver{padding:7px 14px;font-size:12.5px}
 @media (max-width:640px){
 .ac-doc-cab{display:none}
 .ac-doc-linha{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nome acoes" "dados acoes";row-gap:2px}

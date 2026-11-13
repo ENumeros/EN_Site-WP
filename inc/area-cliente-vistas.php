@@ -477,10 +477,17 @@ function cp_ac_render_banner_resposta_pendente() {
 		</div>
 		<?php
 	elseif ( $erro ) :
+		$tipo_recusado = 0 === strpos( $erro, 'anexo_tipo_' ) ? substr( $erro, strlen( 'anexo_tipo_' ) ) : '';
 		?>
 		<div class="ac-status-banner amber">
 			<div class="ac-status-icon amber"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg></div>
-			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível enviar', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber"><?php esc_html_e( 'Escreva uma resposta, anexe um ficheiro, ou marque "sem dados", e tente novamente.', 'contabilidade-pro' ); ?></div></div>
+			<div><div class="ac-status-title"><?php esc_html_e( 'Não foi possível enviar', 'contabilidade-pro' ); ?></div><div class="ac-status-sub amber">
+				<?php if ( $tipo_recusado ) : ?>
+					<?php printf( /* translators: %s: tipos aceites, ex. "PDF ou Excel" */ esc_html__( 'Este tipo de ficheiro não é aceite aqui. Envie %s.', 'contabilidade-pro' ), esc_html( cp_ac_pendente_tipos_texto( $tipo_recusado ) ) ); ?>
+				<?php else : ?>
+					<?php esc_html_e( 'Escreva uma resposta, anexe um ficheiro, ou marque "sem dados", e tente novamente.', 'contabilidade-pro' ); ?>
+				<?php endif; ?>
+			</div></div>
 		</div>
 		<?php
 	endif;
@@ -527,7 +534,7 @@ function cp_ac_vista_documentos_em_falta() {
 							<input type="hidden" name="tipo" value="documento">
 							<input type="hidden" name="item_id" value="<?php echo esc_attr( $doc['id'] ); ?>">
 							<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
-							<input type="file" name="anexo" required style="font-size:12.5px;max-width:200px">
+							<input type="file" name="anexo" required accept="<?php echo esc_attr( cp_ac_pendente_accept( 'documento' ) ); ?>" style="font-size:12.5px;max-width:200px">
 							<button class="ac-btn ac-btn-primary" type="submit" style="padding:7px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
 						</form>
 					<?php endif; ?>
@@ -595,7 +602,7 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 								<label class="ac-btn ac-btn-ghost" style="cursor:pointer">
 									<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5 15 6a3 3 0 0 1 4.2 4.2L11 18.5a4.2 4.2 0 0 1-6-6L13 5"></path></svg>
 									<?php esc_html_e( 'Anexar ficheiro', 'contabilidade-pro' ); ?>
-									<input type="file" name="anexo" style="display:none">
+									<input type="file" name="anexo" accept="<?php echo esc_attr( cp_ac_pendente_accept( 'movimento' ) ); ?>" style="display:none">
 								</label>
 								<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Enviar resposta', 'contabilidade-pro' ); ?></button>
 							</div>
@@ -720,7 +727,7 @@ function cp_ac_render_celula_checklist( $item, $empresa_id, $tipo ) {
 			<input type="hidden" name="tipo" value="<?php echo esc_attr( $tipo ); ?>">
 			<input type="hidden" name="item_id" value="<?php echo esc_attr( $item['id'] ); ?>">
 			<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
-			<input type="file" name="anexo" style="font-size:12px;max-width:160px">
+			<input type="file" name="anexo" accept="<?php echo esc_attr( cp_ac_pendente_accept( $tipo ) ); ?>" style="font-size:12px;max-width:160px">
 			<button class="ac-btn ac-btn-primary" type="submit" style="padding:6px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
 			<button class="ac-btn ac-btn-ghost" type="submit" name="sem_dados" value="1" style="padding:6px 12px"><?php echo 'extrato' === $tipo ? esc_html__( 'Não houve movimento', 'contabilidade-pro' ) : esc_html__( 'Sem SAF-T este mês', 'contabilidade-pro' ); ?></button>
 		</form>

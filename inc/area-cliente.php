@@ -704,6 +704,55 @@ function cp_ac_pendentes_respostas( $empresa_id ) {
     return is_array( $itens ) ? $itens : [];
 }
 
+// Tipos de ficheiro aceites em cada resposta (decisão de 2026-11-13):
+// documentos em falta e movimentos → PDF ou imagem (seguem para a
+// contabilidade, como os Documentos); extratos → PDF ou Excel; SAF-T → XML.
+// Sem isto o WordPress usava a lista dele, que não tem XML.
+function cp_ac_pendente_mimes_permitidos( $tipo ) {
+    if ( 'extrato' === $tipo ) {
+        return [
+            'pdf'  => 'application/pdf',
+            'xls'  => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+    }
+    if ( 'saft' === $tipo ) {
+        return [ 'xml' => 'text/xml' ];
+    }
+    return cp_ac_documento_mimes_permitidos();
+}
+
+// O WordPress só aceita tipos que estejam também na lista geral de uploads
+// do site (get_allowed_mime_types), e o XML não está. Junta os tipos desta
+// resposta a essa lista só enquanto se trata este envio, para o XML não
+// ficar aceite em mais nenhum upload do site.
+function cp_ac_pendente_permitir_tipos( $tipo, $ligar ) {
+    static $filtro = null;
+    if ( $ligar ) {
+        $extra  = cp_ac_pendente_mimes_permitidos( $tipo );
+        $filtro = function ( $mimes ) use ( $extra ) { return array_merge( $mimes, $extra ); };
+        add_filter( 'upload_mimes', $filtro );
+    } elseif ( $filtro ) {
+        remove_filter( 'upload_mimes', $filtro );
+        $filtro = null;
+    }
+}
+
+// Para o atributo accept do campo de ficheiro (".pdf,.xls,.xlsx").
+function cp_ac_pendente_accept( $tipo ) {
+    $ext = [];
+    foreach ( array_keys( cp_ac_pendente_mimes_permitidos( $tipo ) ) as $chave ) {
+        foreach ( explode( '|', $chave ) as $e ) $ext[] = '.' . $e;
+    }
+    return implode( ',', $ext );
+}
+
+function cp_ac_pendente_tipos_texto( $tipo ) {
+    if ( 'extrato' === $tipo ) return __( 'PDF ou Excel', 'contabilidade-pro' );
+    if ( 'saft' === $tipo ) return __( 'XML (o ficheiro SAF-T)', 'contabilidade-pro' );
+    return __( 'PDF ou imagem (JPG, PNG)', 'contabilidade-pro' );
+}
+
 // Devolve a resposta (se existir) para um item (documento ou movimento).
 function cp_ac_pendente_resposta_do_item( $empresa_id, $item_id ) {
     foreach ( cp_ac_pendentes_respostas( $empresa_id ) as $resposta ) {
@@ -880,7 +929,16 @@ function cp_ac_handle_pendente_resposta() {
             require_once ABSPATH . 'wp-admin/includes/media.php';
         }
         $anexo_nome_original = isset( $_FILES['anexo']['name'] ) ? sanitize_file_name( $_FILES['anexo']['name'] ) : '';
-        $resultado = media_handle_upload( 'anexo', 0, [], [ 'test_form' => false ] );
+        $mimes = cp_ac_pendente_mimes_permitidos( $tipo );
+        cp_ac_pendente_permitir_tipos( $tipo, true );
+        $tipo_ficheiro = wp_check_filetype_and_ext( $_FILES['anexo']['tmp_name'], $_FILES['anexo']['name'], $mimes );
+        if ( empty( $tipo_ficheiro['type'] ) ) {
+            cp_ac_pendente_permitir_tipos( $tipo, false );
+            wp_safe_redirect( add_query_arg( 'cp_erro', 'anexo_tipo_' . $tipo, $voltar ) );
+            exit;
+        }
+        $resultado = media_handle_upload( 'anexo', 0, [], [ 'test_form' => false, 'mimes' => $mimes ] );
+        cp_ac_pendente_permitir_tipos( $tipo, false );
         if ( ! is_wp_error( $resultado ) ) {
             $anexo_id   = $resultado;
             $anexo_url  = wp_get_attachment_url( $resultado );

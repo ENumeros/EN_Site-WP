@@ -41,13 +41,13 @@
                     <span class="situacao-card__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M10 20v-5h4v5"/></svg></span>
                     <h3 class="situacao-card__title"><?php esc_html_e( 'Quer abrir empresa?', 'contabilidade-pro' ); ?></h3>
                     <p class="situacao-card__desc"><?php esc_html_e( 'Tratamos de toda a constituição — escolha do tipo de sociedade, registo comercial, início de atividade nas Finanças e Segurança Social — e deixamos tudo pronto para faturar desde o primeiro dia.', 'contabilidade-pro' ); ?></p>
-                    <span class="situacao-card__footer"><?php esc_html_e( 'Falar sobre abertura de empresa', 'contabilidade-pro' ); ?> <svg class="situacao-card__arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                    <span class="situacao-card__footer"><?php esc_html_e( 'Falar sobre abertura de empresa', 'contabilidade-pro' ); ?> <span class="situacao-card__go" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
                 </a>
                 <a class="situacao-card" href="<?php echo esc_url( home_url( '/#contacto' ) ); ?>">
                     <span class="situacao-card__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h15l-4-4"/><path d="M20 15H5l4 4"/></svg></span>
                     <h3 class="situacao-card__title"><?php esc_html_e( 'Quer mudar de contabilista?', 'contabilidade-pro' ); ?></h3>
                     <p class="situacao-card__desc"><?php esc_html_e( 'A transição é mais simples do que parece: tratamos de toda a passagem de pasta com o gabinete anterior, sem interrupções nas suas obrigações fiscais.', 'contabilidade-pro' ); ?></p>
-                    <span class="situacao-card__footer"><?php esc_html_e( 'Falar sobre mudança de contabilista', 'contabilidade-pro' ); ?> <svg class="situacao-card__arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                    <span class="situacao-card__footer"><?php esc_html_e( 'Falar sobre mudança de contabilista', 'contabilidade-pro' ); ?> <span class="situacao-card__go" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
                 </a>
             </div>
 
@@ -105,11 +105,11 @@
                 foreach ( $all_services as $service ) : ?>
                 <a class="services-compact-item" href="<?php echo esc_url( home_url( '/#contacto' ) ); ?>">
                     <div class="services-compact-item__head">
-                        <span class="services-compact-item__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?php echo $service['icon']; // SVG fixo definido acima ?></svg></span>
+                        <span class="services-compact-item__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?php echo $service['icon']; // SVG fixo definido acima ?></svg></span>
                         <h3 class="services-compact-item__title"><?php echo esc_html( $service['title'] ); ?></h3>
                     </div>
                     <p class="services-compact-item__desc"><?php echo esc_html( $service['desc'] ); ?></p>
-                    <span class="services-compact-item__link"><?php esc_html_e( 'Saber mais →', 'contabilidade-pro' ); ?></span>
+                    <span class="services-compact-item__link"><?php esc_html_e( 'Saber mais', 'contabilidade-pro' ); ?> <span class="situacao-card__go situacao-card__go--sm" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
                 </a>
                 <?php endforeach; ?>
             </div>

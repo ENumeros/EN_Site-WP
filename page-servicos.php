@@ -13,9 +13,6 @@
             <div class="hero__overlay" aria-hidden="true"></div>
             <div class="hero__content">
                 <div class="service-main">
-                    <div class="service-main__icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
-                    </div>
                     <div class="service-main__content">
                         <span class="service-main__eyebrow"><?php esc_html_e( 'O nosso serviço principal', 'contabilidade-pro' ); ?></span>
                         <h2 class="service-main__title"><?php esc_html_e( 'Contabilidade', 'contabilidade-pro' ); ?></h2>
@@ -66,9 +63,6 @@
         </div>
         <div class="container">
             <div class="admin-support">
-                <div class="admin-support__icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 4v5M16 4v5"/><circle cx="9" cy="14" r="1"/><circle cx="12" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
-                </div>
                 <div class="admin-support__content">
                     <span class="admin-support__eyebrow"><?php esc_html_e( 'Apoio ao dia a dia', 'contabilidade-pro' ); ?></span>
                     <h2 class="admin-support__title"><?php esc_html_e( 'Apoio Administrativo', 'contabilidade-pro' ); ?></h2>

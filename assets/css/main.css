@@ -311,52 +311,28 @@ img { max-width: 100%; display: block; }
 
 /* ─── Contabilidade — serviço principal (faixa a toda a largura) ───────── */
 
-.service-main { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 28px; }
+.service-main { position: relative; z-index: 1; }
 
 /* ─── Numa situação particular? ──────────────────────────────────────── */
 
 .section--client-focus { background: var(--c-bg); padding: var(--sec-pad-light) 0; }
-.service-main__icon {
-  flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(201,162,39,0.14);
-  color: var(--c-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 .service-main__eyebrow { display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-accent); margin-bottom: 8px; }
 .service-main__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(26px, 3vw, 34px); color: #fff; margin: 0 0 14px; }
 .service-main__desc { font-size: 16px; line-height: 1.7; color: #CBD4E3; margin: 0 0 18px; max-width: 640px; }
 .service-main__link { font-size: 14.5px; font-weight: 600; color: #fff; text-decoration: none; }
 .service-main__link:hover { text-decoration: underline; }
-@media (max-width: 600px) { .service-main { flex-direction: column; } }
 
 /* ─── Apoio Administrativo (secção própria) ─────────────────────────────── */
 
 /* Faixa escura com foto, como "Como trabalhamos" na página inicial
    (alternância da homepage: escuro → claro → escuro → claro → azul). */
 .section--admin-support { position: relative; overflow: hidden; background: var(--c-navy); padding: var(--sec-pad-photo) 0; }
-.admin-support { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 28px; }
-.admin-support__icon {
-  flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(201,162,39,0.14);
-  color: var(--c-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+.admin-support { position: relative; z-index: 1; }
 .admin-support__eyebrow { display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-accent); margin-bottom: 8px; }
 .admin-support__title { font-family: var(--font-serif); font-weight: 500; font-size: clamp(24px, 2.6vw, 32px); color: #fff; margin: 0 0 14px; }
 .admin-support__desc { font-size: 16px; line-height: 1.7; color: #CBD4E3; margin: 0 0 18px; max-width: 640px; }
 .admin-support__link { font-size: 14.5px; font-weight: 600; color: #fff; text-decoration: none; }
 .admin-support__link:hover { text-decoration: underline; }
-@media (max-width: 600px) { .admin-support { flex-direction: column; } }
 
 /* ─── Restantes serviços (segundo plano) ────────────────────────────────── */
 

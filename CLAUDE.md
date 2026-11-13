@@ -154,6 +154,15 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   cliente só se mostra "enviado"; o estado na CentralGest é controlado na
   Work. Só PDF/JPG/PNG (`cp_ac_documento_mimes_permitidos()`), até 10 MB
   (filtro `cp_ac_documento_max_mb`, valor ainda por avaliar).
+  **Destino escolhido pelo cliente** (decisão de 2026-11-13): a Work envia
+  as pastas da empresa na CentralGest (`POST cp/v1/documentos/pastas`,
+  lista completa, meta `_cp_doc_pastas` = `[{id, nome, anos}]`). No upload o
+  cliente escolhe a pasta, o ano e o mês. Os anos têm de existir na pasta e
+  o mês não pode ser futuro (`cp_ac_documento_destino_valido()`). A escolha
+  fica nas metas `_cp_doc_pasta`, `_cp_doc_ano` e `_cp_doc_mes`, e vai para
+  a Work em `/documentos/novos`. **Sem pastas, o upload fica escondido**
+  (formulário, modal e item do botão "+"; ver
+  `cp_ac_documento_upload_disponivel()`).
 
 ## Backoffice
 

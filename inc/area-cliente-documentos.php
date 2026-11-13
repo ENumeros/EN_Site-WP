@@ -47,12 +47,53 @@ function cp_ac_documento_erro_texto( $erro ) {
 			size_format( cp_ac_documento_max_bytes() )
 		),
 		'documento_ja_recebido' => __( 'Este documento já foi recebido pela contabilidade e não pode ser apagado.', 'contabilidade-pro' ),
+		'documento_destino'     => __( 'Escolha a pasta, o ano e o mês do documento.', 'contabilidade-pro' ),
 	];
 	return isset( $textos[ $erro ] ) ? $textos[ $erro ] : '';
 }
 
 function cp_ac_documento_recebido_work( $anexo_id ) {
 	return '' !== (string) get_post_meta( $anexo_id, '_cp_doc_work_recebido', true );
+}
+
+// Pastas de documentos da empresa na CentralGest, enviadas pela Work (POST
+// cp/v1/documentos/pastas): [ { id, nome, anos: [2026, ...] } ]. O cliente
+// escolhe nelas a pasta, o ano e o mês de cada documento. Sem pastas, o
+// upload fica escondido (decisão de 2026-11-13). O WordPress nunca fala
+// com a CentralGest: só guarda a escolha, e a Work envia o documento.
+function cp_ac_documento_pastas( $empresa_id ) {
+	$pastas = $empresa_id ? get_post_meta( $empresa_id, '_cp_doc_pastas', true ) : [];
+	return is_array( $pastas ) ? $pastas : [];
+}
+
+function cp_ac_documento_upload_disponivel( $empresa_id ) {
+	return ! empty( cp_ac_documento_pastas( $empresa_id ) );
+}
+
+function cp_ac_documento_nomes_meses() {
+	return [
+		1 => __( 'Janeiro', 'contabilidade-pro' ), 2 => __( 'Fevereiro', 'contabilidade-pro' ), 3 => __( 'Março', 'contabilidade-pro' ),
+		4 => __( 'Abril', 'contabilidade-pro' ), 5 => __( 'Maio', 'contabilidade-pro' ), 6 => __( 'Junho', 'contabilidade-pro' ),
+		7 => __( 'Julho', 'contabilidade-pro' ), 8 => __( 'Agosto', 'contabilidade-pro' ), 9 => __( 'Setembro', 'contabilidade-pro' ),
+		10 => __( 'Outubro', 'contabilidade-pro' ), 11 => __( 'Novembro', 'contabilidade-pro' ), 12 => __( 'Dezembro', 'contabilidade-pro' ),
+	];
+}
+
+// A pasta escolhida, se o destino é válido: pasta desta empresa, ano que
+// existe nela e mês que não é futuro. A Work volta a validar.
+function cp_ac_documento_destino_valido( $empresa_id, $pasta_id, $ano, $mes ) {
+	$ano = (int) $ano;
+	$mes = (int) $mes;
+	if ( $mes < 1 || $mes > 12 ) return null;
+	$ano_atual = (int) current_time( 'Y' );
+	$mes_atual = (int) current_time( 'n' );
+	if ( $ano > $ano_atual || ( $ano === $ano_atual && $mes > $mes_atual ) ) return null;
+	foreach ( cp_ac_documento_pastas( $empresa_id ) as $pasta ) {
+		if ( (string) $pasta['id'] === (string) $pasta_id ) {
+			return in_array( $ano, array_map( 'intval', (array) $pasta['anos'] ), true ) ? $pasta : null;
+		}
+	}
+	return null;
 }
 
 function cp_ac_documentos( $empresa_id ) {
@@ -92,6 +133,13 @@ function cp_ac_handle_documento_upload() {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_em_falta', $voltar ) );
 		exit;
 	}
+	$pasta_id = isset( $_POST['pasta_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pasta_id'] ) ) : '';
+	$ano      = isset( $_POST['ano'] ) ? absint( $_POST['ano'] ) : 0;
+	$mes      = isset( $_POST['mes'] ) ? absint( $_POST['mes'] ) : 0;
+	if ( ! cp_ac_documento_destino_valido( $empresa_id, $pasta_id, $ano, $mes ) ) {
+		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_destino', $voltar ) );
+		exit;
+	}
 
 	if ( UPLOAD_ERR_INI_SIZE === $_FILES['ficheiro']['error'] || UPLOAD_ERR_FORM_SIZE === $_FILES['ficheiro']['error']
 		|| (int) $_FILES['ficheiro']['size'] > cp_ac_documento_max_bytes() ) {
@@ -115,6 +163,9 @@ function cp_ac_handle_documento_upload() {
 		exit;
 	}
 	update_post_meta( $anexo_id, '_cp_doc_cliente', '1' );
+	update_post_meta( $anexo_id, '_cp_doc_pasta', $pasta_id );
+	update_post_meta( $anexo_id, '_cp_doc_ano', $ano );
+	update_post_meta( $anexo_id, '_cp_doc_mes', $mes );
 
 	cp_push_notificar_equipa(
 		__( 'Novo documento de cliente', 'contabilidade-pro' ),
@@ -173,6 +224,17 @@ function cp_ac_rest_routes_documentos() {
 			],
 		],
 	] );
+	register_rest_route( 'cp/v1', '/documentos/pastas', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_documentos_pastas',
+			'permission_callback' => 'cp_ac_rest_permissao',
+			'args'                => [
+				'work_id' => [ 'required' => true, 'type' => 'string' ],
+				'pastas'  => [ 'required' => true, 'type' => 'array' ],
+			],
+		],
+	] );
 	register_rest_route( 'cp/v1', '/documentos/confirmar', [
 		[
 			'methods'             => 'POST',
@@ -203,9 +265,34 @@ function cp_ac_rest_documentos_novos( $request ) {
 			'mime'       => get_post_mime_type( $doc ),
 			'tamanho'    => ( $caminho && file_exists( $caminho ) ) ? filesize( $caminho ) : null,
 			'enviado_em' => get_post_time( 'Y-m-d H:i:s', false, $doc ),
+			// Destino escolhido pelo cliente (vazio nos enviados antes de haver pastas).
+			'pasta_id'   => (string) get_post_meta( $doc->ID, '_cp_doc_pasta', true ),
+			'ano'        => (int) get_post_meta( $doc->ID, '_cp_doc_ano', true ) ?: null,
+			'mes'        => (int) get_post_meta( $doc->ID, '_cp_doc_mes', true ) ?: null,
 		];
 	}
 	return rest_ensure_response( [ 'documentos' => $documentos ] );
+}
+
+// Substitui as pastas da empresa pelas que a Work envia (lista completa;
+// vazia esconde o upload).
+function cp_ac_rest_documentos_pastas( $request ) {
+	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+	$pastas = [];
+	foreach ( (array) $request->get_param( 'pastas' ) as $pasta ) {
+		if ( ! is_array( $pasta ) || empty( $pasta['id'] ) || empty( $pasta['nome'] ) ) continue;
+		$anos = array_values( array_filter( array_map( 'absint', (array) ( $pasta['anos'] ?? [] ) ) ) );
+		if ( ! $anos ) continue;
+		$pastas[] = [
+			'id'   => sanitize_text_field( (string) $pasta['id'] ),
+			'nome' => sanitize_text_field( $pasta['nome'] ),
+			'anos' => $anos,
+		];
+	}
+	update_post_meta( $empresa_id, '_cp_doc_pastas', $pastas );
+	return rest_ensure_response( [ 'ok' => true, 'pastas' => count( $pastas ) ] );
 }
 
 // Marca como recebidos pela Work. Não apaga: o ficheiro fica no WordPress.
@@ -231,6 +318,14 @@ function cp_ac_rest_documentos_confirmar( $request ) {
 // Só o formulário de envio (dropzone) — reutilizado pela vista Documentos
 // e pelo botão flutuante do Dashboard.
 function cp_ac_render_documento_form() {
+	$pastas = cp_ac_documento_pastas( cp_ac_empresa_ativa() );
+	if ( ! $pastas ) return;
+	$ano_atual = (int) current_time( 'Y' );
+	$mes_atual = (int) current_time( 'n' );
+	$anos      = [];
+	foreach ( $pastas as $pasta ) $anos = array_merge( $anos, array_map( 'intval', (array) $pasta['anos'] ) );
+	$anos = array_unique( $anos );
+	rsort( $anos );
 	?>
 	<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<?php wp_nonce_field( 'cp_documento_upload', 'cp_documento_nonce' ); ?>
@@ -242,10 +337,61 @@ function cp_ac_render_documento_form() {
 			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar um novo documento', 'contabilidade-pro' ); ?></div>
 			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Fatura, despesa ou outro documento', 'contabilidade-pro' ); ?></div>
 			<input type="file" name="ficheiro" required accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-file-input" style="font-size:12.5px;max-width:260px">
+			<div class="ac-doc-destino" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+				<select name="pasta_id" required data-cp-doc-pasta aria-label="<?php esc_attr_e( 'Pasta', 'contabilidade-pro' ); ?>" style="font-size:12.5px">
+					<?php foreach ( $pastas as $pasta ) : ?>
+						<option value="<?php echo esc_attr( $pasta['id'] ); ?>" data-anos="<?php echo esc_attr( implode( ',', array_map( 'intval', (array) $pasta['anos'] ) ) ); ?>"><?php echo esc_html( $pasta['nome'] ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select name="mes" required data-cp-doc-mes aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>" style="font-size:12.5px">
+					<?php foreach ( cp_ac_documento_nomes_meses() as $n => $nome_mes ) : ?>
+						<option value="<?php echo esc_attr( $n ); ?>" <?php selected( $n, $mes_atual ); ?>><?php echo esc_html( $nome_mes ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<select name="ano" required data-cp-doc-ano aria-label="<?php esc_attr_e( 'Ano', 'contabilidade-pro' ); ?>" style="font-size:12.5px">
+					<?php foreach ( $anos as $a ) : if ( $a > $ano_atual ) continue; ?>
+						<option value="<?php echo esc_attr( $a ); ?>" <?php selected( $a, $ano_atual ); ?>><?php echo esc_html( $a ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
 			<div style="font-size:11.5px;color:var(--ac-muted)"><?php printf( /* translators: %s: tamanho máximo */ esc_html__( 'PDF ou imagem, até %s', 'contabilidade-pro' ), esc_html( size_format( cp_ac_documento_max_bytes() ) ) ); ?></div>
 			<button class="ac-btn ac-btn-primary" type="submit" style="margin-top:4px"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
 		</div>
 	</form>
+	<?php
+	cp_ac_render_documento_form_script( $ano_atual, $mes_atual );
+}
+
+// Em cada formulário: só os anos que existem na pasta escolhida e, no ano
+// corrente, só os meses até ao atual. Impresso uma vez por página.
+function cp_ac_render_documento_form_script( $ano_atual, $mes_atual ) {
+	static $impresso = false;
+	if ( $impresso ) return;
+	$impresso = true;
+	?>
+	<script>
+	(function () {
+		var anoAtual = <?php echo (int) $ano_atual; ?>, mesAtual = <?php echo (int) $mes_atual; ?>;
+		function ligar(form) {
+			var pasta = form.querySelector('[data-cp-doc-pasta]'), ano = form.querySelector('[data-cp-doc-ano]'), mes = form.querySelector('[data-cp-doc-mes]');
+			if (!pasta || !ano || !mes || form.dataset.cpDocLigado) return;
+			form.dataset.cpDocLigado = '1';
+			function atualizar() {
+				var anos = (pasta.options[pasta.selectedIndex].getAttribute('data-anos') || '').split(',');
+				var ultimo = null;
+				Array.prototype.forEach.call(ano.options, function (o) { var ok = anos.indexOf(o.value) !== -1; o.hidden = !ok; o.disabled = !ok; if (ok && !ultimo) ultimo = o; });
+				if (ano.selectedOptions.length === 0 || ano.selectedOptions[0].disabled) { if (ultimo) ano.value = ultimo.value; }
+				var limite = parseInt(ano.value, 10) === anoAtual ? mesAtual : 12;
+				Array.prototype.forEach.call(mes.options, function (o) { var ok = parseInt(o.value, 10) <= limite; o.hidden = !ok; o.disabled = !ok; });
+				if (parseInt(mes.value, 10) > limite) mes.value = String(limite);
+			}
+			pasta.addEventListener('change', atualizar);
+			ano.addEventListener('change', atualizar);
+			atualizar();
+		}
+		document.querySelectorAll('form').forEach(ligar);
+	})();
+	</script>
 	<?php
 }
 
@@ -263,6 +409,7 @@ function cp_ac_render_documento_fab_item() {
 
 // Modal aberta por essa ação — formulário de envio.
 function cp_ac_render_documento_modal() {
+	if ( ! cp_ac_documento_upload_disponivel( cp_ac_empresa_ativa() ) ) return;
 	?>
 	<div id="cp-doc-modal-backdrop" class="ac-modal-backdrop" data-cp-fab-modal hidden></div>
 	<div id="cp-doc-modal" class="ac-modal" role="dialog" aria-modal="true" aria-labelledby="cp-doc-modal-title" hidden>
@@ -280,6 +427,8 @@ function cp_ac_render_documento_modal() {
 function cp_ac_render_documentos( $empresa_id ) {
 	$documentos = cp_ac_documentos( $empresa_id );
 	$user_id    = get_current_user_id();
+	$nomes_mes  = cp_ac_documento_nomes_meses();
+	$pastas     = wp_list_pluck( cp_ac_documento_pastas( $empresa_id ), 'nome', 'id' );
 	?>
 	<div class="ac-card" style="padding:22px">
 		<div class="ac-sec-head">
@@ -299,7 +448,17 @@ function cp_ac_render_documentos( $empresa_id ) {
 					<div class="ac-req-row">
 						<div>
 							<div style="font-size:13.5px;font-weight:600"><?php echo esc_html( get_the_title( $doc ) ); ?></div>
-							<div style="font-size:12px;color:var(--ac-muted)"><?php printf( /* translators: %s: há quanto tempo */ esc_html__( 'enviado há %s', 'contabilidade-pro' ), esc_html( human_time_diff( get_post_time( 'U', true, $doc ), current_time( 'U', true ) ) ) ); ?></div>
+							<div style="font-size:12px;color:var(--ac-muted)">
+								<?php printf( /* translators: %s: há quanto tempo */ esc_html__( 'enviado há %s', 'contabilidade-pro' ), esc_html( human_time_diff( get_post_time( 'U', true, $doc ), current_time( 'U', true ) ) ) ); ?>
+								<?php
+								$doc_pasta = (string) get_post_meta( $doc->ID, '_cp_doc_pasta', true );
+								$doc_mes   = (int) get_post_meta( $doc->ID, '_cp_doc_mes', true );
+								$doc_ano   = (int) get_post_meta( $doc->ID, '_cp_doc_ano', true );
+								if ( isset( $pastas[ $doc_pasta ] ) && $doc_mes && $doc_ano ) {
+									echo ' · ' . esc_html( $pastas[ $doc_pasta ] . ' · ' . $nomes_mes[ $doc_mes ] . ' ' . $doc_ano );
+								}
+								?>
+							</div>
 						</div>
 						<div style="display:flex;align-items:center;gap:6px">
 							<a href="<?php echo esc_url( wp_get_attachment_url( $doc->ID ) ); ?>" target="_blank" rel="noopener" class="ac-btn ac-btn-ghost" style="padding:8px 14px;font-size:12.5px"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a>

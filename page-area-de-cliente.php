@@ -200,7 +200,7 @@ else :
 					?>
 				</div>
 
-				<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos, 'mensagem' => $tem_mensagens ] ); ?>
+				<?php cp_ac_render_fab_acoes_rapidas( [ 'documento' => $tem_documentos && cp_ac_documento_upload_disponivel( $empresa_ativa ), 'mensagem' => $tem_mensagens ] ); ?>
 				<?php if ( $tem_documentos ) : ?>
 					<?php cp_ac_render_documento_modal(); ?>
 				<?php endif; ?>

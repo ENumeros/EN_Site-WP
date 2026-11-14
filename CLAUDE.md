@@ -184,6 +184,12 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   escolher o papel à mão em wp-admin → Utilizadores → Editar.
   `cp_backoffice_utilizador_tem_acesso( $user_id )` é o gate único; usa-o
   em qualquer sítio novo que precise de distinguir equipa de clientes.
+- **Equipa sem empresas vai direta ao Backoffice**: quem tem acesso ao
+  Backoffice e não tem `cp_empresas` é levado para `/backoffice` ao
+  iniciar sessão (`login_redirect`) e ao abrir `/area-de-cliente`
+  (`template_redirect`) — `cp_backoffice_e_destino_do_utilizador()`. Um
+  administrador que pediu o `wp-admin` continua a ir para lá; quem da
+  equipa também é cliente (tem empresas) segue o fluxo normal.
 - **Feed de eventos**: `cp_backoffice_registar_evento()`/
   `cp_backoffice_listar_eventos()` (`inc/area-cliente-backoffice.php`)
   guardam na opção `cp_eventos_staff` (array, mais recente primeiro,

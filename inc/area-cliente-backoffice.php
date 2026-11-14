@@ -30,6 +30,41 @@ function cp_backoffice_utilizador_tem_acesso( $user_id = null ) {
 	return user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'cp_backoffice' );
 }
 
+// ─── Equipa sem empresas → Backoffice ──────────────────────────────────────
+// Quem é da equipa (cp_backoffice ou administrador) e não tem empresas como
+// cliente não tem nada a ver na Área de Cliente: ao iniciar sessão vai logo
+// para o Backoffice, e se abrir /area-de-cliente também é levado para lá.
+// Exceção: um administrador que pediu o wp-admin (ex.: wp-login.php a
+// partir do painel) continua a ir para lá.
+
+function cp_backoffice_url() {
+	$pagina = get_page_by_path( 'backoffice' );
+	return $pagina ? get_permalink( $pagina ) : home_url( '/backoffice/' );
+}
+
+function cp_backoffice_e_destino_do_utilizador( $user_id ) {
+	return $user_id && cp_backoffice_utilizador_tem_acesso( $user_id ) && empty( cp_ac_user_empresas( $user_id ) );
+}
+
+function cp_backoffice_login_redirect( $redirect_to, $requested_redirect_to, $user ) {
+	if ( ! ( $user instanceof WP_User ) || ! cp_backoffice_e_destino_do_utilizador( $user->ID ) ) {
+		return $redirect_to;
+	}
+	if ( false !== strpos( (string) $requested_redirect_to, '/wp-admin' ) && user_can( $user, 'manage_options' ) ) {
+		return $redirect_to;
+	}
+	return cp_backoffice_url();
+}
+add_filter( 'login_redirect', 'cp_backoffice_login_redirect', 20, 3 );
+
+function cp_backoffice_desviar_area_cliente() {
+	if ( is_page( 'area-de-cliente' ) && is_user_logged_in() && cp_backoffice_e_destino_do_utilizador( get_current_user_id() ) ) {
+		wp_safe_redirect( cp_backoffice_url() );
+		exit;
+	}
+}
+add_action( 'template_redirect', 'cp_backoffice_desviar_area_cliente' );
+
 // ─── Registo de eventos (opção 'cp_eventos_staff', mais recente primeiro) ──
 
 function cp_backoffice_registar_evento( $titulo, $corpo, $url, $empresa_id = 0 ) {

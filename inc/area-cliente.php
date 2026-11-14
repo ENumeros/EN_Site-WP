@@ -574,11 +574,16 @@ function cp_ac_rest_criar_utilizador( $request ) {
 
     if ( ! empty( $existentes ) ) {
         $user_id = $existentes[0]->ID;
-        wp_update_user( [
-            'ID'           => $user_id,
-            'display_name' => $nome,
-            'user_email'   => $email,
-        ] );
+        // Num administrador a Work nunca muda nome nem email: mudar o email
+        // de uma conta com plenos poderes por API abriria a porta a tomar
+        // conta dela pela recuperação de senha.
+        if ( ! user_can( $user_id, 'manage_options' ) ) {
+            wp_update_user( [
+                'ID'           => $user_id,
+                'display_name' => $nome,
+                'user_email'   => $email,
+            ] );
+        }
         // Papel só muda se a Work o indicar, e nunca a um administrador
         // (não despromover quem gere o site por engano).
         if ( null !== $tipo && ! user_can( $user_id, 'manage_options' ) ) {
@@ -597,7 +602,27 @@ function cp_ac_rest_criar_utilizador( $request ) {
     }
 
     // Email já usado por outra conta WordPress (sem work_id associado)?
-    if ( email_exists( $email ) ) {
+    // Para a equipa, aproveita essa conta (ex.: o email geral, que já é
+    // administrador): liga-a ao work_id e dá-lhe o papel equipa_en, a não
+    // ser que já seja administrador. Não envia email de senha — a conta já
+    // tem uma. Uma conta já ligada a outro utilizador da Work nunca é
+    // aproveitada; para clientes continua a dar 409.
+    $user_id_existente = email_exists( $email );
+    if ( $user_id_existente && 'equipa' === $tipo
+        && '' === (string) get_user_meta( $user_id_existente, '_cp_work_id', true ) ) {
+        update_user_meta( $user_id_existente, '_cp_work_id', $work_id );
+        if ( ! user_can( $user_id_existente, 'manage_options' ) ) {
+            ( new WP_User( $user_id_existente ) )->set_role( 'equipa_en' );
+        }
+        delete_user_meta( $user_id_existente, 'cp_empresas' );
+        return rest_ensure_response( [
+            'id'                       => $user_id_existente,
+            'criado'                   => false,
+            'conta_existente'          => true,
+            'empresas_nao_encontradas' => [],
+        ] );
+    }
+    if ( $user_id_existente ) {
         return new WP_Error(
             'cp_email_existente',
             __( 'Já existe uma conta WordPress com este email.', 'contabilidade-pro' ),

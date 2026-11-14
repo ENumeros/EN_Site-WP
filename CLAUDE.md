@@ -176,8 +176,11 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   automático via `manage_options`. As contas da equipa são criadas na Work
   (Utilizadores, tipo "Equipa"), que envia `tipo: "equipa"` em
   `POST /cp/v1/utilizadores` → papel `equipa_en`, sem `cp_empresas`.
-  `tipo` omitido mantém o comportamento antigo; o papel de um
-  administrador nunca é alterado por esse endpoint. Também se pode
+  `tipo` omitido mantém o comportamento antigo; o papel, o nome e o email
+  de um administrador nunca são alterados por esse endpoint. Com
+  `tipo: "equipa"` e um email que já tem conta (sem `_cp_work_id`), a
+  conta é aproveitada e ligada ao `work_id` (`conta_existente: true`,
+  sem email de senha); para clientes isso continua a ser 409. Também se pode
   escolher o papel à mão em wp-admin → Utilizadores → Editar.
   `cp_backoffice_utilizador_tem_acesso( $user_id )` é o gate único; usa-o
   em qualquer sítio novo que precise de distinguir equipa de clientes.

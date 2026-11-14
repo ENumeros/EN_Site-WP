@@ -9,8 +9,11 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ─── Papel da equipa ────────────────────────────────────────────────────────
-// Criado uma única vez (idempotente); depois disso, atribuir o papel a
-// um utilizador é só escolhê-lo no ecrã nativo wp-admin → Utilizadores.
+// Criado uma única vez (idempotente). A Work atribui-o ao criar um
+// utilizador do tipo "equipa" (POST /cp/v1/utilizadores, campo `tipo`);
+// também se pode escolher no ecrã nativo wp-admin → Utilizadores.
+// Também corre em `init`: `after_switch_theme` só dispara ao ativar o
+// tema, por isso um site onde o tema já estava ativo nunca tinha o papel.
 
 function cp_backoffice_registar_papel_equipa() {
 	if ( get_role( 'equipa_en' ) ) return;
@@ -20,6 +23,7 @@ function cp_backoffice_registar_papel_equipa() {
 	] );
 }
 add_action( 'after_switch_theme', 'cp_backoffice_registar_papel_equipa' );
+add_action( 'init', 'cp_backoffice_registar_papel_equipa' );
 
 function cp_backoffice_utilizador_tem_acesso( $user_id = null ) {
 	$user_id = $user_id ?: get_current_user_id();

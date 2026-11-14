@@ -171,10 +171,14 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   próprio — confirmar/editar continua só em `wp-admin`. Não acrescentar
   ações novas aqui sem decisão explícita de alargar o âmbito.
 - **Acesso**: capacidade `cp_backoffice`, concedida ao papel `equipa_en`
-  (criado uma vez em `cp_backoffice_registar_papel_equipa()`, hook
-  `after_switch_theme`). Administradores têm acesso automático via
-  `manage_options`. Atribuir o papel a alguém da equipa é só escolhê-lo
-  no ecrã nativo wp-admin → Utilizadores → Editar — nenhuma UI nova.
+  (criado uma vez em `cp_backoffice_registar_papel_equipa()`, hooks
+  `after_switch_theme` e `init` — idempotente). Administradores têm acesso
+  automático via `manage_options`. As contas da equipa são criadas na Work
+  (Utilizadores, tipo "Equipa"), que envia `tipo: "equipa"` em
+  `POST /cp/v1/utilizadores` → papel `equipa_en`, sem `cp_empresas`.
+  `tipo` omitido mantém o comportamento antigo; o papel de um
+  administrador nunca é alterado por esse endpoint. Também se pode
+  escolher o papel à mão em wp-admin → Utilizadores → Editar.
   `cp_backoffice_utilizador_tem_acesso( $user_id )` é o gate único; usa-o
   em qualquer sítio novo que precise de distinguir equipa de clientes.
 - **Feed de eventos**: `cp_backoffice_registar_evento()`/

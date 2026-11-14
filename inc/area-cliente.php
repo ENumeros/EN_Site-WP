@@ -489,6 +489,11 @@ function cp_ac_rest_routes_utilizadores() {
                 'nome'     => [ 'required' => true, 'type' => 'string' ],
                 'email'    => [ 'required' => true, 'type' => 'string' ],
                 'empresas' => [ 'required' => false, 'type' => 'array' ],
+                // Opcional: 'cliente' (subscriber, Área de Cliente) ou
+                // 'equipa' (papel equipa_en, Backoffice — sem empresas).
+                // Omitido = comportamento antigo (cria como cliente e, numa
+                // atualização, não mexe no papel).
+                'tipo'     => [ 'required' => false, 'type' => 'string', 'enum' => [ 'cliente', 'equipa' ] ],
             ],
         ],
     ] );
@@ -511,6 +516,7 @@ function cp_ac_rest_listar_utilizadores( $request ) {
             'nome'     => $utilizador->display_name,
             'email'    => $utilizador->user_email,
             'work_id'  => get_user_meta( $utilizador->ID, '_cp_work_id', true ),
+            'tipo'     => in_array( 'equipa_en', (array) $utilizador->roles, true ) ? 'equipa' : 'cliente',
             'empresas' => get_user_meta( $utilizador->ID, 'cp_empresas', true ),
         ];
     }
@@ -523,6 +529,12 @@ function cp_ac_rest_criar_utilizador( $request ) {
     $email         = sanitize_email( $request->get_param( 'email' ) );
     $empresas_work = $request->get_param( 'empresas' );
     $empresas_work = is_array( $empresas_work ) ? array_map( 'sanitize_text_field', $empresas_work ) : [];
+    $tipo          = $request->get_param( 'tipo' );
+    $tipo          = in_array( $tipo, [ 'cliente', 'equipa' ], true ) ? $tipo : null;
+    $papel         = 'equipa' === $tipo ? 'equipa_en' : 'subscriber';
+    if ( 'equipa' === $tipo ) {
+        $empresas_work = []; // a equipa vê todas as empresas no Backoffice
+    }
 
     if ( '' === $work_id || '' === $nome || ! is_email( $email ) ) {
         return new WP_Error(
@@ -567,7 +579,14 @@ function cp_ac_rest_criar_utilizador( $request ) {
             'display_name' => $nome,
             'user_email'   => $email,
         ] );
-        if ( ! empty( $empresas_ids ) ) {
+        // Papel só muda se a Work o indicar, e nunca a um administrador
+        // (não despromover quem gere o site por engano).
+        if ( null !== $tipo && ! user_can( $user_id, 'manage_options' ) ) {
+            ( new WP_User( $user_id ) )->set_role( $papel );
+        }
+        if ( 'equipa' === $tipo ) {
+            delete_user_meta( $user_id, 'cp_empresas' );
+        } elseif ( ! empty( $empresas_ids ) ) {
             update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
         }
         return rest_ensure_response( [
@@ -596,7 +615,7 @@ function cp_ac_rest_criar_utilizador( $request ) {
         'user_email'   => $email,
         'display_name' => $nome,
         'user_pass'    => wp_generate_password( 32, true, true ), // nunca comunicada
-        'role'         => 'subscriber',
+        'role'         => $papel,
     ] );
 
     if ( is_wp_error( $user_id ) ) {

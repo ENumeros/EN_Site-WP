@@ -458,7 +458,8 @@ function cp_ac_mensagens_notificar( $empresa_id, $assunto, $texto, $equipa ) {
 				$texto
 			),
 			add_query_arg( 'empresa_id', $empresa_id, home_url( '/backoffice/' ) ),
-			$empresa_id
+			$empresa_id,
+			'mensagens'
 		);
 	}
 }

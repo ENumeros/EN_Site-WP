@@ -184,6 +184,23 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   escolher o papel à mão em wp-admin → Utilizadores → Editar.
   `cp_backoffice_utilizador_tem_acesso( $user_id )` é o gate único; usa-o
   em qualquer sítio novo que precise de distinguir equipa de clientes.
+- **Resumo (página inicial, SITE-009)**: `inc/area-cliente-backoffice-resumo.php`.
+  Só leitura do que já vive no WP — documentos por recolher, conversas cuja
+  última mensagem é do cliente, respostas a pendentes por confirmar,
+  lembretes em aberto, pedidos sem resposta (documentos em falta e
+  movimentos, só nas empresas com essa ferramenta ligada), contas no site e
+  o feed. As tarefas internas ficam na Work e nunca entram aqui. Os
+  cálculos são as funções `cp_bo_calc_*` (puras, testadas em
+  `tests/Unit/BackofficeResumoTest.php`). A página tem três vistas
+  (`?vista=`): Resumo (omissão), `notificacoes` (o feed completo) e
+  `empresa` (Lembretes + Mensagens; também quando há `empresa_id`).
+  Dados novos que isto guarda: `_cp_ultimo_acesso` (user meta, hook
+  `wp_login`), `_cp_bo_visita` (user meta, "Novo" desde a visita anterior,
+  janela de 30 min) e a opção `cp_work_ultima_recolha` (gravada em
+  `GET /documentos/novos`). Os eventos ganharam `tipo` (último argumento de
+  `cp_push_notificar_equipa()`); nos antigos é deduzido do título. Regras:
+  estados vazios com texto, nunca zeros; no telemóvel os quatro números
+  ficam em 2×2, visíveis sem scroll.
 - **Equipa sem empresas vai direta ao Backoffice**: quem tem acesso ao
   Backoffice e não tem `cp_empresas` é levado para `/backoffice` ao
   iniciar sessão (`login_redirect`) e ao abrir `/area-de-cliente`

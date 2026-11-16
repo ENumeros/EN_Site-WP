@@ -61,7 +61,17 @@ elseif ( ! cp_backoffice_utilizador_tem_acesso() ) :
 
 // ─── 3. Backoffice — central de notificações + atalhos ─────────────────────
 else :
-	$eventos = cp_backoffice_listar_eventos( 50 );
+	$bo_empresa_id  = isset( $_GET['empresa_id'] ) ? absint( $_GET['empresa_id'] ) : 0;
+	$bo_conversa_id = isset( $_GET['conversa_id'] ) ? sanitize_text_field( wp_unslash( $_GET['conversa_id'] ) ) : '';
+	$bo_vista       = isset( $_GET['vista'] ) ? sanitize_key( wp_unslash( $_GET['vista'] ) ) : '';
+	if ( $bo_empresa_id ) {
+		$bo_vista = 'empresa';
+	} elseif ( ! in_array( $bo_vista, [ 'notificacoes', 'empresa' ], true ) ) {
+		$bo_vista = 'resumo';
+	}
+	$bo_resumo    = cp_bo_resumo();
+	$bo_url_base  = get_permalink();
+	$bo_url_gerir = $bo_empresa_id ? add_query_arg( 'empresa_id', $bo_empresa_id, $bo_url_base ) : add_query_arg( 'vista', 'empresa', $bo_url_base );
 	?>
 	<div class="ac-shell">
 		<div class="ac-sidebar-backdrop" id="ac-sidebar-backdrop"></div>
@@ -71,22 +81,24 @@ else :
 				<div class="ac-sidebar-word"><?php bloginfo( 'name' ); ?><small><?php esc_html_e( 'Backoffice', 'contabilidade-pro' ); ?></small></div>
 			</div>
 
-			<?php
-			$bo_empresa_id  = isset( $_GET['empresa_id'] ) ? absint( $_GET['empresa_id'] ) : 0;
-			$bo_conversa_id = isset( $_GET['conversa_id'] ) ? sanitize_text_field( wp_unslash( $_GET['conversa_id'] ) ) : '';
-			?>
 			<div class="ac-nav-group">
-				<a class="ac-nav-link<?php echo $bo_empresa_id ? '' : ' active'; ?>" href="<?php echo esc_url( get_permalink() ); ?>">
-					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path><circle cx="12" cy="12" r="4"></circle></svg>
+				<a class="ac-nav-link<?php echo 'resumo' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( $bo_url_base ); ?>">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="8" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="5" rx="1.5"></rect><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"></rect><rect x="3.5" y="14.5" width="7" height="6" rx="1.5"></rect></svg>
+					<?php esc_html_e( 'Resumo', 'contabilidade-pro' ); ?>
+				</a>
+				<a class="ac-nav-link<?php echo 'notificacoes' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'vista', 'notificacoes', $bo_url_base ) ); ?>">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg>
 					<?php esc_html_e( 'Notificações', 'contabilidade-pro' ); ?>
 				</a>
-				<a class="ac-nav-link<?php echo $bo_empresa_id ? ' active' : ''; ?>" href="#cp-backoffice-tarefas">
+				<a class="ac-nav-link<?php echo 'empresa' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( $bo_url_gerir . '#cp-backoffice-tarefas' ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M7.5 9.5 9 11l2.5-3"></path><path d="M14 9h4"></path><path d="M7.5 15.5 9 17l2.5-3"></path><path d="M14 15h4"></path></svg>
 					<?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?>
+					<?php if ( $bo_resumo['lembretes'] ) : ?><span class="ac-nav-conta"><?php echo esc_html( $bo_resumo['lembretes'] ); ?></span><?php endif; ?>
 				</a>
-				<a class="ac-nav-link<?php echo $bo_empresa_id ? ' active' : ''; ?>" href="#cp-backoffice-mensagens">
+				<a class="ac-nav-link" href="<?php echo esc_url( $bo_url_gerir . '#cp-backoffice-mensagens' ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v11H8l-4 3.5z"></path></svg>
 					<?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?>
+					<?php if ( $bo_resumo['mensagens'] ) : ?><span class="ac-nav-conta"><?php echo esc_html( $bo_resumo['mensagens'] ); ?></span><?php endif; ?>
 				</a>
 				<a class="ac-nav-link" href="<?php echo esc_url( admin_url() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
@@ -109,6 +121,9 @@ else :
 						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
 					</button>
 					<span class="ac-empresa-chip"><?php esc_html_e( 'Equipa', 'contabilidade-pro' ); ?></span>
+					<?php if ( $bo_resumo['work_recolha'] ) : ?>
+						<span class="ac-badge ac-badge-green" style="padding:7px 12px;border:1px solid var(--ac-line);border-radius:999px"><?php echo esc_html( sprintf( __( 'A Work recolheu documentos %s', 'contabilidade-pro' ), cp_bo_ha( $bo_resumo['work_recolha'] ) ) ); ?></span>
+					<?php endif; ?>
 				</div>
 
 				<?php
@@ -136,6 +151,9 @@ else :
 			</header>
 
 			<div class="ac-content">
+				<?php if ( 'resumo' === $bo_vista ) : ?>
+					<?php cp_bo_render_resumo( $bo_resumo ); ?>
+				<?php elseif ( 'notificacoes' === $bo_vista ) : $eventos = cp_backoffice_listar_eventos( 50 ); ?>
 				<div>
 					<h1 style="font-size:23px"><?php esc_html_e( 'Notificações', 'contabilidade-pro' ); ?></h1>
 					<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'O que mudou recentemente na Área de Cliente — cada entrada abre o sítio certo no wp-admin para agir.', 'contabilidade-pro' ); ?></div>
@@ -172,8 +190,9 @@ else :
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>
+				<?php else : ?>
 
-				<div id="cp-backoffice-tarefas" style="margin-top:36px">
+				<div id="cp-backoffice-tarefas">
 					<div>
 						<h1 style="font-size:23px"><?php esc_html_e( 'Lembretes', 'contabilidade-pro' ); ?></h1>
 						<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Deixe uma nota rápida para um cliente, ou conclua um lembrete dele.', 'contabilidade-pro' ); ?></div>
@@ -206,6 +225,7 @@ else :
 						<?php cp_ac_render_mensagens( $bo_empresa_id, $bo_conversa_id ); ?>
 					<?php endif; ?>
 				</div>
+				<?php endif; ?>
 			</div>
 		</main>
 	</div>

@@ -121,7 +121,8 @@ function cp_ac_handle_tarefa_criar() {
 				$titulo
 			),
 			add_query_arg( 'empresa_id', $empresa_id, home_url( '/backoffice/' ) ),
-			$empresa_id
+			$empresa_id,
+			'lembretes'
 		);
 	}
 
@@ -170,7 +171,8 @@ function cp_ac_handle_tarefa_concluir() {
 					$titulo
 				),
 				add_query_arg( 'empresa_id', $empresa_id, home_url( '/backoffice/' ) ),
-				$empresa_id
+				$empresa_id,
+				'lembretes'
 			);
 		}
 	}

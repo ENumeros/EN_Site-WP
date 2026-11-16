@@ -332,9 +332,9 @@ function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '' ) {
 // em inc/area-cliente-backoffice.php). Regista sempre o evento no feed do
 // backoffice, mesmo que o envio do push falhe para todos os dispositivos.
 
-function cp_push_notificar_equipa( $titulo, $corpo, $url = '', $empresa_id = 0 ) {
+function cp_push_notificar_equipa( $titulo, $corpo, $url = '', $empresa_id = 0, $tipo = '' ) {
 	if ( function_exists( 'cp_backoffice_registar_evento' ) ) {
-		cp_backoffice_registar_evento( $titulo, $corpo, $url, $empresa_id );
+		cp_backoffice_registar_evento( $titulo, $corpo, $url, $empresa_id, $tipo );
 	}
 
 	$payload = wp_json_encode( [

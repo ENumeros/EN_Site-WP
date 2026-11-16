@@ -379,3 +379,18 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-doc-viewer-corpo iframe{width:100%;height:100%;border:0;border-radius:12px;background:#fff}
 .ac-doc-viewer-corpo img{max-width:100%;max-height:100%;object-fit:contain;display:block}
 @media (max-width:560px){.ac-doc-viewer-acoes .ac-btn{display:none}.ac-modal-doc{height:82vh;padding:14px}}
+
+/* Backoffice — Resumo (SITE-009): filtros da Atividade recente */
+.ac-bo-filtros{display:flex;gap:6px;flex-wrap:wrap}
+.ac-bo-chip{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--ac-line);background:var(--ac-surface);color:var(--ac-text);font-size:12.5px;font-weight:600}
+.ac-bo-chip:hover{border-color:var(--ac-blue);color:var(--ac-text)}
+.ac-bo-chip.is-on{background:var(--ac-navy);border-color:var(--ac-navy);color:var(--ac-on-navy)}
+.ac-nav-conta{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.14);color:var(--ac-on-navy);font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.ac-bo-kpi{padding:20px 22px;color:inherit;display:block}
+.ac-bo-kpi-num{font-family:'Fraunces',serif;font-size:32px;margin-top:8px}
+@media (max-width:860px){
+	.ac-bo-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+	.ac-bo-kpi{padding:14px 16px}
+	.ac-bo-kpi-num{font-size:26px;margin-top:4px}
+	.ac-bo-kpi .ac-stat-vazio span{font-size:13px}
+}

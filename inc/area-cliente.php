@@ -1021,7 +1021,8 @@ function cp_ac_handle_pendente_resposta() {
             get_the_title( $empresa_id )
         ),
         get_edit_post_link( $empresa_id ),
-        $empresa_id
+        $empresa_id,
+        'pendentes'
     );
 
     wp_safe_redirect( add_query_arg( 'cp_sucesso', 'resposta_enviada', $voltar ) );

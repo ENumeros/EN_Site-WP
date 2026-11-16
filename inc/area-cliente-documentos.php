@@ -230,7 +230,8 @@ function cp_ac_handle_documento_upload() {
 				count( $aceites )
 			),
 		home_url( '/backoffice/' ) . '?empresa_id=' . $empresa_id,
-		$empresa_id
+		$empresa_id,
+		'documentos'
 	);
 
 	$args = [ 'cp_sucesso' => 'documento_enviado', 'cp_n' => count( $aceites ) ];
@@ -343,6 +344,8 @@ add_action( 'rest_api_init', 'cp_ac_rest_routes_documentos' );
 
 // Documentos do cliente que a Work ainda não confirmou, mais antigo primeiro.
 function cp_ac_rest_documentos_novos( $request ) {
+	// Hora da última recolha pela Work — mostrada no topo do Backoffice.
+	update_option( 'cp_work_ultima_recolha', current_time( 'mysql' ), false );
 	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
 	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
 

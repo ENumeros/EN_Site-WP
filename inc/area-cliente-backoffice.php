@@ -67,13 +67,16 @@ add_action( 'template_redirect', 'cp_backoffice_desviar_area_cliente' );
 
 // ─── Registo de eventos (opção 'cp_eventos_staff', mais recente primeiro) ──
 
-function cp_backoffice_registar_evento( $titulo, $corpo, $url, $empresa_id = 0 ) {
+// $tipo: documentos | mensagens | pendentes | lembretes — usado nos filtros
+// do Resumo (cp_bo_calc_tipo_evento() deduz o dos eventos antigos).
+function cp_backoffice_registar_evento( $titulo, $corpo, $url, $empresa_id = 0, $tipo = '' ) {
 	$eventos = cp_backoffice_listar_eventos( 0 );
 	array_unshift( $eventos, [
 		'titulo'     => $titulo,
 		'corpo'      => $corpo,
 		'url'        => $url,
 		'empresa_id' => (int) $empresa_id,
+		'tipo'       => (string) $tipo,
 		'criado_em'  => current_time( 'mysql' ),
 	] );
 	update_option( 'cp_eventos_staff', array_slice( $eventos, 0, 100 ), false );

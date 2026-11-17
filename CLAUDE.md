@@ -177,6 +177,15 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   ferramenta `pagamentos` ligada na empresa, `/notificar` devolve 409
   `cp_ferramenta_desligada`. O primeiro cliente a abrir a vista marca o mês
   como visto (`visto_em`); a Work lê isso em `GET cp/v1/pagamentos/estado`.
+  **Vista do cliente sem estado de pagamento** (pago/por pagar fica só do
+  nosso lado, na Work): lista à esquerda, visor de PDF à direita (por baixo
+  no telemóvel, onde cada linha vira cartão); tocar numa linha carrega a guia
+  no visor (no Android abre noutro separador, como os Documentos). Botão
+  **"Já paguei"** por guia (admin-post `cp_pagamento_indicar`, desfazível):
+  grava `cliente_pago_em`/`cliente_pago_por`, avisa a equipa
+  (`cp_push_notificar_equipa`, tipo `pagamentos`), mantém-se ao republicar,
+  tira a guia do email de aviso e vai para a Work em `/estado`
+  (`cliente_pagou`: `{guia_id: data}`).
   Postmeta `_cp_pagamentos` = `['meses' => ['AAAA-MM' => [...]]]`. Funções
   puras `cp_ac_pag_*` testadas em `tests/Unit/PagamentosTest.php`.
 

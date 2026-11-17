@@ -474,3 +474,38 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-vf-ebitda-acum{font-size:12.5px;color:var(--ac-muted)}
 .ac-vf-ebitda-acum strong{color:var(--ac-text);font-weight:600;font-variant-numeric:tabular-nums}
 .ac-vf-ebitda-texto{font-size:12.5px;color:var(--ac-muted);margin-top:4px;line-height:1.45}
+
+/* ─── Pagamentos ao Estado (inc/area-cliente-pagamentos.php) ─── */
+.ac-pag-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px;align-items:start}
+.ac-pag-lista{display:flex;flex-direction:column;gap:18px;min-width:0}
+.ac-pag-visor{position:sticky;top:18px;padding:16px 18px 18px;display:flex;flex-direction:column;height:min(82vh,900px)}
+.ac-pag-visor-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ac-pag-visor-corpo{flex:1;min-height:0;border-radius:12px;background:var(--ac-bg);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ac-pag-visor-corpo iframe{width:100%;height:100%;border:0;border-radius:12px;background:#fff}
+.ac-pag-com-pdf{cursor:pointer}
+.ac-pag-com-pdf:hover td{background:var(--ac-row-hover)}
+.ac-pag-linha.ativa td{background:var(--ac-bg);box-shadow:inset 0 -2px 0 var(--ac-gold)}
+.ac-pag-com-pdf:focus-visible{outline:2px solid var(--ac-gold);outline-offset:-2px}
+.ac-pag-acao{text-align:right;white-space:nowrap}
+.ac-pag-acao form{display:inline-flex;align-items:center;gap:8px;margin:0}
+.ac-pag-btn{padding:6px 12px;font-size:13px}
+.ac-pag-indicado{font-size:12.5px;color:var(--ac-muted)}
+.ac-pag-desfazer{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--ac-muted);text-decoration:underline;cursor:pointer}
+@media (max-width:980px){
+  .ac-pag-layout{grid-template-columns:1fr}
+  .ac-pag-visor{position:static;height:70vh}
+}
+.ac-pag-tabela td:nth-child(3),.ac-pag-tabela td:nth-child(4){white-space:nowrap}
+@media (max-width:640px){
+  .ac-pag-tabela thead{display:none}
+  .ac-pag-tabela,.ac-pag-tabela tbody{display:block;min-width:0!important;width:100%}
+  .ac-pag-tabela tr{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 4px;border-bottom:1px solid var(--ac-hairline)}
+  .ac-pag-tabela td{display:block;padding:0;border:0;white-space:normal}
+  .ac-pag-tabela td:nth-child(1){font-weight:600}
+  .ac-pag-tabela td:nth-child(4){grid-column:2;grid-row:1;text-align:right;font-weight:600}
+  .ac-pag-tabela td:nth-child(2),.ac-pag-tabela td:nth-child(3){grid-column:1 / -1;color:var(--ac-muted);font-size:13px}
+  .ac-pag-tabela td:nth-child(3)::before{content:"Prazo: "}
+  .ac-pag-tabela td.ac-pag-acao{grid-column:1 / -1;text-align:left;margin-top:6px}
+  .ac-pag-linha.ativa td{box-shadow:none}
+  .ac-pag-linha.ativa{box-shadow:inset 3px 0 0 var(--ac-gold)}
+}

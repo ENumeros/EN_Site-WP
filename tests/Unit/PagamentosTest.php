@@ -53,6 +53,14 @@ final class PagamentosTest extends TestCase {
 		self::assertStringContainsString( '?vista=pagamentos', $t['corpo'] );
 	}
 
+	public function test_indicadas_pelo_cliente_saem_do_aviso(): void {
+		$indicada                    = $this->guia( 'a', 'DMR SS', '2026-11-25', 100 );
+		$indicada['cliente_pago_em'] = '2026-11-18 10:00:00';
+		$lista                       = cp_ac_pag_por_pagar( [ $indicada, $this->guia( 'b', 'IMI', '2026-11-30', 50 ) ] );
+		self::assertSame( [ 'b' ], array_column( $lista, 'id' ) );
+		self::assertNull( cp_ac_pag_texto_email( 'X', 2026, 11, [ $indicada ], 'u' ) );
+	}
+
 	public function test_sem_nada_por_pagar_nao_ha_email(): void {
 		self::assertNull( cp_ac_pag_texto_email( 'X', 2026, 11, [ $this->guia( 'c', 'IUC', '2026-11-10', 50, true ) ], 'u' ) );
 		self::assertNull( cp_ac_pag_texto_email( 'X', 2026, 11, [], 'u' ) );

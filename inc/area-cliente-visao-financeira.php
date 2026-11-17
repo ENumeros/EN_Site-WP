@@ -95,6 +95,19 @@ function cp_ac_rest_sincronizar_visao_financeira( $request ) {
 // preenchido por JS a partir de window.cpVisaoFinanceira (ver
 // cp_enqueue_assets() em functions.php).
 
+// Ícone (i) com a explicação de um card: aparece ao passar o rato ou ao
+// tocar (foco). Só CSS — ver .ac-info em area-cliente.css.
+function cp_ac_info( $texto ) {
+	?>
+	<span class="ac-info">
+		<button type="button" class="ac-info-btn" aria-label="<?php esc_attr_e( 'O que é isto?', 'contabilidade-pro' ); ?>">
+			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 7.5v.5"></path></svg>
+		</button>
+		<span class="ac-info-tip" role="tooltip"><?php echo esc_html( $texto ); ?></span>
+	</span>
+	<?php
+}
+
 function cp_ac_vista_visao_financeira() {
 	$empresa_id = cp_ac_empresa_ativa();
 	$dados      = cp_ac_visao_financeira( $empresa_id );
@@ -138,40 +151,46 @@ function cp_ac_vista_visao_financeira() {
 			<div id="cp-vf-resumo-assinatura" style="font-size:12.5px;color:var(--ac-muted);margin-top:10px"></div>
 		</div>
 
-		<!-- 4 destaques -->
+		<!-- 4 destaques (explicação de cada um no ícone (i)) -->
 		<div class="ac-stats-grid" style="max-width:none">
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
-				<div class="ac-stat-label" id="cp-vf-d-vendas-label"></div>
+			<div class="ac-card ac-vf-card">
+				<div class="ac-vf-card-head">
+					<div class="ac-stat-label" id="cp-vf-d-vendas-label"></div>
+					<?php cp_ac_info( __( 'Tudo o que faturou no mês, sem IVA, comparado com o mesmo mês do ano passado.', 'contabilidade-pro' ) ); ?>
+				</div>
 				<div class="ac-vf-destaque-val" id="cp-vf-d-vendas-val"></div>
 				<div id="cp-vf-d-vendas-trend" class="ac-trend"></div>
-				<div style="font-size:12.5px;color:var(--ac-muted);margin-top:6px"><?php esc_html_e( 'Tudo o que faturou no mês, sem IVA, comparado com o mesmo mês do ano passado.', 'contabilidade-pro' ); ?></div>
 			</div>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Lucro acumulado', 'contabilidade-pro' ); ?></div>
+			<div class="ac-card ac-vf-card">
+				<div class="ac-vf-card-head">
+					<div class="ac-stat-label"><?php esc_html_e( 'Lucro acumulado', 'contabilidade-pro' ); ?></div>
+					<?php cp_ac_info( __( 'O que sobra das vendas depois de pagar todos os custos do ano. Antes do imposto sobre o lucro.', 'contabilidade-pro' ) ); ?>
+				</div>
 				<div class="ac-vf-destaque-val" id="cp-vf-d-lucro-val"></div>
 				<div id="cp-vf-d-lucro-trend" class="ac-trend"></div>
-				<div style="font-size:12.5px;color:var(--ac-muted);margin-top:6px"><?php esc_html_e( 'O que sobra das vendas depois de pagar todos os custos do ano. Antes do imposto sobre o lucro.', 'contabilidade-pro' ); ?></div>
 			</div>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
-				<div class="ac-stat-label" id="cp-vf-d-dinheiro-label"></div>
+			<div class="ac-card ac-vf-card">
+				<div class="ac-vf-card-head">
+					<div class="ac-stat-label" id="cp-vf-d-dinheiro-label"></div>
+					<?php cp_ac_info( __( 'O que a empresa tinha em caixa e nas contas bancárias no último dia do mês.', 'contabilidade-pro' ) ); ?>
+				</div>
 				<div class="ac-vf-destaque-val" id="cp-vf-d-dinheiro-val"></div>
 				<div id="cp-vf-d-dinheiro-trend" class="ac-trend"></div>
-				<div style="font-size:12.5px;color:var(--ac-muted);margin-top:6px"><?php esc_html_e( 'O que a empresa tinha em caixa e nas contas bancárias no último dia do mês.', 'contabilidade-pro' ); ?></div>
 			</div>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:6px">
-				<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+			<div class="ac-card ac-vf-card">
+				<div class="ac-vf-card-head">
 					<div class="ac-stat-label"><?php esc_html_e( 'O que precisamos de si', 'contabilidade-pro' ); ?></div>
-					<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'A tratar', 'contabilidade-pro' ); ?></span>
+					<?php cp_ac_info( __( 'Faturas e movimentos bancários que ainda não conseguimos justificar. Não depende do mês escolhido.', 'contabilidade-pro' ) ); ?>
+					<span class="ac-badge ac-badge-amber" style="margin-left:auto"><?php esc_html_e( 'A tratar', 'contabilidade-pro' ); ?></span>
 				</div>
 				<div class="ac-vf-destaque-val" id="cp-vf-d-pendentes-val"></div>
-				<div style="font-size:12.5px;color:var(--ac-muted);margin-top:6px"><?php esc_html_e( 'Faturas e movimentos bancários que ainda não conseguimos justificar. Não depende do mês escolhido.', 'contabilidade-pro' ); ?></div>
 			</div>
 		</div>
 
 		<!-- As contas do mês -->
-		<div>
+		<div class="ac-vf-secao-head">
 			<h2 style="font-size:18px"><?php esc_html_e( 'As contas do mês', 'contabilidade-pro' ); ?></h2>
-			<div style="font-size:13px;color:var(--ac-muted);margin-top:4px"><?php esc_html_e( 'A Demonstração de Resultados do mês, em imagem. Comece nas vendas, à esquerda: cada barra laranja é um custo que sai e as barras escuras mostram o que fica.', 'contabilidade-pro' ); ?></div>
+			<?php cp_ac_info( __( 'A Demonstração de Resultados do mês, de cima para baixo: começa nas vendas, cada barra laranja é um custo que sai e as linhas de total (a negrito) mostram o que fica. Toque numa linha para ver o detalhe.', 'contabilidade-pro' ) ); ?>
 		</div>
 		<div class="ac-card" style="padding:22px">
 			<div id="cp-vf-cascata" class="ac-vf-cascata"></div>

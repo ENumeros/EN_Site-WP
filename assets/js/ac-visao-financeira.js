@@ -20,7 +20,7 @@
 
 	function fmtEuro( v ) {
 		if ( v === null || v === undefined ) return '—';
-		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 0 } ).format( v ) + ' €';
+		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: 'always' } ).format( v ) + ' €';
 	}
 	function fmtEuroAssinado( v ) {
 		var sinal = v < 0 ? '−' : '+';
@@ -40,6 +40,20 @@
 		return n;
 	}
 	function limpar( node ) { while ( node.firstChild ) node.removeChild( node.firstChild ); }
+
+	// Ícones (i): ao abrir, encosta a explicação para dentro do ecrã.
+	root.querySelectorAll( '.ac-info' ).forEach( function ( info ) {
+		function ajustar() {
+			var tip = info.querySelector( '.ac-info-tip' );
+			tip.style.setProperty( '--dx', '0px' );
+			var r = tip.getBoundingClientRect();
+			var margem = 12, larg = document.documentElement.clientWidth;
+			var dx = r.left < margem ? margem - r.left : ( r.right > larg - margem ? larg - margem - r.right : 0 );
+			tip.style.setProperty( '--dx', dx + 'px' );
+		}
+		info.addEventListener( 'mouseenter', ajustar );
+		info.addEventListener( 'focusin', ajustar );
+	} );
 
 	// ─── Navegador de mês ─────────────────────────────────────────────────
 
@@ -138,7 +152,6 @@
 	var elCascataLegenda = document.getElementById( 'cp-vf-cascata-legenda' );
 	var elDetalhe        = document.getElementById( 'cp-vf-detalhe' );
 	var elEbitda         = document.getElementById( 'cp-vf-ebitda' );
-	var ALTURA_PISTA     = 170;
 
 	function renderCascata( mes ) {
 		var contas = mes.contas || [];
@@ -156,7 +169,6 @@
 			return { conta: conta, inicio: inicio, fim: fim };
 		} );
 		var amplitude = ( max - min ) || 1;
-		var escala = ALTURA_PISTA / amplitude;
 
 		if ( ! contaSelecionada && contas.length ) {
 			var porOmissao = contas.filter( function ( c ) { return c.id === 'servicos'; } )[0]
@@ -165,38 +177,40 @@
 			contaSelecionada = porOmissao.id;
 		}
 
+		// Uma linha por conta: nome · pista com a barra a flutuar · valor em €.
+		// A barra começa onde a anterior acabou (cascata deitada).
+		var pct = function ( v ) { return ( ( v - min ) / amplitude * 100 ) + '%'; };
 		geom.forEach( function ( g ) {
 			var conta = g.conta;
-			var topo    = Math.max( g.inicio, g.fim );
-			var base    = Math.min( g.inicio, g.fim );
-			var altura  = Math.max( 2, ( topo - base ) * escala );
-			var bottom  = ( base - min ) * escala;
-
-			var botaoCol = el( 'button', 'ac-vf-barra-col' + ( conta.id === contaSelecionada ? ' is-ativa' : '' ) );
-			botaoCol.type = 'button';
-			var pista = el( 'div', 'ac-vf-barra-pista' );
 			var negativo = conta.tipo === 'subtotal' && conta.valor < 0;
-			var barra = el( 'div', 'ac-vf-barra tipo-' + conta.tipo + ( negativo ? ' is-negativo' : '' ) );
-			barra.style.position = 'absolute';
-			barra.style.left = '0'; barra.style.right = '0';
-			barra.style.bottom = bottom + 'px';
-			barra.style.height = altura + 'px';
-			var valorLabel = el( 'span', 'ac-vf-barra-valor', ( conta.valor >= 0 ? '' : '−' ) + Math.round( Math.abs( conta.valor ) / 1000 * 10 ) / 10 + ' mil' );
-			barra.appendChild( valorLabel );
-			pista.style.position = 'relative';
+			var linha = el( 'button', 'ac-vf-cas-linha tipo-' + conta.tipo + ( conta.id === contaSelecionada ? ' is-ativa' : '' ) );
+			linha.type = 'button';
+			linha.appendChild( el( 'span', 'ac-vf-cas-nome', conta.titulo || conta.nome ) );
+
+			var pista = el( 'span', 'ac-vf-cas-pista' );
+			if ( min < 0 ) {
+				var zero = el( 'i', 'ac-vf-cas-zero' );
+				zero.style.left = pct( 0 );
+				pista.appendChild( zero );
+			}
+			var barra = el( 'span', 'ac-vf-cas-barra tipo-' + conta.tipo + ( negativo ? ' is-negativo' : '' ) );
+			barra.style.left = pct( Math.min( g.inicio, g.fim ) );
+			barra.style.width = 'max(3px, ' + ( Math.abs( g.fim - g.inicio ) / amplitude * 100 ) + '%)';
 			pista.appendChild( barra );
-			botaoCol.appendChild( pista );
-			botaoCol.appendChild( el( 'span', 'ac-vf-barra-label', conta.titulo || conta.nome ) );
-			botaoCol.addEventListener( 'click', function () { contaSelecionada = conta.id; render(); } );
-			elCascata.appendChild( botaoCol );
+			linha.appendChild( pista );
+
+			var texto = conta.tipo === 'custo' ? '−' + fmtEuro( Math.abs( conta.valor ) )
+				: ( conta.tipo === 'rendimento' ? '+' + fmtEuro( conta.valor ) : ( conta.valor < 0 ? '−' : '' ) + fmtEuro( Math.abs( conta.valor ) ) );
+			linha.appendChild( el( 'span', 'ac-vf-cas-valor', texto ) );
+			linha.addEventListener( 'click', function () { contaSelecionada = conta.id; render(); } );
+			elCascata.appendChild( linha );
 		} );
 
 		limpar( elCascataLegenda );
-		[ [ 'var(--ac-blue)', 'Vendas' ], [ '#D9A441', 'Custos que saem' ], [ 'var(--ac-navy)', 'O que fica' ] ].forEach( function ( item ) {
-			var span = el( 'span', '', '<i style="background:' + item[0] + '"></i>' + item[1] );
-			elCascataLegenda.appendChild( span );
+		[ [ 'tipo-vendas', 'Vendas' ], [ 'tipo-custo', 'Custos que saem' ], [ 'tipo-subtotal', 'O que fica' ] ].forEach( function ( item ) {
+			elCascataLegenda.appendChild( el( 'span', '', '<i class="ac-vf-cas-barra ' + item[0] + '"></i>' + item[1] ) );
 		} );
-		var notaUnidade = el( 'span', '', 'Valores em milhares de euros, sem IVA. O lucro é antes do imposto sobre o lucro (IRC).' );
+		var notaUnidade = el( 'span', '', 'Sem IVA · lucro antes do IRC' );
 		notaUnidade.style.marginLeft = 'auto';
 		elCascataLegenda.appendChild( notaUnidade );
 

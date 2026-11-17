@@ -185,7 +185,9 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   grava `cliente_pago_em`/`cliente_pago_por`, avisa a equipa
   (`cp_push_notificar_equipa`, tipo `pagamentos`), mantém-se ao republicar,
   tira a guia do email de aviso e vai para a Work em `/estado`
-  (`cliente_pagou`: `{guia_id: data}`).
+  (`cliente_pagou`: `{guia_id: data}`). Cada guia pode trazer `entidade`
+  (ex: a guia da Segurança Social Direta, que a Work põe no lugar da da CG,
+  ou um pagamento manual): aparece com a referência na vista e no email.
   Postmeta `_cp_pagamentos` = `['meses' => ['AAAA-MM' => [...]]]`. Funções
   puras `cp_ac_pag_*` testadas em `tests/Unit/PagamentosTest.php`.
 

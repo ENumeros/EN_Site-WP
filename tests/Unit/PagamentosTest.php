@@ -61,6 +61,14 @@ final class PagamentosTest extends TestCase {
 		self::assertNull( cp_ac_pag_texto_email( 'X', 2026, 11, [ $indicada ], 'u' ) );
 	}
 
+	public function test_email_com_entidade(): void {
+		$g             = $this->guia( 'a', 'DMR SS', '2026-11-25', 100, false, '123 456 789' );
+		$g['entidade'] = '20999';
+		$t             = cp_ac_pag_texto_email( 'X', 2026, 11, [ $g ], 'u' );
+		self::assertStringContainsString( "  Entidade: 20999\n  Referência: 123 456 789", $t['corpo'] );
+		self::assertSame( '20999', cp_ac_pag_normalizar_guias( [ [ 'id' => 'a', 'entidade' => '20999' ] ] )[0]['entidade'] );
+	}
+
 	public function test_sem_nada_por_pagar_nao_ha_email(): void {
 		self::assertNull( cp_ac_pag_texto_email( 'X', 2026, 11, [ $this->guia( 'c', 'IUC', '2026-11-10', 50, true ) ], 'u' ) );
 		self::assertNull( cp_ac_pag_texto_email( 'X', 2026, 11, [], 'u' ) );

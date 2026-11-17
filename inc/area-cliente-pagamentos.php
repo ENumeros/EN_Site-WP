@@ -24,7 +24,7 @@
  *
  * Postmeta `_cp_pagamentos` no post da empresa:
  *   [ 'meses' => [ 'AAAA-MM' => [ publicado_em, notificado_em, n_avisados,
- *     visto_em, guias => [ { id, imposto, nome, referencia, data_limite,
+ *     visto_em, guias => [ { id, imposto, nome, entidade, referencia, data_limite,
  *     montante, pago, anexo_id, anexo_url, cliente_pago_em,
  *     cliente_pago_por } ] ] ] ]
  */
@@ -54,6 +54,7 @@ function cp_ac_pag_normalizar_guias( $guias_in ) {
 			'id'          => sanitize_text_field( $g['id'] ),
 			'imposto'     => isset( $g['imposto'] ) ? sanitize_text_field( $g['imposto'] ) : '',
 			'nome'        => isset( $g['nome'] ) ? sanitize_text_field( $g['nome'] ) : '',
+			'entidade'    => isset( $g['entidade'] ) ? sanitize_text_field( $g['entidade'] ) : '',
 			'referencia'  => isset( $g['referencia'] ) ? sanitize_text_field( $g['referencia'] ) : '',
 			'data_limite' => preg_match( '/^\d{4}-\d{2}-\d{2}$/', $data ) ? $data : '',
 			'montante'    => isset( $g['montante'] ) ? (float) $g['montante'] : 0.0,
@@ -110,6 +111,7 @@ function cp_ac_pag_texto_email( $nome_empresa, $ano, $mes, $guias, $url ) {
 	foreach ( $por_pagar as $g ) {
 		$linha = sprintf( '- %s: %s', $g['nome'] ?: $g['imposto'], cp_ac_pag_euros( $g['montante'] ) );
 		if ( $g['data_limite'] ) $linha .= ' até ' . cp_ac_pag_data( $g['data_limite'] );
+		if ( ! empty( $g['entidade'] ) ) $linha .= "\n  Entidade: " . $g['entidade'];
 		if ( $g['referencia'] ) $linha .= "\n  Referência: " . $g['referencia'];
 		$linhas[] = $linha;
 	}
@@ -477,7 +479,7 @@ function cp_ac_vista_pagamentos() {
 						<thead>
 							<tr>
 								<th><?php esc_html_e( 'Pagamento', 'contabilidade-pro' ); ?></th>
-								<th><?php esc_html_e( 'Referência', 'contabilidade-pro' ); ?></th>
+								<th><?php esc_html_e( 'Entidade / Referência', 'contabilidade-pro' ); ?></th>
 								<th><?php esc_html_e( 'Prazo', 'contabilidade-pro' ); ?></th>
 								<th style="text-align:right"><?php esc_html_e( 'Valor', 'contabilidade-pro' ); ?></th>
 								<th></th>
@@ -491,7 +493,10 @@ function cp_ac_vista_pagamentos() {
 								<tr class="ac-pag-linha<?php echo $tem_pdf ? ' ac-pag-com-pdf' : ''; ?><?php echo $ativa ? ' ativa' : ''; ?>"
 									<?php if ( $tem_pdf ) : ?>tabindex="0" data-pdf="<?php echo esc_url( $g['anexo_url'] ); ?>" data-titulo="<?php echo esc_attr( $titulo_guia( $chave, $g ) ); ?>"<?php endif; ?>>
 									<td><?php echo esc_html( $g['nome'] ?: $g['imposto'] ); ?></td>
-									<td style="font-variant-numeric:tabular-nums"><?php echo esc_html( $g['referencia'] ); ?></td>
+									<td style="font-variant-numeric:tabular-nums">
+										<?php if ( ! empty( $g['entidade'] ) ) : ?><div><?php echo esc_html( sprintf( __( 'Entidade %s', 'contabilidade-pro' ), $g['entidade'] ) ); ?></div><?php endif; ?>
+										<div><?php echo esc_html( $g['referencia'] ); ?></div>
+									</td>
 									<td><?php echo esc_html( cp_ac_pag_data( $g['data_limite'] ) ); ?></td>
 									<td style="text-align:right;font-variant-numeric:tabular-nums"><?php echo esc_html( cp_ac_pag_euros( $g['montante'] ) ); ?></td>
 									<td class="ac-pag-acao">

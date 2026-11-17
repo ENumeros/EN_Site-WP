@@ -314,8 +314,10 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-vf-trilho{--vf-pos:0;position:relative;padding:3px;border-radius:999px;background:var(--ac-bg);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
 .ac-vf-trilho:focus{outline:none}
 .ac-vf-trilho:focus-visible{box-shadow:0 0 0 2px var(--ac-blue)}
-.ac-vf-trilho-pilula{position:absolute;top:3px;bottom:3px;left:calc(3px + (100% - 6px) / 12 * var(--vf-pos));width:calc((100% - 6px) / 12);border-radius:999px;background:var(--ac-navy);box-shadow:0 2px 6px rgba(16,24,40,.18);transition:left .22s cubic-bezier(.3,.7,.3,1)}
+.ac-vf-trilho-pilula{position:absolute;top:3px;bottom:3px;left:calc(3px + (100% - 6px) / 12 * var(--vf-pos));width:calc((100% - 6px) / 12);border-radius:999px;background:var(--ac-navy);box-shadow:0 2px 6px rgba(16,24,40,.18)}
+.ac-vf-trilho.is-pronto .ac-vf-trilho-pilula{transition:left .22s cubic-bezier(.3,.7,.3,1)}
 .ac-vf-trilho.is-a-arrastar .ac-vf-trilho-pilula{transition:left .08s linear}
+:root[data-theme="dark"] .ac-vf-trilho-pilula{background:var(--ac-navy-strong);box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .ac-vf-trilho-meses{position:relative;display:grid;grid-template-columns:repeat(12,1fr)}
 .ac-vf-trilho-mes{text-align:center;padding:6px 0;font-size:12.5px;font-weight:600;color:var(--ac-muted);transition:color .2s ease;white-space:nowrap}
 .ac-vf-trilho-mes.is-vazio{opacity:.35}

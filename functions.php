@@ -94,7 +94,7 @@ function cp_enqueue_assets() {
                 'cp-pwa-install',
                 get_template_directory_uri() . '/assets/js/pwa-install.js',
                 [],
-                '1.0.0',
+                '1.0.0-' . filemtime( get_template_directory() . '/assets/js/pwa-install.js' ),
                 true
             );
 
@@ -102,7 +102,7 @@ function cp_enqueue_assets() {
                 'cp-ac-fab',
                 get_template_directory_uri() . '/assets/js/ac-fab.js',
                 [],
-                '1.0.0',
+                '1.0.0-' . filemtime( get_template_directory() . '/assets/js/ac-fab.js' ),
                 true
             );
         }
@@ -111,7 +111,7 @@ function cp_enqueue_assets() {
             'cp-ac-theme-toggle',
             get_template_directory_uri() . '/assets/js/ac-theme-toggle.js',
             [],
-            '1.0.0',
+            '1.0.0-' . filemtime( get_template_directory() . '/assets/js/ac-theme-toggle.js' ),
             true
         );
 
@@ -119,7 +119,7 @@ function cp_enqueue_assets() {
             'cp-ac-user-menu',
             get_template_directory_uri() . '/assets/js/ac-user-menu.js',
             [],
-            '1.0.0',
+            '1.0.0-' . filemtime( get_template_directory() . '/assets/js/ac-user-menu.js' ),
             true
         );
 
@@ -127,7 +127,7 @@ function cp_enqueue_assets() {
             'cp-ac-mobile-nav',
             get_template_directory_uri() . '/assets/js/ac-mobile-nav.js',
             [],
-            '1.0.0',
+            '1.0.0-' . filemtime( get_template_directory() . '/assets/js/ac-mobile-nav.js' ),
             true
         );
 
@@ -144,7 +144,7 @@ function cp_enqueue_assets() {
             'cp-ac-mensagens',
             get_template_directory_uri() . '/assets/js/ac-mensagens.js',
             [],
-            '1.0.0',
+            '1.0.0-' . filemtime( get_template_directory() . '/assets/js/ac-mensagens.js' ),
             true
         );
         wp_add_inline_script(
@@ -165,7 +165,7 @@ function cp_enqueue_assets() {
                 'cp-ac-visao-financeira',
                 get_template_directory_uri() . '/assets/js/ac-visao-financeira.js',
                 [],
-                '1.0.0',
+                '1.0.0-' . filemtime( get_template_directory() . '/assets/js/ac-visao-financeira.js' ),
                 true
             );
             wp_add_inline_script(
@@ -180,7 +180,7 @@ function cp_enqueue_assets() {
             'cp-push',
             get_template_directory_uri() . '/assets/js/push.js',
             [],
-            '1.0.0',
+            '1.0.0-' . filemtime( get_template_directory() . '/assets/js/push.js' ),
             true
         );
         wp_add_inline_script(

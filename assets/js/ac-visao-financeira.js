@@ -99,6 +99,8 @@
 		}
 		elTrilho.style.setProperty( '--vf-pos', p.mes - 1 );
 		elTrilho.setAttribute( 'aria-valuenow', p.mes );
+		// Sem animação no primeiro desenho (senão a pílula desliza desde jan).
+		if ( ! elTrilho.classList.contains( 'is-pronto' ) ) requestAnimationFrame( function () { requestAnimationFrame( function () { elTrilho.classList.add( 'is-pronto' ); } ); } );
 		elTrilho.setAttribute( 'aria-valuetext', NOMES_MES[ p.mes - 1 ] + ' de ' + p.ano );
 	}
 

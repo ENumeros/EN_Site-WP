@@ -246,19 +246,34 @@
 		limpar( elEbitda );
 		var e = mes.ebitda;
 		if ( ! e ) return;
-		var head = el( 'div' );
-		head.style.cssText = 'display:flex;align-items:center;justify-content:space-between';
-		head.appendChild( el( 'div', 'ac-stat-label', 'EBITDA' ) );
-		head.appendChild( el( 'span', 'ac-badge ' + ( e.valor >= 0 ? 'ac-badge-green' : 'ac-badge-red' ), e.valor >= 0 ? 'Positivo' : 'Negativo' ) );
-		elEbitda.appendChild( head );
-		elEbitda.appendChild( el( 'div', 'ac-vf-destaque-val', fmtEuro( e.valor ) ) );
-		var sub = el( 'div', '', 'Lê-se "ébitda". É o dinheiro que a atividade gera antes de pagar juros e o imposto sobre o lucro, e antes de contar com o desgaste dos equipamentos. Mostra se o negócio em si dá dinheiro, seja qual for a forma como foi financiado ou quanto investiu.' );
-		sub.style.cssText = 'font-size:12.5px;color:var(--ac-muted);margin-top:4px';
-		elEbitda.appendChild( sub );
+		// Dois blocos iguais: EBITDA e RAI (lucro antes de impostos) — o mês
+		// escolhido em grande e o acumulado do ano por baixo.
+		function bloco( rotulo, valor, acumulado, texto ) {
+			var caixa = el( 'div', 'ac-vf-ebitda-bloco' );
+			var head = el( 'div', 'ac-vf-ebitda-head' );
+			head.appendChild( el( 'div', 'ac-stat-label', rotulo ) );
+			head.appendChild( el( 'span', 'ac-badge ' + ( valor >= 0 ? 'ac-badge-green' : 'ac-badge-red' ), valor >= 0 ? 'Positivo' : 'Negativo' ) );
+			caixa.appendChild( head );
+			var linha = el( 'div', 'ac-vf-ebitda-valores' );
+			linha.appendChild( el( 'div', 'ac-vf-destaque-val' + ( valor < 0 ? ' is-negativo' : '' ), ( valor < 0 ? '−' : '' ) + fmtEuro( Math.abs( valor ) ) ) );
+			if ( acumulado !== null && acumulado !== undefined ) {
+				linha.appendChild( el( 'div', 'ac-vf-ebitda-acum', 'Acumulado ' + partesMes( mes.mes ).ano + ': <strong>' + ( acumulado < 0 ? '−' : '' ) + fmtEuro( Math.abs( acumulado ) ) + '</strong>' ) );
+			}
+			caixa.appendChild( linha );
+			caixa.appendChild( el( 'div', 'ac-vf-ebitda-texto', texto ) );
+			elEbitda.appendChild( caixa );
+		}
+		bloco( 'EBITDA', e.valor, e.acumulado,
+			'Lê-se "ébitda". O dinheiro que a atividade gera antes de juros, impostos e desgaste dos equipamentos: mostra se o negócio em si dá dinheiro.' );
+		var subtotais = ( mes.contas || [] ).filter( function ( c ) { return c.tipo === 'subtotal'; } );
+		var rai = subtotais.length ? subtotais[ subtotais.length - 1 ] : null;
+		if ( rai && rai !== subtotais.filter( function ( c ) { return /ebitda/i.test( c.nome || '' ); } )[0] ) {
+			bloco( 'RAI — Lucro antes de impostos', rai.valor, rai.acumulado !== undefined ? rai.acumulado : e.lucro_acumulado,
+				'O que fica depois de tirar ao EBITDA o desgaste dos equipamentos e os juros. É sobre este valor que se calcula o imposto sobre o lucro (IRC).' );
+		}
 
 		if ( e.divida_bancaria ) {
 			var grid = el( 'div', 'ac-vf-grid3' );
-			grid.style.marginTop = '16px';
 			[
 				[ 'Dívida ÷ EBITDA', e.divida_em_anos_de_ebitda.toFixed( 1 ) + '×' ],
 				[ 'Por cada 100€ de EBITDA', fmtEuro( e.por_cada_100_ebitda ) + ' de dívida' ],
@@ -281,6 +296,72 @@
 	var elVendasGrafico = document.getElementById( 'cp-vf-vendas-grafico' );
 	var elClientes       = document.getElementById( 'cp-vf-clientes' );
 
+	// Barras por mês (jan–dez): a clara é o ano passado, a escura este ano.
+	// Tocar num mês deste ano com dados vai para esse mês.
+	function desenharBarrasAno( elGraf, pontos, mes ) {
+		limpar( elGraf );
+		var anoAtual = partesMes( mes.mes ).ano;
+		var porMesAno = {};
+		pontos.forEach( function ( p ) { porMesAno[ p.mes ] = p.valor; } );
+		var max = Math.max.apply( null, pontos.map( function ( p ) { return Math.abs( p.valor ); } ).concat( [ 1 ] ) );
+		for ( var m = 1; m <= 12; m++ ) {
+			var mm = m < 10 ? '0' + m : String( m );
+			var vAtual = porMesAno[ anoAtual + '-' + mm ];
+			var vAnt   = porMesAno[ ( anoAtual - 1 ) + '-' + mm ];
+			var col = el( 'div', 'ac-vf-vendas-mes' + ( m === partesMes( mes.mes ).mes ? ' is-ativo' : '' ) );
+			var par = el( 'div', 'ac-vf-vendas-par' );
+			var barAnt = el( 'div', 'ac-vf-vendas-bar ano-anterior' );
+			barAnt.style.height = ( vAnt ? Math.abs( vAnt ) / max * 115 : 0 ) + 'px';
+			var barAtual = el( 'div', 'ac-vf-vendas-bar ano-atual' );
+			barAtual.style.height = ( vAtual ? Math.abs( vAtual ) / max * 115 : 0 ) + 'px';
+			par.appendChild( barAnt );
+			par.appendChild( barAtual );
+			if ( vAtual !== undefined ) {
+				( function ( chave ) {
+					par.addEventListener( 'click', function () {
+						var idx = meses.findIndex( function ( x ) { return x.mes === chave; } );
+						if ( idx > -1 ) irParaMes( idx );
+					} );
+				} )( anoAtual + '-' + mm );
+				par.style.cursor = 'pointer';
+			}
+			col.appendChild( par );
+			col.appendChild( el( 'span', 'ac-vf-vendas-mes-label', ABREV_MES[ m - 1 ] ) );
+			elGraf.appendChild( col );
+		}
+	}
+
+	// Soma de janeiro ao mês escolhido, num ano, a partir de uma série mensal.
+	function somaAteMes( pontos, ano, mesNum ) {
+		var total = 0, tem = false;
+		pontos.forEach( function ( p ) {
+			var q = partesMes( p.mes );
+			if ( q.ano === ano && q.mes <= mesNum ) { total += p.valor; tem = true; }
+		} );
+		return tem ? total : null;
+	}
+
+	var elComprasTotal   = document.getElementById( 'cp-vf-compras-total' );
+	var elComprasTrend   = document.getElementById( 'cp-vf-compras-trend' );
+	var elComprasGrafico = document.getElementById( 'cp-vf-compras-grafico' );
+
+	function renderCompras( mes ) {
+		var pontos = series.compras || [];
+		var p = partesMes( mes.mes );
+		var total = somaAteMes( pontos, p.ano, p.mes );
+		var totalAnt = somaAteMes( pontos, p.ano - 1, p.mes );
+		elComprasTotal.textContent = total === null ? '—' : fmtEuro( total );
+		// Nas compras, subir não é "bom": a seta fica neutra (sem verde).
+		if ( total !== null && totalAnt ) {
+			var pct = ( total - totalAnt ) / totalAnt * 100;
+			elComprasTrend.className = 'ac-trend';
+			elComprasTrend.textContent = ( pct >= 0 ? '↑ ' : '↓ ' ) + fmtPct( Math.abs( pct ) ) + ' que em ' + ( p.ano - 1 );
+		} else {
+			elComprasTrend.textContent = '';
+		}
+		desenharBarrasAno( elComprasGrafico, pontos, mes );
+	}
+
 	function renderVendas( mes ) {
 		elVendasTotal.textContent = fmtEuro( mes.contas && mes.contas[0] ? mes.contas[0].acumulado : mes.destaques.vendas );
 		var pct = mes.destaques.vendas_ano_anterior
@@ -289,39 +370,7 @@
 		elVendasTrend.className = 'ac-trend ' + ( pct >= 0 ? 'ac-trend-up' : '' );
 		elVendasTrend.textContent = ( pct >= 0 ? '↑ ' : '↓ ' ) + fmtPct( Math.abs( pct ) ) + ' que em ' + ( partesMes( mes.mes ).ano - 1 );
 
-		limpar( elVendasGrafico );
-		var pontos = series.vendas || [];
-		var anoAtual = partesMes( mes.mes ).ano;
-		var porMesAno = {};
-		pontos.forEach( function ( p ) { porMesAno[ p.mes ] = p.valor; } );
-		var max = Math.max.apply( null, pontos.map( function ( p ) { return p.valor; } ).concat( [ 1 ] ) );
-
-		for ( var m = 1; m <= 12; m++ ) {
-			var chaveAtual = anoAtual + '-' + ( m < 10 ? '0' + m : m );
-			var chaveAnt   = ( anoAtual - 1 ) + '-' + ( m < 10 ? '0' + m : m );
-			var vAtual = porMesAno[ chaveAtual ];
-			var vAnt   = porMesAno[ chaveAnt ];
-			var col = el( 'div', 'ac-vf-vendas-mes' + ( m === partesMes( mes.mes ).mes ? ' is-ativo' : '' ) );
-			var par = el( 'div', 'ac-vf-vendas-par' );
-			var barAnt = el( 'div', 'ac-vf-vendas-bar ano-anterior' );
-			barAnt.style.height = ( vAnt ? vAnt / max * 115 : 0 ) + 'px';
-			var barAtual = el( 'div', 'ac-vf-vendas-bar ano-atual' );
-			barAtual.style.height = ( vAtual ? vAtual / max * 115 : 0 ) + 'px';
-			par.appendChild( barAnt );
-			par.appendChild( barAtual );
-			if ( vAtual !== undefined ) {
-				( function ( mesNum ) {
-					par.addEventListener( 'click', function () {
-						var idx = meses.findIndex( function ( mm ) { return mm.mes === anoAtual + '-' + ( mesNum < 10 ? '0' + mesNum : mesNum ); } );
-						if ( idx > -1 ) irParaMes( idx );
-					} );
-				} )( m );
-				par.style.cursor = 'pointer';
-			}
-			col.appendChild( par );
-			col.appendChild( el( 'span', 'ac-vf-vendas-mes-label', ABREV_MES[ m - 1 ] ) );
-			elVendasGrafico.appendChild( col );
-		}
+		desenharBarrasAno( elVendasGrafico, series.vendas || [], mes );
 
 		if ( mes.clientes_top && mes.clientes_top.length ) {
 			elClientes.hidden = false;
@@ -352,6 +401,25 @@
 
 	// ─── Dinheiro / tesouraria ──────────────────────────────────────────────
 
+	function desenharLinha( alvo, pontos, cor ) {
+		limpar( alvo );
+		if ( pontos.length < 2 ) return;
+		var w = 600, h = 120, pad = 8;
+		var vals = pontos.map( function ( p ) { return p.valor; } );
+		var min = Math.min.apply( null, vals ), max = Math.max.apply( null, vals );
+		var amp = ( max - min ) || 1;
+		var coords = pontos.map( function ( p, i ) {
+			var x = pad + ( i / ( pontos.length - 1 ) ) * ( w - pad * 2 );
+			var y = h - pad - ( ( p.valor - min ) / amp ) * ( h - pad * 2 );
+			return [ x, y ];
+		} );
+		var ult = coords[ coords.length - 1 ];
+		alvo.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+			+ '<polyline fill="none" stroke="' + cor + '" stroke-width="2.5" vector-effect="non-scaling-stroke" points="' + coords.map( function ( c ) { return c.join( ',' ); } ).join( ' ' ) + '"></polyline>'
+			+ '<circle cx="' + ult[0] + '" cy="' + ult[1] + '" r="4" fill="var(--ac-gold)"></circle>'
+			+ '</svg>';
+	}
+
 	function renderTesouraria( mes ) {
 		document.getElementById( 'cp-vf-tesouraria-dinheiro' ).textContent = fmtEuro( mes.destaques.dinheiro );
 		var diff = mes.destaques.dinheiro - mes.destaques.dinheiro_mes_anterior;
@@ -359,25 +427,7 @@
 		trend.className = 'ac-trend ' + ( diff >= 0 ? 'ac-trend-up' : '' );
 		trend.textContent = ( diff >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( diff ) ) + ' desde o mês anterior';
 
-		var linhaEl = document.getElementById( 'cp-vf-tesouraria-linha' );
-		limpar( linhaEl );
-		var pontos = series.dinheiro || [];
-		if ( pontos.length > 1 ) {
-			var w = 600, h = 120, pad = 8;
-			var vals = pontos.map( function ( p ) { return p.valor; } );
-			var min = Math.min.apply( null, vals ), max = Math.max.apply( null, vals );
-			var amp = ( max - min ) || 1;
-			var coords = pontos.map( function ( p, i ) {
-				var x = pad + ( i / ( pontos.length - 1 ) ) * ( w - pad * 2 );
-				var y = h - pad - ( ( p.valor - min ) / amp ) * ( h - pad * 2 );
-				return x + ',' + y;
-			} );
-			var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
-				+ '<polyline fill="none" stroke="var(--ac-navy)" stroke-width="2.5" points="' + coords.join( ' ' ) + '"></polyline>'
-				+ '<circle cx="' + coords[ coords.length - 1 ].split( ',' )[0] + '" cy="' + coords[ coords.length - 1 ].split( ',' )[1] + '" r="4" fill="var(--ac-gold)"></circle>'
-				+ '</svg>';
-			linhaEl.innerHTML = svg;
-		}
+		desenharLinha( document.getElementById( 'cp-vf-tesouraria-linha' ), series.dinheiro || [], 'var(--ac-navy)' );
 
 		var t = mes.tesouraria || {};
 		var folegoBadge = document.getElementById( 'cp-vf-tesouraria-folego-badge' );
@@ -389,7 +439,33 @@
 		document.getElementById( 'cp-vf-pmr' ).textContent = t.pmr_dias ? 'Pagam, em média, a ' + t.pmr_dias + ' dias' : '';
 		document.getElementById( 'cp-vf-a-pagar' ).textContent = fmtEuro( t.a_pagar );
 		document.getElementById( 'cp-vf-pmp' ).textContent = t.pmp_dias ? 'Paga, em média, a ' + t.pmp_dias + ' dias' : '';
-		document.getElementById( 'cp-vf-divida' ).textContent = fmtEuro( t.divida_bancaria );
+		var divida = t.divida_bancaria || 0;
+		document.getElementById( 'cp-vf-divida' ).textContent = divida ? fmtEuro( divida ) : 'Nada';
+		var liquido = ( mes.destaques.dinheiro || 0 ) - divida;
+		var elLiquido = document.getElementById( 'cp-vf-liquido' );
+		elLiquido.textContent = ( liquido < 0 ? '−' : '' ) + fmtEuro( Math.abs( liquido ) );
+		elLiquido.classList.toggle( 'is-negativo', liquido < 0 );
+		document.getElementById( 'cp-vf-liquido-nota' ).textContent = divida
+			? ( liquido >= 0 ? 'O que ficaria se pagasse hoje todos os empréstimos' : 'O dinheiro ainda não chega para pagar os empréstimos' )
+			: 'Sem empréstimos, é todo o dinheiro';
+
+		// Empréstimos bancários: valor do mês, variação e evolução.
+		var pontosDiv = series.divida || [];
+		document.getElementById( 'cp-vf-divida-total' ).textContent = divida ? fmtEuro( divida ) : 'Sem empréstimos';
+		var elDivTrend = document.getElementById( 'cp-vf-divida-trend' );
+		var idxDiv = pontosDiv.findIndex( function ( p ) { return p.mes === mes.mes; } );
+		var antDiv = idxDiv > 0 ? pontosDiv[ idxDiv - 1 ].valor : null;
+		if ( antDiv !== null && Math.round( antDiv - divida ) !== 0 ) {
+			var desceu = divida < antDiv;
+			elDivTrend.className = 'ac-trend ' + ( desceu ? 'ac-trend-up' : '' );
+			elDivTrend.textContent = ( desceu ? '↓ ' : '↑ ' ) + fmtEuro( Math.abs( divida - antDiv ) ) + ' desde o mês anterior';
+		} else {
+			elDivTrend.textContent = '';
+		}
+		var temDivida = pontosDiv.some( function ( p ) { return Math.round( p.valor ) > 0; } );
+		var elDivLinha = document.getElementById( 'cp-vf-divida-linha' );
+		if ( temDivida ) desenharLinha( elDivLinha, pontosDiv, 'var(--ac-blue)' );
+		else limpar( elDivLinha );
 		document.getElementById( 'cp-vf-juros' ).textContent = t.juros_acumulado ? 'Juros pagos este ano: ' + fmtEuro( t.juros_acumulado ) : '';
 	}
 
@@ -457,30 +533,11 @@
 		elTrendD.className = 'ac-trend ' + ( diffDinheiro >= 0 ? 'ac-trend-up' : '' );
 		elTrendD.textContent = ( diffDinheiro >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( diffDinheiro ) ) + ' que no mês anterior';
 
-		// Dívida ao banco junto ao dinheiro: o dinheiro sozinho engana se houver empréstimos.
-		var elDivida = document.getElementById( 'cp-vf-d-divida' );
-		limpar( elDivida );
-		var divida = mes.tesouraria ? mes.tesouraria.divida_bancaria : null;
-		if ( divida !== null && divida !== undefined ) {
-			if ( Math.round( divida ) > 0 ) {
-				var linhaD = el( 'div', 'linha' );
-				linhaD.appendChild( el( 'span', '', 'Dívida ao banco' ) );
-				linhaD.appendChild( el( 'strong', '', fmtEuro( divida ) ) );
-				elDivida.appendChild( linhaD );
-				var liquido = d.dinheiro - divida;
-				var linhaL = el( 'div', 'linha' );
-				linhaL.appendChild( el( 'span', '', 'Dinheiro menos dívida' ) );
-				linhaL.appendChild( el( 'strong', liquido < 0 ? 'is-negativo' : '', ( liquido < 0 ? '−' : '' ) + fmtEuro( Math.abs( liquido ) ) ) );
-				elDivida.appendChild( linhaL );
-			} else {
-				elDivida.appendChild( el( 'div', 'linha', '<span>Sem empréstimos bancários</span>' ) );
-			}
-		}
-
 		document.getElementById( 'cp-vf-d-pendentes-val' ).textContent = pendentes + ( pendentes === 1 ? ' item' : ' itens' );
 
 		renderContas( mes );
 		renderVendas( mes );
+		renderCompras( mes );
 		renderTesouraria( mes );
 		renderEstado( mes );
 	}

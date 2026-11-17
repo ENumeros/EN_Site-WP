@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function cp_ac_visao_financeira( $empresa_id ) {
 	$dados = get_post_meta( $empresa_id, '_cp_visao_financeira', true );
 	if ( ! is_array( $dados ) ) $dados = [];
-	$dados += [ 'work_id' => '', 'atualizado_em' => '', 'meses' => [], 'series' => [ 'vendas' => [], 'dinheiro' => [] ] ];
+	$dados += [ 'work_id' => '', 'atualizado_em' => '', 'meses' => [], 'series' => [ 'vendas' => [], 'dinheiro' => [], 'compras' => [], 'divida' => [] ] ];
 	if ( ! is_array( $dados['meses'] ) ) $dados['meses'] = [];
 	return $dados;
 }
@@ -71,7 +71,7 @@ function cp_ac_rest_sincronizar_visao_financeira( $request ) {
 	$meses_antes    = wp_list_pluck( $anterior['meses'], 'mes' );
 	$meses_novos    = array_diff( wp_list_pluck( $meses_in, 'mes' ), $meses_antes );
 
-	$payload += [ 'work_id' => $request->get_param( 'work_id' ), 'atualizado_em' => current_time( 'mysql' ), 'series' => [ 'vendas' => [], 'dinheiro' => [] ] ];
+	$payload += [ 'work_id' => $request->get_param( 'work_id' ), 'atualizado_em' => current_time( 'mysql' ), 'series' => [ 'vendas' => [], 'dinheiro' => [], 'compras' => [], 'divida' => [] ] ];
 	$payload['meses'] = $meses_in;
 
 	update_post_meta( $empresa_id, '_cp_visao_financeira', $payload );
@@ -176,7 +176,6 @@ function cp_ac_vista_visao_financeira() {
 				</div>
 				<div class="ac-vf-destaque-val" id="cp-vf-d-dinheiro-val"></div>
 				<div id="cp-vf-d-dinheiro-trend" class="ac-trend"></div>
-				<div id="cp-vf-d-divida" class="ac-vf-card-divida"></div>
 			</div>
 			<div class="ac-card ac-vf-card">
 				<div class="ac-vf-card-head">
@@ -201,48 +200,74 @@ function cp_ac_vista_visao_financeira() {
 			<div class="ac-card" id="cp-vf-ebitda" style="padding:22px"></div>
 		</div>
 
-		<!-- Vendas -->
-		<div><h2 style="font-size:18px"><?php esc_html_e( 'Vendas — o que entra', 'contabilidade-pro' ); ?></h2></div>
-		<div class="ac-vf-duas-col ac-vf-duas-col-vendas">
+		<!-- Vendas e compras: o que entra e o que sai, mês a mês -->
+		<div><h2 style="font-size:18px"><?php esc_html_e( 'Vendas e compras — o que entra e o que sai', 'contabilidade-pro' ); ?></h2></div>
+		<div class="ac-vf-duas-col">
 			<div class="ac-card" style="padding:22px">
-				<div class="ac-stat-label"><?php esc_html_e( 'Vendas por mês', 'contabilidade-pro' ); ?></div>
-				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
+				<div class="ac-vf-card-head">
+					<div class="ac-stat-label"><?php esc_html_e( 'Vendas por mês', 'contabilidade-pro' ); ?></div>
+					<?php cp_ac_info( __( 'Cada par de barras é um mês: a escura é este ano, a clara é o ano passado. Toque numa barra para ver esse mês.', 'contabilidade-pro' ) ); ?>
+				</div>
+				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap">
 					<div class="ac-vf-destaque-val" id="cp-vf-vendas-total" style="font-size:28px"></div>
 					<div id="cp-vf-vendas-trend" class="ac-trend"></div>
 				</div>
 				<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Total de janeiro ao mês escolhido', 'contabilidade-pro' ); ?></div>
 				<div id="cp-vf-vendas-grafico" class="ac-vf-vendas-grafico" style="margin-top:14px"></div>
-				<div style="font-size:12px;color:var(--ac-muted);margin-top:10px"><?php esc_html_e( 'Cada par de barras é um mês: a escura é este ano, a clara é o ano passado. Toque numa barra para ver esse mês.', 'contabilidade-pro' ); ?></div>
 			</div>
-			<div class="ac-card" id="cp-vf-clientes" style="padding:22px" hidden></div>
+			<div class="ac-card" style="padding:22px">
+				<div class="ac-vf-card-head">
+					<div class="ac-stat-label"><?php esc_html_e( 'Compras e serviços por mês', 'contabilidade-pro' ); ?></div>
+					<?php cp_ac_info( __( 'Mercadoria e serviços comprados a terceiros (rendas, energia, combustível…), sem IVA. A barra escura é este ano, a clara é o ano passado.', 'contabilidade-pro' ) ); ?>
+				</div>
+				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap">
+					<div class="ac-vf-destaque-val" id="cp-vf-compras-total" style="font-size:28px"></div>
+					<div id="cp-vf-compras-trend" class="ac-trend"></div>
+				</div>
+				<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Total de janeiro ao mês escolhido', 'contabilidade-pro' ); ?></div>
+				<div id="cp-vf-compras-grafico" class="ac-vf-vendas-grafico is-compras" style="margin-top:14px"></div>
+			</div>
 		</div>
+		<div class="ac-card" id="cp-vf-clientes" style="padding:22px" hidden></div>
 
-		<!-- Dinheiro -->
+		<!-- Dinheiro: caixa e dívida lado a lado; fôlego por baixo -->
 		<div><h2 style="font-size:18px"><?php esc_html_e( 'Dinheiro — tesouraria', 'contabilidade-pro' ); ?></h2></div>
 		<div class="ac-vf-duas-col">
 			<div class="ac-card" style="padding:22px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Dinheiro em caixa e bancos', 'contabilidade-pro' ); ?></div>
-				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
+				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap">
 					<div class="ac-vf-destaque-val" id="cp-vf-tesouraria-dinheiro" style="font-size:28px"></div>
 					<div id="cp-vf-tesouraria-trend" class="ac-trend"></div>
 				</div>
 				<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Saldo no fim de cada mês', 'contabilidade-pro' ); ?></div>
 				<div id="cp-vf-tesouraria-linha" class="ac-vf-linha-grafico" style="margin-top:14px"></div>
 			</div>
-			<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:14px">
-				<div>
-					<div style="display:flex;align-items:center;justify-content:space-between">
+			<div class="ac-card" style="padding:22px">
+				<div class="ac-stat-label"><?php esc_html_e( 'Empréstimos bancários', 'contabilidade-pro' ); ?></div>
+				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap">
+					<div class="ac-vf-destaque-val" id="cp-vf-divida-total" style="font-size:28px"></div>
+					<div id="cp-vf-divida-trend" class="ac-trend"></div>
+				</div>
+				<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Dívida ao banco no fim de cada mês', 'contabilidade-pro' ); ?></div>
+				<div id="cp-vf-divida-linha" class="ac-vf-linha-grafico" style="margin-top:14px"></div>
+			</div>
+		</div>
+		<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:16px">
+			<div>
+				<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+					<div class="ac-vf-card-head">
 						<div class="ac-stat-label"><?php esc_html_e( 'Fôlego', 'contabilidade-pro' ); ?></div>
-						<span id="cp-vf-tesouraria-folego-badge" class="ac-badge ac-badge-green"></span>
+						<?php cp_ac_info( __( 'Quantos meses consegue pagar os custos fixos — salários, rendas, serviços — só com o dinheiro que tem, sem vender mais nada.', 'contabilidade-pro' ) ); ?>
 					</div>
-					<div class="ac-vf-destaque-val" id="cp-vf-tesouraria-folego"></div>
-					<div style="font-size:12.5px;color:var(--ac-muted)"><?php esc_html_e( 'Quantos meses consegue pagar os custos fixos — salários, rendas, serviços — só com o dinheiro que tem.', 'contabilidade-pro' ); ?></div>
+					<span id="cp-vf-tesouraria-folego-badge" class="ac-badge ac-badge-green"></span>
 				</div>
-				<div class="ac-vf-grid3">
-					<div><div class="ac-stat-label"><?php esc_html_e( 'Os seus clientes devem-lhe', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-a-receber" style="font-size:20px"></div><div id="cp-vf-pmr" style="font-size:12px;color:var(--ac-muted)"></div></div>
-					<div><div class="ac-stat-label"><?php esc_html_e( 'Deve aos seus fornecedores', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-a-pagar" style="font-size:20px"></div><div id="cp-vf-pmp" style="font-size:12px;color:var(--ac-muted)"></div></div>
-					<div><div class="ac-stat-label"><?php esc_html_e( 'Empréstimos bancários', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-divida" style="font-size:20px"></div><div id="cp-vf-juros" style="font-size:12px;color:var(--ac-muted)"></div></div>
-				</div>
+				<div class="ac-vf-destaque-val" id="cp-vf-tesouraria-folego"></div>
+			</div>
+			<div class="ac-vf-grid4">
+				<div><div class="ac-stat-label"><?php esc_html_e( 'Os seus clientes devem-lhe', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-a-receber" style="font-size:20px"></div><div id="cp-vf-pmr" style="font-size:12px;color:var(--ac-muted)"></div></div>
+				<div><div class="ac-stat-label"><?php esc_html_e( 'Deve aos seus fornecedores', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-a-pagar" style="font-size:20px"></div><div id="cp-vf-pmp" style="font-size:12px;color:var(--ac-muted)"></div></div>
+				<div><div class="ac-stat-label"><?php esc_html_e( 'Deve ao banco', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-divida" style="font-size:20px"></div><div id="cp-vf-juros" style="font-size:12px;color:var(--ac-muted)"></div></div>
+				<div><div class="ac-stat-label"><?php esc_html_e( 'Dinheiro menos dívida', 'contabilidade-pro' ); ?></div><div class="ac-vf-destaque-val" id="cp-vf-liquido" style="font-size:20px"></div><div id="cp-vf-liquido-nota" style="font-size:12px;color:var(--ac-muted)"></div></div>
 			</div>
 		</div>
 
@@ -342,6 +367,8 @@ function cp_ac_vf_payload_exemplo( $cenario ) {
 	$series = [
 		'vendas'   => array_map( null, [ '2025-01', '2025-02', '2025-03', '2025-04', '2025-05', '2025-06', '2025-07', '2025-08', '2025-09', '2025-10', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10' ], [ 34100, 36800, 41200, 43500, 45900, 44000, 39700, 28400, 42600, 44700, 34100, 36800, 41200, 43500, 45900, 44000, 39700, 28400, 42600, 48300 ] ),
 		'dinheiro' => array_map( null, [ '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10' ], [ 38200, 39500, 35000, 36100, 37800, 38900, 40200, 41000, 40500, 39800, 43600, 46800 ] ),
+		'compras'  => array_map( null, [ '2025-01', '2025-02', '2025-03', '2025-04', '2025-05', '2025-06', '2025-07', '2025-08', '2025-09', '2025-10', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10' ], [ 24300, 25900, 28700, 30100, 31800, 30600, 27900, 21500, 29800, 31200, 24800, 26300, 29200, 30700, 32100, 31000, 28400, 22000, 30100, 33190 ] ),
+		'divida'   => array_map( null, [ '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10' ], [ 41000, 40200, 39400, 38600, 37800, 37000, 36200, 35400, 34600, 33800, 32900, 32000 ] ),
 	];
 	foreach ( $series as $chave => $pares ) {
 		$series[ $chave ] = array_map( function ( $par ) { return [ 'mes' => $par[0], 'valor' => (float) $par[1] ]; }, $pares );

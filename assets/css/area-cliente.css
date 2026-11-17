@@ -377,9 +377,12 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 @media (max-width:980px){.ac-vf-duas-col,.ac-vf-duas-col-vendas,.ac-vf-grid3-card{grid-template-columns:minmax(0,1fr)}.ac-vf-grid3{grid-template-columns:1fr 1fr}}
 
 .ac-vf-vendas-grafico{display:flex;align-items:flex-end;gap:6px;height:160px;overflow-x:auto}
-.ac-vf-vendas-mes{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:34px}
+.ac-vf-vendas-mes{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
 .ac-vf-vendas-par{display:flex;align-items:flex-end;gap:2px;height:130px;cursor:pointer}
-.ac-vf-vendas-bar{width:11px;border-radius:3px 3px 0 0}
+.ac-vf-vendas-bar{width:min(11px,40%);flex:0 0 auto;border-radius:3px 3px 0 0}
+.ac-vf-vendas-par{width:100%;justify-content:center}
+.ac-vf-vendas-grafico.is-compras .ac-vf-vendas-bar.ano-atual{background:#E4BC72}
+.ac-vf-vendas-grafico.is-compras .ac-vf-vendas-mes.is-ativo .ano-atual{background:#C98F2E}
 .ac-vf-vendas-bar.ano-anterior{background:var(--ac-line)}
 .ac-vf-vendas-bar.ano-atual{background:var(--ac-blue)}
 .ac-vf-vendas-mes.is-ativo .ano-atual{background:var(--ac-navy)}
@@ -452,13 +455,22 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-card:has(.ac-info:hover),.ac-card:has(.ac-info:focus-within){position:relative;z-index:20}
 
 /* "As contas do mês" com o EBITDA ao lado; empilham abaixo de 1180px. */
-.ac-vf-contas-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:20px;align-items:start}
+.ac-vf-contas-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:20px;align-items:stretch}
+#cp-vf-ebitda{display:flex;flex-direction:column}
+.ac-vf-contas-grid #cp-vf-ebitda .ac-vf-grid3{margin-top:auto;padding-top:16px;border-top:1px solid var(--ac-hairline)}
 .ac-vf-contas-grid .ac-vf-grid3{grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:1180px){.ac-vf-contas-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:1180px){.ac-vf-contas-grid{grid-template-columns:minmax(0,1fr)}.ac-vf-contas-grid #cp-vf-ebitda .ac-vf-grid3{margin-top:16px}}
 
-/* Dívida ao banco no card "Dinheiro no fim de…". */
-.ac-vf-card-divida{margin-top:10px;padding-top:10px;border-top:1px solid var(--ac-hairline);display:flex;flex-direction:column;gap:4px}
-.ac-vf-card-divida:empty{display:none}
-.ac-vf-card-divida .linha{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ac-muted)}
-.ac-vf-card-divida strong{color:var(--ac-text);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.ac-vf-card-divida strong.is-negativo{color:var(--ac-badge-red-fg)}
+
+/* Fôlego: quatro números (clientes, fornecedores, banco, dinheiro menos dívida). */
+.ac-vf-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:980px){.ac-vf-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ac-vf-destaque-val.is-negativo{color:var(--ac-badge-red-fg)}
+
+/* Card EBITDA: blocos EBITDA e RAI (mês em grande, acumulado ao lado). */
+.ac-vf-ebitda-bloco + .ac-vf-ebitda-bloco{margin-top:18px;padding-top:16px;border-top:1px solid var(--ac-hairline)}
+.ac-vf-ebitda-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ac-vf-ebitda-valores{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ac-vf-ebitda-acum{font-size:12.5px;color:var(--ac-muted)}
+.ac-vf-ebitda-acum strong{color:var(--ac-text);font-weight:600;font-variant-numeric:tabular-nums}
+.ac-vf-ebitda-texto{font-size:12.5px;color:var(--ac-muted);margin-top:4px;line-height:1.45}

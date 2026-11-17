@@ -33,11 +33,6 @@
 		var partes = chaveMes.split( '-' );
 		return { ano: parseInt( partes[0], 10 ), mes: parseInt( partes[1], 10 ) };
 	}
-	function fmtDataPT( iso ) {
-		if ( ! iso ) return '';
-		var p = iso.split( '-' );
-		return p[2] + ' de ' + NOMES_MES[ parseInt( p[1], 10 ) - 1 ] + ' de ' + p[0];
-	}
 	function el( tag, cls, html ) {
 		var n = document.createElement( tag );
 		if ( cls ) n.className = cls;
@@ -49,17 +44,16 @@
 	// ─── Navegador de mês ─────────────────────────────────────────────────
 
 	var elTitulo   = document.getElementById( 'cp-vf-mes-titulo' );
-	var elSub      = document.getElementById( 'cp-vf-mes-sub' );
-	var elSlider   = document.getElementById( 'cp-vf-mes-slider' );
+	var elTrilho   = document.getElementById( 'cp-vf-mes-trilho' );
+	var elPilula   = elTrilho.querySelector( '.ac-vf-trilho-pilula' );
 	var elBotoes   = document.getElementById( 'cp-vf-mes-botoes' );
 	var btnPrev    = document.getElementById( 'cp-vf-mes-prev' );
 	var btnNext    = document.getElementById( 'cp-vf-mes-next' );
 
-	// O marcador tem 12 posições (jan–dez do ano do mês escolhido), alinhadas
-	// com os botões. Só se arrasta entre o primeiro e o último mês desse ano
-	// que tenham dados: com 6 meses fechados, pára a meio da barra.
-	elSlider.min = '0';
-	elSlider.max = '11';
+	// A fila dos 12 meses (jan–dez do ano do mês escolhido) é o slider: a
+	// pílula desliza para o mês escolhido; arrastar, tocar ou usar as setas do
+	// teclado. Só pára em meses com dados: com 6 meses fechados, não passa de
+	// metade da fila (fora disso, prende no mês com dados mais próximo).
 
 	function indicesDoAno( ano ) {
 		var porMes = {};
@@ -70,66 +64,42 @@
 		return porMes;
 	}
 
-	function atualizarSlider() {
-		var p = partesMes( meses[ indiceAtual ].mes );
-		var nums = Object.keys( indicesDoAno( p.ano ) ).map( Number );
-		var min = Math.min.apply( null, nums ) - 1;
-		var max = Math.max.apply( null, nums ) - 1;
-		elSlider.value = String( p.mes - 1 );
-		elSlider.style.setProperty( '--vf-min', min );
-		elSlider.style.setProperty( '--vf-max', max );
-		elSlider.style.setProperty( '--vf-val', p.mes - 1 );
-	}
-
-	function mesDoSlider() {
-		var ano = partesMes( meses[ indiceAtual ].mes ).ano;
-		var porMes = indicesDoAno( ano );
-		var nums = Object.keys( porMes ).map( Number ).sort( function ( a, b ) { return a - b; } );
-		var pedido = parseInt( elSlider.value, 10 ) + 1;
-		// Fora dos meses com dados → o mais próximo (prende nas pontas).
+	function irParaMesNum( pedido ) {
+		var porMes = indicesDoAno( partesMes( meses[ indiceAtual ].mes ).ano );
+		var nums = Object.keys( porMes ).map( Number );
 		var escolhido = nums.reduce( function ( melhor, n ) {
 			return Math.abs( n - pedido ) < Math.abs( melhor - pedido ) ? n : melhor;
 		}, nums[0] );
 		if ( porMes[ escolhido ] !== indiceAtual ) irParaMes( porMes[ escolhido ] );
-		else atualizarSlider(); // repõe o marcador na posição permitida
+	}
+
+	function mesNaPosicao( clientX ) {
+		var r = elBotoes.getBoundingClientRect();
+		var n = Math.floor( ( clientX - r.left ) / ( r.width / 12 ) ) + 1;
+		return Math.max( 1, Math.min( 12, n ) );
 	}
 
 	function montarBotoesMes() {
 		limpar( elBotoes );
 		for ( var a = 0; a < 12; a++ ) {
-			( function ( mesNum ) {
-				var btn = el( 'button', 'ac-vf-mes-btn', ABREV_MES[ mesNum - 1 ] );
-				btn.type = 'button';
-				btn.setAttribute( 'data-mes-num', mesNum );
-				btn.disabled = true;
-				btn.addEventListener( 'click', function () {
-					var idx = parseInt( btn.getAttribute( 'data-indice' ), 10 );
-					if ( ! isNaN( idx ) ) irParaMes( idx );
-				} );
-				elBotoes.appendChild( btn );
-			} )( a + 1 );
+			var cel = el( 'span', 'ac-vf-trilho-mes', ABREV_MES[ a ] );
+			cel.setAttribute( 'data-mes-num', a + 1 );
+			elBotoes.appendChild( cel );
 		}
 	}
 	montarBotoesMes();
 
 	function atualizarBotoesMes() {
-		var botoes = elBotoes.querySelectorAll( '.ac-vf-mes-btn' );
-		for ( var i = 0; i < botoes.length; i++ ) {
-			botoes[ i ].disabled = true;
-			botoes[ i ].classList.remove( 'is-ativo' );
-			botoes[ i ].removeAttribute( 'data-indice' );
+		var p = partesMes( meses[ indiceAtual ].mes );
+		var porMes = indicesDoAno( p.ano );
+		var celulas = elBotoes.querySelectorAll( '.ac-vf-trilho-mes' );
+		for ( var i = 0; i < celulas.length; i++ ) {
+			celulas[ i ].classList.toggle( 'is-vazio', porMes[ i + 1 ] === undefined );
+			celulas[ i ].classList.toggle( 'is-ativo', i + 1 === p.mes );
 		}
-		var anoAtual = partesMes( meses[ indiceAtual ].mes ).ano;
-		meses.forEach( function ( mes, idx ) {
-			var p = partesMes( mes.mes );
-			if ( p.ano !== anoAtual ) return;
-			var mesNum = p.mes;
-			var btn = elBotoes.querySelector( '[data-mes-num="' + mesNum + '"]' );
-			if ( ! btn ) return;
-			btn.disabled = false;
-			btn.setAttribute( 'data-indice', idx );
-			if ( idx === indiceAtual ) btn.classList.add( 'is-ativo' );
-		} );
+		elTrilho.style.setProperty( '--vf-pos', p.mes - 1 );
+		elTrilho.setAttribute( 'aria-valuenow', p.mes );
+		elTrilho.setAttribute( 'aria-valuetext', NOMES_MES[ p.mes - 1 ] + ' de ' + p.ano );
 	}
 
 	function irParaMes( idx ) {
@@ -141,7 +111,24 @@
 
 	btnPrev.addEventListener( 'click', function () { irParaMes( indiceAtual - 1 ); } );
 	btnNext.addEventListener( 'click', function () { irParaMes( indiceAtual + 1 ); } );
-	elSlider.addEventListener( 'input', mesDoSlider );
+
+	var aArrastar = false;
+	elTrilho.addEventListener( 'pointerdown', function ( e ) {
+		aArrastar = true;
+		elTrilho.classList.add( 'is-a-arrastar' );
+		if ( elTrilho.setPointerCapture ) elTrilho.setPointerCapture( e.pointerId );
+		irParaMesNum( mesNaPosicao( e.clientX ) );
+	} );
+	elTrilho.addEventListener( 'pointermove', function ( e ) {
+		if ( aArrastar ) irParaMesNum( mesNaPosicao( e.clientX ) );
+	} );
+	function largar() { aArrastar = false; elTrilho.classList.remove( 'is-a-arrastar' ); }
+	elTrilho.addEventListener( 'pointerup', largar );
+	elTrilho.addEventListener( 'pointercancel', largar );
+	elTrilho.addEventListener( 'keydown', function ( e ) {
+		if ( e.key === 'ArrowLeft' || e.key === 'ArrowDown' ) { irParaMes( indiceAtual - 1 ); e.preventDefault(); }
+		else if ( e.key === 'ArrowRight' || e.key === 'ArrowUp' ) { irParaMes( indiceAtual + 1 ); e.preventDefault(); }
+	} );
 
 	// ─── Cascata ("As contas do mês") ──────────────────────────────────────
 
@@ -471,8 +458,6 @@
 		var mes = meses[ indiceAtual ];
 
 		elTitulo.textContent = NOMES_MES[ partesMes( mes.mes ).mes - 1 ].replace( /^./, function ( c ) { return c.toUpperCase(); } ) + ' ' + partesMes( mes.mes ).ano;
-		elSub.textContent = ( indiceAtual === meses.length - 1 ? 'Último mês fechado' : 'Mês fechado' ) + ( mes.fechado_em ? ' · dados atualizados a ' + fmtDataPT( mes.fechado_em ) : '' );
-		atualizarSlider();
 		btnPrev.disabled = indiceAtual === 0;
 		btnNext.disabled = indiceAtual === meses.length - 1;
 		atualizarBotoesMes();

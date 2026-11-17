@@ -301,38 +301,26 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 
 /* Visão financeira (WORK-045) */
 .ac-vf-destaque-val{font-family:'Fraunces',serif;font-size:32px;line-height:1.1}
-.ac-vf-nav-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
-/* Marcador de meses: 12 posições alinhadas com os 12 botões por baixo.
-   Botões flex:1 com gap 4px → centro do 1.º a (100% + 4px)/24 − 2px da borda;
-   o centro do marcador anda a 8px (meia largura) das pontas do input, daí o −8px.
-   O JS põe em --vf-min/--vf-max/--vf-val a posição (0–11) do primeiro mês com
-   dados, do último e do escolhido; fora de [min,max] a pista fica apagada e o
-   arrasto não passa dali. */
-.ac-vf-slider{--vf-ins:calc((100% + 4px) / 24 - 10px);--vf-min:0;--vf-max:11;--vf-val:11;
-	-webkit-appearance:none;appearance:none;display:block;box-sizing:border-box;
-	width:calc(100% - 2 * var(--vf-ins));margin:4px var(--vf-ins) 14px;height:20px;background:none;cursor:pointer}
-.ac-vf-slider:focus{outline:none}
-.ac-vf-slider:focus-visible{outline:2px solid var(--ac-blue);outline-offset:4px;border-radius:4px}
-.ac-vf-slider::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,
-	var(--ac-line) 0, var(--ac-line) calc(8px + (100% - 16px) * var(--vf-min) / 11),
-	var(--ac-text) calc(8px + (100% - 16px) * var(--vf-min) / 11), var(--ac-text) calc(8px + (100% - 16px) * var(--vf-val) / 11),
-	var(--ac-blue) calc(8px + (100% - 16px) * var(--vf-val) / 11), var(--ac-blue) calc(8px + (100% - 16px) * var(--vf-max) / 11),
-	var(--ac-line) calc(8px + (100% - 16px) * var(--vf-max) / 11), var(--ac-line) 100%)}
-.ac-vf-slider::-moz-range-track{height:6px;border-radius:3px;background:linear-gradient(to right,
-	var(--ac-line) 0, var(--ac-line) calc(8px + (100% - 16px) * var(--vf-min) / 11),
-	var(--ac-text) calc(8px + (100% - 16px) * var(--vf-min) / 11), var(--ac-text) calc(8px + (100% - 16px) * var(--vf-val) / 11),
-	var(--ac-blue) calc(8px + (100% - 16px) * var(--vf-val) / 11), var(--ac-blue) calc(8px + (100% - 16px) * var(--vf-max) / 11),
-	var(--ac-line) calc(8px + (100% - 16px) * var(--vf-max) / 11), var(--ac-line) 100%)}
-.ac-vf-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-5px;border-radius:50%;background:var(--ac-text);border:2px solid var(--ac-surface);box-sizing:border-box;box-shadow:0 0 0 1px var(--ac-text)}
-.ac-vf-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ac-text);border:2px solid var(--ac-surface);box-sizing:border-box;box-shadow:0 0 0 1px var(--ac-text)}
-.ac-vf-meses-row{display:flex;gap:4px;padding-bottom:2px}
-.ac-vf-mes-btn{flex:1;min-width:0;text-align:center;padding:8px 0;border-radius:8px;border:none;background:none;color:var(--ac-muted);font-size:13px;font-weight:600;font-family:'Public Sans',sans-serif;cursor:pointer}
-.ac-vf-mes-btn:hover{background:var(--ac-bg)}
-.ac-vf-mes-btn.is-ativo{background:var(--ac-navy);color:var(--ac-on-navy)}
-.ac-vf-mes-btn:disabled{opacity:.35;cursor:default}
-.ac-vf-mes-btn:disabled:hover{background:none}
-@media (max-width:520px){.ac-vf-mes-btn{font-size:11.5px;padding:7px 0;border-radius:6px}}
-@media (max-width:400px){.ac-vf-meses-row{gap:2px}.ac-vf-slider{--vf-ins:calc((100% + 2px) / 24 - 9px)}.ac-vf-mes-btn{font-size:10px;letter-spacing:-.2px}}
+/* Navegador de mês: título + setas numa linha; a fila dos meses é o slider
+   (pílula que desliza para o mês escolhido). --vf-pos = 0–11, posto pelo JS. */
+#cp-vf-root{display:flex;flex-direction:column;gap:26px}
+.ac-vf-nav{padding:16px 18px}
+.ac-vf-nav-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ac-vf-nav-titulo{font-size:21px;line-height:1.2;margin:0}
+.ac-vf-nav-setas{display:flex;gap:6px}
+.ac-vf-seta{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--ac-line);background:var(--ac-surface);color:var(--ac-text);cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.ac-vf-seta:hover:not(:disabled){background:var(--ac-bg);border-color:var(--ac-blue)}
+.ac-vf-seta:disabled{opacity:.35;cursor:default}
+.ac-vf-trilho{--vf-pos:0;position:relative;padding:3px;border-radius:999px;background:var(--ac-bg);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.ac-vf-trilho:focus{outline:none}
+.ac-vf-trilho:focus-visible{box-shadow:0 0 0 2px var(--ac-blue)}
+.ac-vf-trilho-pilula{position:absolute;top:3px;bottom:3px;left:calc(3px + (100% - 6px) / 12 * var(--vf-pos));width:calc((100% - 6px) / 12);border-radius:999px;background:var(--ac-navy);box-shadow:0 2px 6px rgba(16,24,40,.18);transition:left .22s cubic-bezier(.3,.7,.3,1)}
+.ac-vf-trilho.is-a-arrastar .ac-vf-trilho-pilula{transition:left .08s linear}
+.ac-vf-trilho-meses{position:relative;display:grid;grid-template-columns:repeat(12,1fr)}
+.ac-vf-trilho-mes{text-align:center;padding:6px 0;font-size:12.5px;font-weight:600;color:var(--ac-muted);transition:color .2s ease;white-space:nowrap}
+.ac-vf-trilho-mes.is-vazio{opacity:.35}
+.ac-vf-trilho-mes.is-ativo{color:var(--ac-on-navy)}
+@media (max-width:520px){.ac-vf-trilho-mes{font-size:10.5px;letter-spacing:-.2px}.ac-vf-nav-titulo{font-size:19px}}
 
 .ac-vf-cascata{display:flex;align-items:flex-end;gap:14px;min-height:220px;overflow-x:auto;padding-bottom:4px}
 .ac-vf-barra-col{flex:0 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:none;font-family:inherit;padding:0}

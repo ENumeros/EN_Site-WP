@@ -112,22 +112,23 @@ function cp_ac_vista_visao_financeira() {
 	<div id="cp-vf-root" data-pendentes="<?php echo esc_attr( count( cp_ac_pendentes_documentos( $empresa_id ) ) + count( cp_ac_pendentes_movimentos( $empresa_id ) ) ); ?>">
 
 		<!-- Navegador de mês -->
-		<div class="ac-card ac-vf-nav" style="padding:22px">
+		<div class="ac-card ac-vf-nav">
 			<div class="ac-vf-nav-head">
-				<button type="button" class="ac-icon-btn-sm" id="cp-vf-mes-prev" aria-label="<?php esc_attr_e( 'Mês anterior', 'contabilidade-pro' ); ?>">
-					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
-				</button>
-				<div style="text-align:center">
-					<h2 id="cp-vf-mes-titulo" style="font-size:26px"></h2>
-					<div id="cp-vf-mes-sub" style="font-size:12.5px;color:var(--ac-muted);margin-top:4px"></div>
+				<h2 id="cp-vf-mes-titulo" class="ac-vf-nav-titulo"></h2>
+				<div class="ac-vf-nav-setas">
+					<button type="button" class="ac-vf-seta" id="cp-vf-mes-prev" aria-label="<?php esc_attr_e( 'Mês anterior', 'contabilidade-pro' ); ?>">
+						<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+					</button>
+					<button type="button" class="ac-vf-seta" id="cp-vf-mes-next" aria-label="<?php esc_attr_e( 'Mês seguinte', 'contabilidade-pro' ); ?>">
+						<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+					</button>
 				</div>
-				<button type="button" class="ac-icon-btn-sm" id="cp-vf-mes-next" aria-label="<?php esc_attr_e( 'Mês seguinte', 'contabilidade-pro' ); ?>">
-					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
-				</button>
 			</div>
-			<div style="font-size:12px;color:var(--ac-muted);margin:14px 0 6px"><?php esc_html_e( 'Arraste o marcador ou toque num mês', 'contabilidade-pro' ); ?></div>
-			<input type="range" id="cp-vf-mes-slider" class="ac-vf-slider" min="0" value="0" step="1">
-			<div id="cp-vf-mes-botoes" class="ac-vf-meses-row"></div>
+			<!-- A fila dos meses é o próprio slider: arrastar, tocar ou setas do teclado. -->
+			<div id="cp-vf-mes-trilho" class="ac-vf-trilho" role="slider" tabindex="0" aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>" aria-valuemin="1" aria-valuemax="12">
+				<span class="ac-vf-trilho-pilula" aria-hidden="true"></span>
+				<div id="cp-vf-mes-botoes" class="ac-vf-trilho-meses" aria-hidden="true"></div>
+			</div>
 		</div>
 
 		<!-- Resumo do mês -->

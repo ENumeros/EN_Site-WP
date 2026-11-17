@@ -55,7 +55,44 @@
 	var btnPrev    = document.getElementById( 'cp-vf-mes-prev' );
 	var btnNext    = document.getElementById( 'cp-vf-mes-next' );
 
-	elSlider.max = String( meses.length - 1 );
+	// O marcador tem 12 posições (jan–dez do ano do mês escolhido), alinhadas
+	// com os botões. Só se arrasta entre o primeiro e o último mês desse ano
+	// que tenham dados: com 6 meses fechados, pára a meio da barra.
+	elSlider.min = '0';
+	elSlider.max = '11';
+
+	function indicesDoAno( ano ) {
+		var porMes = {};
+		meses.forEach( function ( mes, idx ) {
+			var p = partesMes( mes.mes );
+			if ( p.ano === ano ) porMes[ p.mes ] = idx;
+		} );
+		return porMes;
+	}
+
+	function atualizarSlider() {
+		var p = partesMes( meses[ indiceAtual ].mes );
+		var nums = Object.keys( indicesDoAno( p.ano ) ).map( Number );
+		var min = Math.min.apply( null, nums ) - 1;
+		var max = Math.max.apply( null, nums ) - 1;
+		elSlider.value = String( p.mes - 1 );
+		elSlider.style.setProperty( '--vf-min', min );
+		elSlider.style.setProperty( '--vf-max', max );
+		elSlider.style.setProperty( '--vf-val', p.mes - 1 );
+	}
+
+	function mesDoSlider() {
+		var ano = partesMes( meses[ indiceAtual ].mes ).ano;
+		var porMes = indicesDoAno( ano );
+		var nums = Object.keys( porMes ).map( Number ).sort( function ( a, b ) { return a - b; } );
+		var pedido = parseInt( elSlider.value, 10 ) + 1;
+		// Fora dos meses com dados → o mais próximo (prende nas pontas).
+		var escolhido = nums.reduce( function ( melhor, n ) {
+			return Math.abs( n - pedido ) < Math.abs( melhor - pedido ) ? n : melhor;
+		}, nums[0] );
+		if ( porMes[ escolhido ] !== indiceAtual ) irParaMes( porMes[ escolhido ] );
+		else atualizarSlider(); // repõe o marcador na posição permitida
+	}
 
 	function montarBotoesMes() {
 		limpar( elBotoes );
@@ -82,8 +119,11 @@
 			botoes[ i ].classList.remove( 'is-ativo' );
 			botoes[ i ].removeAttribute( 'data-indice' );
 		}
+		var anoAtual = partesMes( meses[ indiceAtual ].mes ).ano;
 		meses.forEach( function ( mes, idx ) {
-			var mesNum = partesMes( mes.mes ).mes;
+			var p = partesMes( mes.mes );
+			if ( p.ano !== anoAtual ) return;
+			var mesNum = p.mes;
 			var btn = elBotoes.querySelector( '[data-mes-num="' + mesNum + '"]' );
 			if ( ! btn ) return;
 			btn.disabled = false;
@@ -101,7 +141,7 @@
 
 	btnPrev.addEventListener( 'click', function () { irParaMes( indiceAtual - 1 ); } );
 	btnNext.addEventListener( 'click', function () { irParaMes( indiceAtual + 1 ); } );
-	elSlider.addEventListener( 'input', function () { irParaMes( parseInt( elSlider.value, 10 ) ); } );
+	elSlider.addEventListener( 'input', mesDoSlider );
 
 	// ─── Cascata ("As contas do mês") ──────────────────────────────────────
 
@@ -432,7 +472,7 @@
 
 		elTitulo.textContent = NOMES_MES[ partesMes( mes.mes ).mes - 1 ].replace( /^./, function ( c ) { return c.toUpperCase(); } ) + ' ' + partesMes( mes.mes ).ano;
 		elSub.textContent = ( indiceAtual === meses.length - 1 ? 'Último mês fechado' : 'Mês fechado' ) + ( mes.fechado_em ? ' · dados atualizados a ' + fmtDataPT( mes.fechado_em ) : '' );
-		elSlider.value = String( indiceAtual );
+		atualizarSlider();
 		btnPrev.disabled = indiceAtual === 0;
 		btnNext.disabled = indiceAtual === meses.length - 1;
 		atualizarBotoesMes();

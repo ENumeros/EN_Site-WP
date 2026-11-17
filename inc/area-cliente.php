@@ -38,6 +38,11 @@ function cp_ac_ferramentas() {
 			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
 			'icon'  => '<path d="M3 7.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M16 12.5h3v3h-3a1.5 1.5 0 0 1 0-3z"></path><path d="M3 9h15"></path>',
 		],
+		'pagamentos'         => [
+			'label' => __( 'Pagamentos ao Estado', 'contabilidade-pro' ),
+			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
+			'icon'  => '<rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18"></path><path d="M7 15h4"></path>',
+		],
 		'calendario_fiscal'  => [
 			'label' => __( 'Calendário', 'contabilidade-pro' ),
 			'grupo' => __( 'Gestão', 'contabilidade-pro' ),

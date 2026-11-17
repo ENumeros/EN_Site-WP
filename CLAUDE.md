@@ -164,6 +164,22 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (formulário, modal e item do botão "+"; ver
   `cp_ac_documento_upload_disponivel()`).
 
+- **Pagamentos ao Estado** (`inc/area-cliente-pagamentos.php`, WORK-022):
+  a Work lê o Mapa de pagamentos da CentralGest, a equipa revê e publica
+  um mês por empresa: `POST cp/v1/pagamentos` (substitui o mês, mantém o
+  PDF das guias que ficam com o mesmo `id`), `POST cp/v1/pagamentos/documento`
+  (PDF de cada guia, multipart) e `POST cp/v1/pagamentos/notificar`.
+  **O email e o push saem daqui, não da Work** (decisão de 2026-11-17: um só
+  canal; sem conta na Área de Cliente não há aviso). O email é texto simples,
+  só com as guias por pagar, um por cliente (nunca com os endereços uns dos
+  outros), para os utilizadores com acesso à empresa que não são equipa
+  (`cp_ac_pag_destinatarios()`); sem nada por pagar não se envia. Sem a
+  ferramenta `pagamentos` ligada na empresa, `/notificar` devolve 409
+  `cp_ferramenta_desligada`. O primeiro cliente a abrir a vista marca o mês
+  como visto (`visto_em`); a Work lê isso em `GET cp/v1/pagamentos/estado`.
+  Postmeta `_cp_pagamentos` = `['meses' => ['AAAA-MM' => [...]]]`. Funções
+  puras `cp_ac_pag_*` testadas em `tests/Unit/PagamentosTest.php`.
+
 ## Backoffice
 
 - **Âmbito desta fase, de propósito limitado**: central de notificações

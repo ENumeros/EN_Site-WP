@@ -324,36 +324,57 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-vf-trilho-mes.is-ativo{color:var(--ac-on-navy)}
 @media (max-width:520px){.ac-vf-trilho-mes{font-size:10.5px;letter-spacing:-.2px}.ac-vf-nav-titulo{font-size:19px}}
 
-/* "As contas do mês": cascata deitada, uma linha por conta
-   (nome · pista com a barra · valor). Subtotais com o texto forte. */
-.ac-vf-cascata{display:flex;flex-direction:column;gap:2px}
-.ac-vf-cas-linha{display:grid;grid-template-columns:minmax(120px,210px) 1fr minmax(84px,auto);align-items:center;gap:16px;width:100%;padding:9px 10px;border:none;border-radius:10px;background:none;font-family:inherit;color:var(--ac-text);text-align:left;cursor:pointer;transition:background .15s ease}
-.ac-vf-cas-linha:hover{background:var(--ac-row-hover)}
-.ac-vf-cas-linha.is-ativa{background:var(--ac-bg);box-shadow:inset 3px 0 0 var(--ac-blue)}
-.ac-vf-cas-linha.tipo-subtotal{margin-top:6px;border-top:1px solid var(--ac-hairline);border-radius:0 0 10px 10px;padding-top:12px}
-.ac-vf-cas-linha.tipo-subtotal.is-ativa{border-radius:10px}
-.ac-vf-cas-nome{font-size:13.5px;font-weight:500;line-height:1.3}
-.ac-vf-cas-linha.tipo-subtotal .ac-vf-cas-nome,.ac-vf-cas-linha.tipo-vendas .ac-vf-cas-nome{font-weight:700}
-.ac-vf-cas-pista{position:relative;height:18px}
-.ac-vf-cas-zero{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--ac-line)}
-.ac-vf-cas-barra{position:absolute;top:0;bottom:0;border-radius:5px;display:inline-block}
-.ac-vf-cas-barra.tipo-vendas,.ac-vf-cas-barra.tipo-rendimento{background:var(--ac-blue)}
-.ac-vf-cas-barra.tipo-custo{background:#D9A441}
-.ac-vf-cas-barra.tipo-subtotal{background:var(--ac-text)}
-.ac-vf-cas-barra.tipo-subtotal.is-negativo{background:var(--ac-badge-red-fg)}
-.ac-vf-cas-valor{font-size:13.5px;font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.ac-vf-cas-linha.tipo-custo .ac-vf-cas-valor{color:var(--ac-muted);font-weight:500}
-.ac-vf-cas-linha.tipo-subtotal .ac-vf-cas-valor{font-weight:700}
-@media (max-width:560px){.ac-vf-cas-linha{grid-template-columns:96px 1fr auto;gap:10px;padding:8px 6px}.ac-vf-cas-nome,.ac-vf-cas-valor{font-size:12px}}
-.ac-vf-cascata-legenda{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid var(--ac-hairline);font-size:12px;color:var(--ac-muted)}
-.ac-vf-cascata-legenda span{display:inline-flex;align-items:center;gap:6px}
-.ac-vf-cascata-legenda i{position:static;width:10px;height:10px;border-radius:3px;display:inline-block}
+/* "As contas do mês": tabela ao jeito do Mapa de exploração da Work.
+   Totais a negrito com linha por cima; parcelas abrem por baixo da rubrica. */
+.ac-vf-mapa{width:100%;border-collapse:collapse;table-layout:fixed;font-variant-numeric:tabular-nums}
+.ac-vf-mapa th.num{width:20%;white-space:normal;vertical-align:bottom}
+.ac-vf-mapa th{padding:10px 10px 8px;font-size:11.5px;font-weight:600;color:var(--ac-muted);text-transform:uppercase;letter-spacing:.03em;text-align:left;border-bottom:1px solid var(--ac-line);white-space:nowrap}
+.ac-vf-mapa td{padding:10px;font-size:14px;border-bottom:1px solid var(--ac-hairline);vertical-align:top}
+.ac-vf-mapa .num{text-align:right;white-space:nowrap}
+.ac-vf-mapa td.num{font-weight:500}
+.ac-vf-mapa-linha.tipo-custo td.num{color:var(--ac-muted)}
+.ac-vf-mapa-linha.tipo-vendas td,.ac-vf-mapa-linha.is-total td{font-weight:700}
+.ac-vf-mapa-linha.is-total td{border-top:1.5px solid var(--ac-text);background:var(--ac-row-hover)}
+.ac-vf-mapa-linha.is-total:last-child td,.ac-vf-mapa-linha.is-total:nth-last-child(1) td{border-bottom:none}
+.ac-vf-mapa td.is-negativo{color:var(--ac-badge-red-fg)}
+.ac-vf-mapa-linha.com-detalhe{cursor:pointer}
+.ac-vf-mapa-linha.com-detalhe:hover td{background:var(--ac-bg)}
+.ac-vf-mapa-linha.com-detalhe:focus-visible{outline:2px solid var(--ac-blue);outline-offset:-2px}
+.ac-vf-mapa-linha .seta{display:inline-block;width:14px;color:var(--ac-muted);transition:transform .15s ease}
+.ac-vf-mapa-linha.is-aberta .seta{transform:rotate(90deg)}
+.ac-vf-mapa-linha.is-aberta td{border-bottom-color:transparent}
+.ac-vf-mapa-linha:not(.com-detalhe) td.nome{padding-left:24px}
+.ac-vf-mapa-exp td{padding:0 10px 8px 24px;font-size:12.5px;color:var(--ac-muted);border-bottom:none;background:var(--ac-bg)}
+.ac-vf-mapa-parcela td{padding:6px 10px;font-size:13px;border-bottom:none;background:var(--ac-bg)}
+.ac-vf-mapa-parcela td.nome{padding-left:38px;color:var(--ac-text)}
+.ac-vf-mapa-parcela td.num{color:var(--ac-text)}
+.ac-vf-mapa-parcela .nota{font-size:11.5px;color:var(--ac-muted);margin-top:2px}
+.ac-vf-mapa-parcela .nota.is-destaque{color:var(--ac-badge-amber-fg)}
+.ac-vf-mapa-parcela td.peso{font-size:12px;color:var(--ac-muted);white-space:nowrap}
+.ac-vf-mapa-parcela .barra{display:inline-block;width:70px;height:6px;border-radius:3px;background:var(--ac-line);margin-right:8px;vertical-align:middle;overflow:hidden}
+.ac-vf-mapa-parcela .barra i{display:block;height:100%;background:var(--ac-blue);border-radius:3px}
+.ac-vf-mapa tbody tr.ac-vf-mapa-parcela + tr:not(.ac-vf-mapa-parcela) td{border-top:1px solid var(--ac-hairline)}
+.ac-vf-mapa-nota{font-size:12px;color:var(--ac-muted);margin:12px 10px 0}
+@media (max-width:560px){
+	.ac-vf-mapa .col-ant{display:none}
+	.ac-vf-mapa{table-layout:auto}
+	.ac-vf-mapa th.num{width:auto}
+	.ac-vf-mapa-parcela .peso-mes{display:none}
+	.ac-vf-mapa td,.ac-vf-mapa th{padding-left:6px;padding-right:6px}
+	.ac-vf-mapa td{font-size:13px}
+	.ac-vf-mapa-linha:not(.com-detalhe) td.nome{padding-left:20px}
+	.ac-vf-mapa-parcela td.nome{padding-left:26px}
+	.ac-vf-mapa-parcela .barra{display:none}
+	.ac-vf-mapa th,.ac-vf-mapa th.num{white-space:normal}
+}
 
 .ac-vf-duas-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .ac-vf-duas-col-vendas{grid-template-columns:1.5fr 1fr}
+/* minmax(0,…) e min-width:0: o gráfico de vendas (scroll próprio) não pode alargar a grelha — no telemóvel esticava a página toda. */
+.ac-vf-duas-col>*{min-width:0}
 .ac-vf-grid3-card{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .ac-vf-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-@media (max-width:980px){.ac-vf-duas-col,.ac-vf-duas-col-vendas,.ac-vf-grid3-card{grid-template-columns:1fr}.ac-vf-grid3{grid-template-columns:1fr 1fr}}
+@media (max-width:980px){.ac-vf-duas-col,.ac-vf-duas-col-vendas,.ac-vf-grid3-card{grid-template-columns:minmax(0,1fr)}.ac-vf-grid3{grid-template-columns:1fr 1fr}}
 
 .ac-vf-vendas-grafico{display:flex;align-items:flex-end;gap:6px;height:160px;overflow-x:auto}
 .ac-vf-vendas-mes{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:34px}

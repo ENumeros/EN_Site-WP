@@ -13,7 +13,6 @@
 	var series        = dados.series || {};
 	var pendentes      = parseInt( root.getAttribute( 'data-pendentes' ), 10 ) || 0;
 	var indiceAtual    = meses.length - 1;
-	var contaSelecionada = null;
 
 	var NOMES_MES = [ 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro' ];
 	var ABREV_MES = [ 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez' ];
@@ -21,10 +20,6 @@
 	function fmtEuro( v ) {
 		if ( v === null || v === undefined ) return '—';
 		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: 'always' } ).format( v ) + ' €';
-	}
-	function fmtEuroAssinado( v ) {
-		var sinal = v < 0 ? '−' : '+';
-		return sinal + fmtEuro( Math.abs( v ) );
 	}
 	function fmtPct( v, casas ) {
 		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: casas || 1, maximumFractionDigits: casas || 1 } ).format( v ) + '%';
@@ -121,7 +116,6 @@
 	function irParaMes( idx ) {
 		if ( idx < 0 || idx >= meses.length ) return;
 		indiceAtual = idx;
-		contaSelecionada = null;
 		render();
 	}
 
@@ -146,130 +140,106 @@
 		else if ( e.key === 'ArrowRight' || e.key === 'ArrowUp' ) { irParaMes( indiceAtual + 1 ); e.preventDefault(); }
 	} );
 
-	// ─── Cascata ("As contas do mês") ──────────────────────────────────────
+	// ─── "As contas do mês" (como o Mapa de exploração da Work) ─────────────
+	// Tabela: uma linha por rubrica, de cima para baixo (vendas → lucro), com o
+	// mês escolhido, o acumulado do ano e o mesmo período do ano passado. Os
+	// totais (margem, EBITDA, lucro) vão a negrito. Tocar numa rubrica com
+	// composição abre por baixo as parcelas (nomes simples) e o peso de cada uma.
 
-	var elCascata        = document.getElementById( 'cp-vf-cascata' );
-	var elCascataLegenda = document.getElementById( 'cp-vf-cascata-legenda' );
-	var elDetalhe        = document.getElementById( 'cp-vf-detalhe' );
-	var elEbitda         = document.getElementById( 'cp-vf-ebitda' );
+	var elContas  = document.getElementById( 'cp-vf-contas' );
+	var elEbitda  = document.getElementById( 'cp-vf-ebitda' );
+	var contasAbertas = {}; // id → true; mantém-se ao mudar de mês
 
-	function renderCascata( mes ) {
+	// Custos com "−", rendimentos com "+", totais com o próprio sinal.
+	function valorConta( conta, v ) {
+		if ( v === null || v === undefined ) return '—';
+		if ( Math.round( v ) === 0 ) return fmtEuro( 0 );
+		if ( conta.tipo === 'custo' ) return '−' + fmtEuro( Math.abs( v ) );
+		if ( conta.tipo === 'rendimento' ) return '+' + fmtEuro( Math.abs( v ) );
+		return ( v < 0 ? '−' : '' ) + fmtEuro( Math.abs( v ) );
+	}
+
+	function td( cls, conteudo ) {
+		var c = el( 'td', cls );
+		if ( conteudo !== undefined ) c.textContent = conteudo;
+		return c;
+	}
+
+	function renderContas( mes ) {
+		limpar( elContas );
 		var contas = mes.contas || [];
-		limpar( elCascata );
+		if ( ! contas.length ) return;
+		var p = partesMes( mes.mes );
+		var abrevMes = ABREV_MES[ p.mes - 1 ];
+		var periodoAnt = ( p.mes === 1 ? 'jan' : 'jan–' + abrevMes ) + ' ' + ( p.ano - 1 );
 
-		var nivel = 0, min = 0, max = 0;
-		var geom = contas.map( function ( conta ) {
-			var inicio, fim;
-			if ( conta.tipo === 'vendas' ) { inicio = 0; fim = conta.valor; nivel = fim; }
-			else if ( conta.tipo === 'rendimento' ) { inicio = nivel; fim = nivel + conta.valor; nivel = fim; }
-			else if ( conta.tipo === 'custo' ) { fim = nivel; inicio = nivel - conta.valor; nivel = inicio; }
-			else { inicio = 0; fim = conta.valor; nivel = fim; } // subtotal
-			min = Math.min( min, inicio, fim );
-			max = Math.max( max, inicio, fim );
-			return { conta: conta, inicio: inicio, fim: fim };
+		var tabela = el( 'table', 'ac-vf-mapa' );
+		var thead = el( 'thead' );
+		var trh = el( 'tr' );
+		[ [ '', '' ], [ NOMES_MES[ p.mes - 1 ].replace( /^./, function ( c ) { return c.toUpperCase(); } ), 'num' ],
+		  [ 'Acumulado ' + p.ano, 'num' ], [ periodoAnt, 'num col-ant' ] ].forEach( function ( h ) {
+			trh.appendChild( el( 'th', h[1], h[0] ) );
 		} );
-		var amplitude = ( max - min ) || 1;
+		thead.appendChild( trh );
+		tabela.appendChild( thead );
 
-		if ( ! contaSelecionada && contas.length ) {
-			var porOmissao = contas.filter( function ( c ) { return c.id === 'servicos'; } )[0]
-				|| contas.filter( function ( c ) { return c.tipo === 'custo'; } )[0]
-				|| contas[0];
-			contaSelecionada = porOmissao.id;
-		}
+		var tbody = el( 'tbody' );
+		contas.forEach( function ( conta ) {
+			var temDetalhe = !! ( conta.composicao && conta.composicao.length > 1 );
+			var aberta = temDetalhe && contasAbertas[ conta.id ];
+			var total = conta.tipo === 'subtotal';
+			var tr = el( 'tr', 'ac-vf-mapa-linha tipo-' + conta.tipo + ( total ? ' is-total' : '' ) + ( temDetalhe ? ' com-detalhe' : '' ) + ( aberta ? ' is-aberta' : '' ) );
 
-		// Uma linha por conta: nome · pista com a barra a flutuar · valor em €.
-		// A barra começa onde a anterior acabou (cascata deitada).
-		var pct = function ( v ) { return ( ( v - min ) / amplitude * 100 ) + '%'; };
-		geom.forEach( function ( g ) {
-			var conta = g.conta;
-			var negativo = conta.tipo === 'subtotal' && conta.valor < 0;
-			var linha = el( 'button', 'ac-vf-cas-linha tipo-' + conta.tipo + ( conta.id === contaSelecionada ? ' is-ativa' : '' ) );
-			linha.type = 'button';
-			linha.appendChild( el( 'span', 'ac-vf-cas-nome', conta.titulo || conta.nome ) );
-
-			var pista = el( 'span', 'ac-vf-cas-pista' );
-			if ( min < 0 ) {
-				var zero = el( 'i', 'ac-vf-cas-zero' );
-				zero.style.left = pct( 0 );
-				pista.appendChild( zero );
+			var nome = td( 'nome' );
+			if ( temDetalhe ) nome.appendChild( el( 'span', 'seta', '›' ) );
+			nome.appendChild( document.createTextNode( conta.titulo || conta.nome ) );
+			tr.appendChild( nome );
+			[ [ conta.valor, '' ], [ conta.acumulado, '' ], [ conta.acumulado_ano_anterior, ' col-ant' ] ].forEach( function ( c ) {
+				var negativo = total && c[0] !== null && c[0] !== undefined && Math.round( c[0] ) < 0;
+				tr.appendChild( td( 'num' + c[1] + ( negativo ? ' is-negativo' : '' ), valorConta( conta, c[0] ) ) );
+			} );
+			if ( temDetalhe ) {
+				tr.tabIndex = 0;
+				tr.setAttribute( 'role', 'button' );
+				tr.setAttribute( 'aria-expanded', aberta ? 'true' : 'false' );
+				var alternar = function () { contasAbertas[ conta.id ] = ! contasAbertas[ conta.id ]; renderContas( mes ); };
+				tr.addEventListener( 'click', alternar );
+				tr.addEventListener( 'keydown', function ( e ) { if ( e.key === 'Enter' || e.key === ' ' ) { e.preventDefault(); alternar(); } } );
 			}
-			var barra = el( 'span', 'ac-vf-cas-barra tipo-' + conta.tipo + ( negativo ? ' is-negativo' : '' ) );
-			barra.style.left = pct( Math.min( g.inicio, g.fim ) );
-			barra.style.width = 'max(3px, ' + ( Math.abs( g.fim - g.inicio ) / amplitude * 100 ) + '%)';
-			pista.appendChild( barra );
-			linha.appendChild( pista );
+			tbody.appendChild( tr );
 
-			var texto = conta.tipo === 'custo' ? '−' + fmtEuro( Math.abs( conta.valor ) )
-				: ( conta.tipo === 'rendimento' ? '+' + fmtEuro( conta.valor ) : ( conta.valor < 0 ? '−' : '' ) + fmtEuro( Math.abs( conta.valor ) ) );
-			linha.appendChild( el( 'span', 'ac-vf-cas-valor', texto ) );
-			linha.addEventListener( 'click', function () { contaSelecionada = conta.id; render(); } );
-			elCascata.appendChild( linha );
-		} );
-
-		limpar( elCascataLegenda );
-		[ [ 'tipo-vendas', 'Vendas' ], [ 'tipo-custo', 'Custos que saem' ], [ 'tipo-subtotal', 'O que fica' ] ].forEach( function ( item ) {
-			elCascataLegenda.appendChild( el( 'span', '', '<i class="ac-vf-cas-barra ' + item[0] + '"></i>' + item[1] ) );
-		} );
-		var notaUnidade = el( 'span', '', 'Sem IVA · lucro antes do IRC' );
-		notaUnidade.style.marginLeft = 'auto';
-		elCascataLegenda.appendChild( notaUnidade );
-
-		renderDetalhe( contas.filter( function ( c ) { return c.id === contaSelecionada; } )[0] || contas[0], mes );
-		renderEbitda( mes );
-	}
-
-	function tendenciaMedia( conta ) {
-		if ( ! conta.media_12m ) return '';
-		var diffPct = ( conta.valor - conta.media_12m ) / conta.media_12m * 100;
-		if ( Math.abs( diffPct ) < 5 ) return 'em linha com o habitual';
-		var sobeDesce = diffPct > 0 ? '↑' : '↓';
-		return sobeDesce + ' ' + fmtPct( Math.abs( diffPct ) ) + ( diffPct > 0 ? ' acima' : ' abaixo' ) + ' da média';
-	}
-
-	function renderDetalhe( conta, mes ) {
-		limpar( elDetalhe );
-		if ( ! conta ) return;
-		var nomeMes = NOMES_MES[ partesMes( mes.mes ).mes - 1 ];
-		elDetalhe.appendChild( el( 'div', 'ac-stat-label', ( conta.titulo || conta.nome ).toUpperCase() + ' EM ' + nomeMes.toUpperCase() ) );
-		elDetalhe.appendChild( el( 'div', 'ac-vf-destaque-val', fmtEuro( conta.valor ) ) );
-		if ( conta.explicacao ) {
-			var exp = el( 'div', '', conta.explicacao );
-			exp.style.cssText = 'font-size:12.5px;color:var(--ac-muted);margin-top:4px';
-			elDetalhe.appendChild( exp );
-		}
-		var meta = el( 'div', '', tendenciaMedia( conta ) + ( conta.acumulado !== undefined && conta.acumulado !== null ? ' · acumulado ' + fmtEuro( conta.acumulado ) : '' ) );
-		meta.style.cssText = 'font-size:12px;color:var(--ac-muted);margin-top:10px';
-		elDetalhe.appendChild( meta );
-
-		if ( conta.composicao && conta.composicao.length ) {
-			var lista = el( 'div', 'ac-vf-detalhe-composicao' );
-			conta.composicao.forEach( function ( item ) {
-				var linha = el( 'div', 'ac-vf-detalhe-linha' );
-				linha.appendChild( el( 'span', 'nome', item.nome ) );
-				linha.appendChild( el( 'span', 'valor', item.valor ? fmtEuro( item.valor ) : '—' ) );
-				lista.appendChild( linha );
-				if ( item.nota ) {
-					lista.appendChild( el( 'div', 'ac-vf-detalhe-nota' + ( item.destaque ? ' is-destaque' : '' ), item.nota ) );
+			if ( aberta ) {
+				if ( conta.explicacao ) {
+					var trExp = el( 'tr', 'ac-vf-mapa-exp' );
+					var cExp = td( '', conta.explicacao );
+					cExp.colSpan = 4;
+					trExp.appendChild( cExp );
+					tbody.appendChild( trExp );
 				}
-			} );
-			elDetalhe.appendChild( lista );
-		} else if ( conta.formula && conta.formula.length ) {
-			var listaF = el( 'div', 'ac-vf-detalhe-composicao' );
-			conta.formula.forEach( function ( linha ) {
-				var row = el( 'div', 'ac-vf-detalhe-linha' );
-				row.appendChild( el( 'span', 'nome', linha.nome ) );
-				row.appendChild( el( 'span', 'valor', fmtEuroAssinado( linha.valor ) ) );
-				listaF.appendChild( row );
-			} );
-			var total = el( 'div', 'ac-vf-detalhe-linha' );
-			total.style.borderTop = '1px solid var(--ac-hairline)';
-			total.style.paddingTop = '8px';
-			total.style.marginTop = '4px';
-			total.appendChild( el( 'span', 'nome', '= ' + ( conta.titulo || conta.nome ) ) );
-			total.appendChild( el( 'span', 'valor', fmtEuro( conta.valor ) ) );
-			listaF.appendChild( total );
-			elDetalhe.appendChild( listaF );
-		}
+				var base = conta.composicao.reduce( function ( soma, item ) { return soma + Math.abs( item.valor || 0 ); }, 0 ) || 1;
+				conta.composicao.slice().sort( function ( a, b ) { return Math.abs( b.valor || 0 ) - Math.abs( a.valor || 0 ); } ).forEach( function ( item ) {
+					var trP = el( 'tr', 'ac-vf-mapa-parcela' );
+					var cNome = td( 'nome' );
+					cNome.appendChild( document.createTextNode( item.nome ) );
+					if ( item.nota ) cNome.appendChild( el( 'div', 'nota' + ( item.destaque ? ' is-destaque' : '' ), item.nota ) );
+					trP.appendChild( cNome );
+					trP.appendChild( td( 'num', fmtEuro( item.valor || 0 ) ) );
+					var pesoPct = Math.round( Math.abs( item.valor || 0 ) / base * 100 );
+					var cPeso = td( 'peso' );
+					cPeso.colSpan = 2;
+					cPeso.innerHTML = '<span class="barra"><i style="width:' + pesoPct + '%"></i></span>' + pesoPct + '%<span class="peso-mes"> de ' + abrevMes + '</span>';
+					trP.appendChild( cPeso );
+					tbody.appendChild( trP );
+				} );
+			}
+		} );
+		tabela.appendChild( tbody );
+		elContas.appendChild( tabela );
+
+		var nota = el( 'div', 'ac-vf-mapa-nota', 'Valores sem IVA. O lucro é antes do imposto sobre o lucro (IRC). Toque numa linha com › para ver de que é feita.' );
+		elContas.appendChild( nota );
+
+		renderEbitda( mes );
 	}
 
 	function renderEbitda( mes ) {
@@ -285,23 +255,6 @@
 		var sub = el( 'div', '', 'Lê-se "ébitda". É o dinheiro que a atividade gera antes de pagar juros e o imposto sobre o lucro, e antes de contar com o desgaste dos equipamentos. Mostra se o negócio em si dá dinheiro, seja qual for a forma como foi financiado ou quanto investiu.' );
 		sub.style.cssText = 'font-size:12.5px;color:var(--ac-muted);margin-top:4px';
 		elEbitda.appendChild( sub );
-
-		var ponte = el( 'div' );
-		ponte.style.cssText = 'margin-top:16px;padding-top:14px;border-top:1px solid var(--ac-hairline);font-size:11px;font-weight:600;color:var(--ac-muted);text-transform:uppercase;letter-spacing:.04em';
-		ponte.textContent = 'Do EBITDA ao lucro';
-		elEbitda.appendChild( ponte );
-		[
-			[ 'EBITDA', e.acumulado, false ],
-			[ '− Desgaste dos equipamentos', -e.depreciacoes_acumulado, false ],
-			[ '− Juros', -e.juros_acumulado, false ],
-			[ '= Lucro antes de impostos', e.lucro_acumulado, true ],
-		].forEach( function ( linha ) {
-			var row = el( 'div', 'ac-vf-detalhe-linha' );
-			if ( linha[2] ) { row.style.fontWeight = '700'; row.style.marginTop = '4px'; row.style.paddingTop = '6px'; row.style.borderTop = '1px dashed var(--ac-line)'; }
-			row.appendChild( el( 'span', 'nome', linha[0] ) );
-			row.appendChild( el( 'span', 'valor', fmtEuro( linha[1] ) ) );
-			elEbitda.appendChild( row );
-		} );
 
 		if ( e.divida_bancaria ) {
 			var grid = el( 'div', 'ac-vf-grid3' );
@@ -506,7 +459,7 @@
 
 		document.getElementById( 'cp-vf-d-pendentes-val' ).textContent = pendentes + ( pendentes === 1 ? ' item' : ' itens' );
 
-		renderCascata( mes );
+		renderContas( mes );
 		renderVendas( mes );
 		renderTesouraria( mes );
 		renderEstado( mes );

@@ -457,6 +457,26 @@
 		elTrendD.className = 'ac-trend ' + ( diffDinheiro >= 0 ? 'ac-trend-up' : '' );
 		elTrendD.textContent = ( diffDinheiro >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( diffDinheiro ) ) + ' que no mês anterior';
 
+		// Dívida ao banco junto ao dinheiro: o dinheiro sozinho engana se houver empréstimos.
+		var elDivida = document.getElementById( 'cp-vf-d-divida' );
+		limpar( elDivida );
+		var divida = mes.tesouraria ? mes.tesouraria.divida_bancaria : null;
+		if ( divida !== null && divida !== undefined ) {
+			if ( Math.round( divida ) > 0 ) {
+				var linhaD = el( 'div', 'linha' );
+				linhaD.appendChild( el( 'span', '', 'Dívida ao banco' ) );
+				linhaD.appendChild( el( 'strong', '', fmtEuro( divida ) ) );
+				elDivida.appendChild( linhaD );
+				var liquido = d.dinheiro - divida;
+				var linhaL = el( 'div', 'linha' );
+				linhaL.appendChild( el( 'span', '', 'Dinheiro menos dívida' ) );
+				linhaL.appendChild( el( 'strong', liquido < 0 ? 'is-negativo' : '', ( liquido < 0 ? '−' : '' ) + fmtEuro( Math.abs( liquido ) ) ) );
+				elDivida.appendChild( linhaL );
+			} else {
+				elDivida.appendChild( el( 'div', 'linha', '<span>Sem empréstimos bancários</span>' ) );
+			}
+		}
+
 		document.getElementById( 'cp-vf-d-pendentes-val' ).textContent = pendentes + ( pendentes === 1 ? ' item' : ' itens' );
 
 		renderContas( mes );

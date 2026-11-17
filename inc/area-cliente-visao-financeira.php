@@ -176,6 +176,7 @@ function cp_ac_vista_visao_financeira() {
 				</div>
 				<div class="ac-vf-destaque-val" id="cp-vf-d-dinheiro-val"></div>
 				<div id="cp-vf-d-dinheiro-trend" class="ac-trend"></div>
+				<div id="cp-vf-d-divida" class="ac-vf-card-divida"></div>
 			</div>
 			<div class="ac-card ac-vf-card">
 				<div class="ac-vf-card-head">
@@ -192,10 +193,13 @@ function cp_ac_vista_visao_financeira() {
 			<h2 style="font-size:18px"><?php esc_html_e( 'As contas do mês', 'contabilidade-pro' ); ?></h2>
 			<?php cp_ac_info( __( 'A Demonstração de Resultados, de cima para baixo: começa nas vendas, tira cada custo e mostra o que fica (margem, EBITDA e lucro). O mês escolhido, o acumulado do ano e o mesmo período do ano passado.', 'contabilidade-pro' ) ); ?>
 		</div>
-		<div class="ac-card" style="padding:10px 14px 16px">
-			<div id="cp-vf-contas"></div>
+		<!-- Tabela das contas e, ao lado, o EBITDA (empilham em ecrãs estreitos). -->
+		<div class="ac-vf-contas-grid">
+			<div class="ac-card" style="padding:10px 14px 16px">
+				<div id="cp-vf-contas"></div>
+			</div>
+			<div class="ac-card" id="cp-vf-ebitda" style="padding:22px"></div>
 		</div>
-		<div class="ac-card" id="cp-vf-ebitda" style="padding:22px"></div>
 
 		<!-- Vendas -->
 		<div><h2 style="font-size:18px"><?php esc_html_e( 'Vendas — o que entra', 'contabilidade-pro' ); ?></h2></div>

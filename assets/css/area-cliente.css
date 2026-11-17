@@ -450,3 +450,15 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 @keyframes ac-info-in{from{opacity:0;margin-top:4px}to{opacity:1;margin-top:0}}
 :root[data-theme="dark"] .ac-info-tip{background:#2A3B52;border:1px solid var(--ac-line)}
 .ac-card:has(.ac-info:hover),.ac-card:has(.ac-info:focus-within){position:relative;z-index:20}
+
+/* "As contas do mês" com o EBITDA ao lado; empilham abaixo de 1180px. */
+.ac-vf-contas-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:20px;align-items:start}
+.ac-vf-contas-grid .ac-vf-grid3{grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1180px){.ac-vf-contas-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Dívida ao banco no card "Dinheiro no fim de…". */
+.ac-vf-card-divida{margin-top:10px;padding-top:10px;border-top:1px solid var(--ac-hairline);display:flex;flex-direction:column;gap:4px}
+.ac-vf-card-divida:empty{display:none}
+.ac-vf-card-divida .linha{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ac-muted)}
+.ac-vf-card-divida strong{color:var(--ac-text);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ac-vf-card-divida strong.is-negativo{color:var(--ac-badge-red-fg)}

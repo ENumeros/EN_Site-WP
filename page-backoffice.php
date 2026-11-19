@@ -66,7 +66,7 @@ else :
 	$bo_vista       = isset( $_GET['vista'] ) ? sanitize_key( wp_unslash( $_GET['vista'] ) ) : '';
 	if ( $bo_empresa_id ) {
 		$bo_vista = 'empresa';
-	} elseif ( ! in_array( $bo_vista, [ 'notificacoes', 'empresa' ], true ) ) {
+	} elseif ( ! in_array( $bo_vista, [ 'notificacoes', 'empresa', 'recebimentos' ], true ) ) {
 		$bo_vista = 'resumo';
 	}
 	$bo_resumo    = cp_bo_resumo();
@@ -89,6 +89,12 @@ else :
 				<a class="ac-nav-link<?php echo 'notificacoes' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'vista', 'notificacoes', $bo_url_base ) ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg>
 					<?php esc_html_e( 'Notificações', 'contabilidade-pro' ); ?>
+				</a>
+				<?php $bo_rec_n = cp_rec_contagem_por_tratar(); ?>
+				<a class="ac-nav-link<?php echo 'recebimentos' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'vista', 'recebimentos', $bo_url_base ) ); ?>">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg>
+					<?php esc_html_e( 'Recebimentos', 'contabilidade-pro' ); ?>
+					<?php if ( $bo_rec_n ) : ?><span class="ac-nav-conta"><?php echo esc_html( $bo_rec_n ); ?></span><?php endif; ?>
 				</a>
 				<a class="ac-nav-link<?php echo 'empresa' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( $bo_url_gerir . '#cp-backoffice-tarefas' ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M7.5 9.5 9 11l2.5-3"></path><path d="M14 9h4"></path><path d="M7.5 15.5 9 17l2.5-3"></path><path d="M14 15h4"></path></svg>
@@ -153,6 +159,8 @@ else :
 			<div class="ac-content">
 				<?php if ( 'resumo' === $bo_vista ) : ?>
 					<?php cp_bo_render_resumo( $bo_resumo ); ?>
+				<?php elseif ( 'recebimentos' === $bo_vista ) : ?>
+					<?php cp_rec_render_vista(); ?>
 				<?php elseif ( 'notificacoes' === $bo_vista ) : $eventos = cp_backoffice_listar_eventos( 50 ); ?>
 				<div>
 					<h1 style="font-size:23px"><?php esc_html_e( 'Notificações', 'contabilidade-pro' ); ?></h1>

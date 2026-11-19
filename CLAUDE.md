@@ -164,6 +164,16 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (formulário, modal e item do botão "+"; ver
   `cp_ac_documento_upload_disponivel()`).
 
+- **Conta corrente** (`cp_ac_rest_sincronizar_conta_corrente`): as linhas
+  passam por `cp_ac_cc_normalizar_linhas()`, que aceita o formato antigo
+  (`id`, `documento`, `valor`, `estado`) e o que a Work envia de facto
+  (`numero_documento`, `tipo` fatura/recibo/resumo, `debito`, `credito`,
+  `pendente`, `por_pagar`, `ext_poc_cab_id`, `ano`). Até 2026-11-19 as linhas
+  da Work eram todas descartadas por não trazerem `id`; o `id` passa a ser o
+  `ext_poc_cab_id` (`#2`, `#3`… se o mesmo documento der várias linhas). O
+  PDF (`/conta-corrente/documento`) aceita `linha_id` ou `ext_poc_cab_id`
+  (este anexa a todas as linhas do documento).
+
 - **Pagamentos ao Estado** (`inc/area-cliente-pagamentos.php`, WORK-022):
   a Work lê o Mapa de pagamentos da CentralGest, a equipa revê e publica
   um mês por empresa: `POST cp/v1/pagamentos` (substitui o mês, mantém o
@@ -258,6 +268,22 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   Partilham o mesmo seletor de empresa (`$bo_empresa_id`) — uma escolha
   só, não uma por secção. Não tratar isto como precedente para
   adicionar outra gestão aqui sem decisão igualmente explícita.
+- **Recebimentos (segunda exceção deliberada, decidida a 2026-11-19 — WORK-175
+  fase 2)**: `inc/area-cliente-recebimentos.php`, vista `?vista=recebimentos`.
+  A Work envia uma vez por dia as entradas no banco da EN ainda sem recibo, com
+  o cliente e as faturas sugeridos (`POST cp/v1/recebimentos`: `recebimentos`,
+  `emitidos`, `ignorados`; fundido por `cp_rec_calc_fundir()`, opção
+  `cp_recebimentos`). Novos → `cp_push_notificar_equipa()` (tipo
+  `recebimentos`; mais de 3 de uma vez → um só aviso). A equipa pode mudar o
+  cliente e as faturas (as faturas vêm da conta corrente da empresa já
+  sincronizada, linhas com `por_pagar`, mais a sugestão da Work quando é a
+  mesma empresa) e pede "Emitir recibo" (admin-post `cp_recebimento`, nonce
+  `cp_recebimento`, ações pedir/cancelar/ignorar/repor; só equipa). O WP só
+  guarda o pedido: a Work lê `GET cp/v1/recebimentos/pedidos` em cada ronda
+  (15 min), volta a confirmar tudo na CentralGest, emite e responde em
+  `POST cp/v1/recebimentos/resultado` (emitido/erro; erro avisa a equipa). O
+  cliente não é avisado — o recibo aparece na conta corrente. Funções puras
+  `cp_rec_calc_*` em `tests/Unit/RecebimentosTest.php`.
 
 ## Convenções gerais (nas três superfícies)
 

@@ -1184,6 +1184,87 @@ function cp_ac_conta_corrente( $empresa_id ) {
     return $dados;
 }
 
+// Linhas recebidas da Work → linhas guardadas. Aceita o formato antigo
+// (id, documento, valor, estado) e o que a Work envia de facto desde sempre
+// (numero_documento, tipo fatura/recibo/resumo, debito, credito, pendente,
+// por_pagar, ext_poc_cab_id, ano) — até 2026-11-19 estas linhas eram todas
+// descartadas por não trazerem "id". O id passa a ser o ext_poc_cab_id
+// (com #2, #3… quando o mesmo documento dá mais do que uma linha).
+// Função pura: testada em tests/Unit/ContaCorrenteTest.php.
+function cp_ac_cc_normalizar_linhas( $linhas_in ) {
+    $linhas = [];
+    $vistos = [];
+    if ( ! is_array( $linhas_in ) ) return $linhas;
+    foreach ( $linhas_in as $linha ) {
+        if ( ! is_array( $linha ) ) continue;
+        $ext = isset( $linha['ext_poc_cab_id'] ) ? sanitize_text_field( (string) $linha['ext_poc_cab_id'] ) : '';
+        if ( ! empty( $linha['id'] ) ) {
+            $id = sanitize_text_field( (string) $linha['id'] );
+        } elseif ( '' !== $ext ) {
+            $id = $ext;
+        } elseif ( isset( $linha['tipo'] ) && 'resumo' === $linha['tipo'] ) {
+            $id = 'resumo-' . ( isset( $linha['ano'] ) ? sanitize_text_field( (string) $linha['ano'] ) : '' );
+        } else {
+            continue;
+        }
+        $base = $id;
+        $n    = isset( $vistos[ $base ] ) ? $vistos[ $base ] + 1 : 1;
+        $vistos[ $base ] = $n;
+        if ( $n > 1 ) $id = $base . '#' . $n;
+
+        $tipo_in = isset( $linha['tipo'] ) ? sanitize_text_field( (string) $linha['tipo'] ) : '';
+        $debito  = isset( $linha['debito'] ) ? (float) $linha['debito'] : 0.0;
+        $credito = isset( $linha['credito'] ) ? (float) $linha['credito'] : 0.0;
+        if ( isset( $linha['valor'] ) ) {
+            $valor = (float) $linha['valor'];
+        } elseif ( 'resumo' === $tipo_in ) {
+            $valor = isset( $linha['saldo'] ) ? (float) $linha['saldo'] : 0.0;
+        } else {
+            $valor = $debito > 0 ? $debito : $credito;
+        }
+        $por_pagar = isset( $linha['por_pagar'] ) ? round( (float) $linha['por_pagar'], 2 ) : 0.0;
+        if ( isset( $linha['estado'] ) ) {
+            $estado = sanitize_text_field( (string) $linha['estado'] );
+        } elseif ( 'resumo' === $tipo_in ) {
+            $estado = '';
+        } elseif ( 'recibo' === $tipo_in ) {
+            $estado = __( 'Pago', 'contabilidade-pro' );
+        } elseif ( ! empty( $linha['pendente'] ) ) {
+            $estado = $debito > 0 ? __( 'Por pagar', 'contabilidade-pro' ) : __( 'Crédito', 'contabilidade-pro' );
+        } else {
+            $estado = __( 'Paga', 'contabilidade-pro' );
+        }
+        $rotulos = [ 'fatura' => __( 'Fatura', 'contabilidade-pro' ), 'recibo' => __( 'Recibo', 'contabilidade-pro' ), 'resumo' => __( 'Saldo', 'contabilidade-pro' ) ];
+
+        $linhas[] = [
+            'id'             => $id,
+            'data'           => isset( $linha['data'] ) ? sanitize_text_field( (string) $linha['data'] ) : '',
+            'documento'      => isset( $linha['documento'] ) ? sanitize_text_field( (string) $linha['documento'] )
+                : ( isset( $linha['numero_documento'] ) ? sanitize_text_field( (string) $linha['numero_documento'] ) : '' ),
+            'tipo'           => isset( $rotulos[ $tipo_in ] ) ? $rotulos[ $tipo_in ] : $tipo_in,
+            'valor'          => $valor,
+            'estado'         => $estado,
+            'ext_poc_cab_id' => $ext,
+            'debito'         => $debito,
+            'por_pagar'      => $por_pagar,
+            'anexo_id'       => 0,
+            'anexo_url'      => '',
+        ];
+    }
+    return $linhas;
+}
+
+// Faturas da empresa com valor por receber (para os Recebimentos do
+// Backoffice): linhas a débito com por_pagar > 0, mais antigas primeiro.
+function cp_ac_cc_faturas_em_aberto( array $linhas ) {
+    $abertas = array_values( array_filter( $linhas, function ( $l ) {
+        return ! empty( $l['ext_poc_cab_id'] ) && ( isset( $l['debito'] ) ? (float) $l['debito'] : 0 ) > 0
+            && ( isset( $l['por_pagar'] ) ? (float) $l['por_pagar'] : 0 ) > 0;
+    } ) );
+    usort( $abertas, function ( $a, $b ) { return strcmp( (string) $a['data'], (string) $b['data'] ); } );
+    return $abertas;
+}
+
 function cp_ac_rest_routes_conta_corrente() {
     register_rest_route( 'cp/v1', '/conta-corrente', [
         [
@@ -1202,9 +1283,11 @@ function cp_ac_rest_routes_conta_corrente() {
             'methods'             => 'POST',
             'callback'            => 'cp_ac_rest_conta_corrente_documento',
             'permission_callback' => 'cp_ac_rest_permissao',
+            // linha_id (formato antigo) ou ext_poc_cab_id (o que a Work envia).
             'args'                => [
-                'work_id'  => [ 'required' => true, 'type' => 'string' ],
-                'linha_id' => [ 'required' => true, 'type' => 'string' ],
+                'work_id'        => [ 'required' => true, 'type' => 'string' ],
+                'linha_id'       => [ 'required' => false, 'type' => 'string' ],
+                'ext_poc_cab_id' => [ 'required' => false, 'type' => 'string' ],
             ],
         ],
     ] );
@@ -1238,28 +1321,14 @@ function cp_ac_rest_sincronizar_conta_corrente( $request ) {
         }
     }
 
-    $linhas_in = $request->get_param( 'linhas' );
-    $linhas    = [];
-    if ( is_array( $linhas_in ) ) {
-        foreach ( $linhas_in as $linha ) {
-            if ( empty( $linha['id'] ) ) continue;
-            $id       = sanitize_text_field( $linha['id'] );
-            $nova     = [
-                'id'        => $id,
-                'data'      => isset( $linha['data'] ) ? sanitize_text_field( $linha['data'] ) : '',
-                'documento' => isset( $linha['documento'] ) ? sanitize_text_field( $linha['documento'] ) : '',
-                'tipo'      => isset( $linha['tipo'] ) ? sanitize_text_field( $linha['tipo'] ) : '',
-                'valor'     => isset( $linha['valor'] ) ? (float) $linha['valor'] : 0,
-                'estado'    => isset( $linha['estado'] ) ? sanitize_text_field( $linha['estado'] ) : '',
-                'anexo_id'  => 0,
-                'anexo_url' => '',
-            ];
-            if ( isset( $anexos_por_id[ $id ] ) ) {
-                $nova['anexo_id']  = $anexos_por_id[ $id ]['anexo_id'];
-                $nova['anexo_url'] = $anexos_por_id[ $id ]['anexo_url'];
-            }
-            $linhas[] = $nova;
+    $linhas = [];
+    foreach ( cp_ac_cc_normalizar_linhas( $request->get_param( 'linhas' ) ) as $nova ) {
+        $id = $nova['id'];
+        if ( isset( $anexos_por_id[ $id ] ) ) {
+            $nova['anexo_id']  = $anexos_por_id[ $id ]['anexo_id'];
+            $nova['anexo_url'] = $anexos_por_id[ $id ]['anexo_url'];
         }
+        $linhas[] = $nova;
     }
 
     update_post_meta( $empresa_id, '_cp_conta_corrente', [ 'resumo' => $resumo, 'linhas' => $linhas ] );
@@ -1271,18 +1340,26 @@ function cp_ac_rest_conta_corrente_documento( $request ) {
     $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
     if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
 
-    $linha_id = sanitize_text_field( $request->get_param( 'linha_id' ) );
+    $linha_id = sanitize_text_field( (string) $request->get_param( 'linha_id' ) );
+    $ext      = sanitize_text_field( (string) $request->get_param( 'ext_poc_cab_id' ) );
+    if ( '' === $linha_id && '' === $ext ) {
+        return new WP_Error( 'cp_linha_em_falta', __( 'Indique linha_id ou ext_poc_cab_id.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+    }
+
+    $dados    = cp_ac_conta_corrente( $empresa_id );
     $ficheiro = cp_ac_rest_guardar_ficheiro( $request, 'ficheiro' );
     if ( is_wp_error( $ficheiro ) ) return $ficheiro;
 
-    $dados      = cp_ac_conta_corrente( $empresa_id );
+    // Por ext_poc_cab_id o PDF vai para todas as linhas desse documento (um
+    // recibo pode dar duas linhas: o valor e uma sobra).
     $encontrada = false;
     foreach ( $dados['linhas'] as &$linha ) {
-        if ( $linha['id'] === $linha_id ) {
+        $bate = '' !== $linha_id ? $linha['id'] === $linha_id : ( isset( $linha['ext_poc_cab_id'] ) && $linha['ext_poc_cab_id'] === $ext );
+        if ( $bate ) {
             $linha['anexo_id']  = $ficheiro['id'];
             $linha['anexo_url'] = $ficheiro['url'];
             $encontrada = true;
-            break;
+            if ( '' !== $linha_id ) break;
         }
     }
     unset( $linha );

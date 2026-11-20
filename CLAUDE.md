@@ -79,6 +79,14 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   pushes e os emails de pagamentos já o respeitam. Quem manda é a Work
   (campo `acessos` em `POST /cp/v1/utilizadores`); o perfil no wp-admin só
   mostra.
+- **Convite** (`cp_ac_email_convite`, filtro `wp_new_user_notification_email`):
+  os clientes criados pela Work recebem o email nativo "definir a senha" com
+  o texto da Entre Números (`cp_ac_calc_texto_convite()`, testada em
+  `AreaClienteTest`) — nomeia as empresas e dá o link novo (24 h). Equipa e
+  administradores ficam com o email nativo. `POST /cp/v1/utilizadores/convite`
+  `{work_id}` volta a enviá-lo (409 para equipa, 502 se o `wp_mail` falha).
+  Guarda `_cp_convite_enviado_em` (user meta), devolvido também no
+  `POST`/`GET /cp/v1/utilizadores`.
 - Enquanto não há dados reais de uma ferramenta, a vista mostra **estado
   vazio honesto** (`cp_ac_vazio()`), nunca números/documentos inventados.
   Mantém esse princípio ao ligar fontes de dados reais: um erro de sync

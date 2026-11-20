@@ -656,6 +656,7 @@ function cp_ac_rest_listar_utilizadores( $request ) {
             'tipo'     => in_array( 'equipa_en', (array) $utilizador->roles, true ) ? 'equipa' : 'cliente',
             'empresas' => get_user_meta( $utilizador->ID, 'cp_empresas', true ),
             'acessos'  => cp_ac_user_acessos( $utilizador->ID ),
+            'convite_enviado_em' => (string) get_user_meta( $utilizador->ID, '_cp_convite_enviado_em', true ),
         ];
     }
     return rest_ensure_response( $resultado );
@@ -796,13 +797,110 @@ function cp_ac_rest_criar_utilizador( $request ) {
     cp_ac_rest_aplicar_acessos( $user_id, $request->get_param( 'acessos' ), $post_por_work, $tipo );
 
     // Dispara o fluxo nativo do WordPress para o cliente definir a própria
-    // password (a password gerada acima nunca é enviada nem devolvida).
+    // password (a password gerada acima nunca é enviada nem devolvida). Para
+    // clientes, o texto é o convite da Entre Números (cp_ac_email_convite).
     wp_new_user_notification( $user_id, null, 'user' );
 
     return rest_ensure_response( [
         'id'                       => $user_id,
         'criado'                   => true,
         'empresas_nao_encontradas' => $nao_encontradas,
+        'convite_enviado_em'       => (string) get_user_meta( $user_id, '_cp_convite_enviado_em', true ),
+    ] );
+}
+
+
+// ─── Convite para a Área de Cliente ────────────────────────────────────────
+// O email nativo "definir a senha" do WordPress, com o texto da Entre Números,
+// para os clientes criados pela Work. A equipa continua com o email nativo.
+// A Work pode pedir que se volte a enviar (POST /cp/v1/utilizadores/convite):
+// gera um link novo, válido 24 h como qualquer reposição de senha.
+
+// Texto do convite (pura). $empresas: nomes das empresas do utilizador.
+function cp_ac_calc_texto_convite( $nome, array $empresas, $email, $url_senha, $url_area ) {
+    $nome    = trim( (string) $nome );
+    $empresas = array_values( array_filter( array_map( 'trim', $empresas ) ) );
+    if ( 1 === count( $empresas ) ) {
+        $para = ' para ' . $empresas[0];
+    } elseif ( $empresas ) {
+        $ultima = array_pop( $empresas );
+        $para   = ' para ' . implode( ', ', $empresas ) . ' e ' . $ultima;
+    } else {
+        $para = '';
+    }
+
+    $corpo  = ( '' !== $nome ? "Olá {$nome},\n\n" : "Olá,\n\n" );
+    $corpo .= "Criámos o seu acesso à Área de Cliente da Entre Números{$para}. ";
+    $corpo .= "É lá que nos pode enviar documentos, falar connosco e acompanhar o que temos em curso.\n\n";
+    $corpo .= "Para começar, defina a sua senha neste link:\n{$url_senha}\n\n";
+    $corpo .= "O link é válido durante 24 horas. Se expirar, use \"Esqueceu-se da sua senha?\" na página de entrada ou peça-nos um novo convite.\n\n";
+    $corpo .= "Depois, entre sempre por {$url_area} com este email ({$email}) e a senha que escolher.\n\n";
+    $corpo .= "Entre Números";
+
+    return [ 'assunto' => 'Convite para a Área de Cliente — Entre Números', 'corpo' => $corpo ];
+}
+
+// Cliente criado pela Work (nunca equipa nem administrador).
+function cp_ac_e_cliente_work( $user ) {
+    if ( ! $user instanceof WP_User ) return false;
+    if ( '' === (string) get_user_meta( $user->ID, '_cp_work_id', true ) ) return false;
+    if ( in_array( 'equipa_en', (array) $user->roles, true ) || user_can( $user, 'manage_options' ) ) return false;
+    return true;
+}
+
+function cp_ac_email_convite( $email, $user, $blogname ) {
+    if ( ! cp_ac_e_cliente_work( $user ) ) return $email;
+    // Link novo (substitui o que o WordPress acabou de gerar e não chega a sair).
+    $chave = get_password_reset_key( $user );
+    if ( is_wp_error( $chave ) ) return $email;
+    $url_senha = network_site_url( 'wp-login.php?action=rp&key=' . $chave . '&login=' . rawurlencode( $user->user_login ), 'login' );
+    $empresas  = array_map( 'get_the_title', cp_ac_user_empresas( $user->ID ) );
+    $texto     = cp_ac_calc_texto_convite( $user->display_name, $empresas, $user->user_email, $url_senha, home_url( '/area-de-cliente/' ) );
+    update_user_meta( $user->ID, '_cp_convite_enviado_em', current_time( 'mysql' ) );
+    return [
+        'to'      => $user->user_email,
+        'subject' => $texto['assunto'],
+        'message' => $texto['corpo'],
+        'headers' => [ 'Content-Type: text/plain; charset=UTF-8' ],
+    ];
+}
+add_filter( 'wp_new_user_notification_email', 'cp_ac_email_convite', 10, 3 );
+
+function cp_ac_rest_routes_convite() {
+    register_rest_route( 'cp/v1', '/utilizadores/convite', [
+        'methods'             => 'POST',
+        'callback'            => 'cp_ac_rest_reenviar_convite',
+        'permission_callback' => 'cp_ac_rest_permissao_utilizadores',
+        'args'                => [
+            'work_id' => [ 'required' => true, 'type' => 'string' ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_convite' );
+
+function cp_ac_rest_reenviar_convite( $request ) {
+    $work_id = sanitize_text_field( $request->get_param( 'work_id' ) );
+    $users   = '' === $work_id ? [] : get_users( [ 'meta_key' => '_cp_work_id', 'meta_value' => $work_id, 'number' => 1 ] );
+    if ( empty( $users ) ) {
+        return new WP_Error( 'cp_utilizador_nao_encontrado', __( 'Nenhum utilizador do site com este work_id.', 'contabilidade-pro' ), [ 'status' => 404 ] );
+    }
+    $user = $users[0];
+    if ( ! cp_ac_e_cliente_work( $user ) ) {
+        return new WP_Error( 'cp_convite_so_clientes', __( 'O convite só se envia a clientes — a equipa entra com a senha que já tem.', 'contabilidade-pro' ), [ 'status' => 409 ] );
+    }
+
+    $falhou = false;
+    $apanhar = function () use ( &$falhou ) { $falhou = true; };
+    add_action( 'wp_mail_failed', $apanhar );
+    wp_new_user_notification( $user->ID, null, 'user' );
+    remove_action( 'wp_mail_failed', $apanhar );
+    if ( $falhou ) {
+        return new WP_Error( 'cp_email_falhou', __( 'O site não conseguiu enviar o email do convite.', 'contabilidade-pro' ), [ 'status' => 502 ] );
+    }
+
+    return rest_ensure_response( [
+        'ok'                 => true,
+        'convite_enviado_em' => (string) get_user_meta( $user->ID, '_cp_convite_enviado_em', true ),
     ] );
 }
 

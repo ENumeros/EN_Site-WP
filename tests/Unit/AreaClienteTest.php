@@ -5,6 +5,7 @@ namespace ContabilidadePro\Tests\Unit;
 use Brain\Monkey\Functions;
 
 /**
+ * @covers cp_ac_calc_texto_convite
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -146,5 +147,22 @@ final class AreaClienteTest extends TestCase {
 		Functions\expect( 'delete_user_meta' )->once()->with( 7, 'cp_ferramentas_por_empresa' )->andReturn( true );
 
 		cp_ac_rest_aplicar_acessos( 7, [ '5' => [ 'tarefas' ] ], [ '5' => 123 ], 'equipa' );
+	}
+
+	public function test_convite_nomeia_as_empresas_e_tem_o_link(): void {
+		$t = cp_ac_calc_texto_convite( 'Ana Silva', [ 'Alfa Lda', 'Beta SA', 'Gama' ], 'ana@x.pt', 'https://s/rp', 'https://s/area-de-cliente/' );
+		self::assertStringContainsString( 'Convite', $t['assunto'] );
+		self::assertStringStartsWith( 'Olá Ana Silva,', $t['corpo'] );
+		self::assertStringContainsString( 'para Alfa Lda, Beta SA e Gama.', $t['corpo'] );
+		self::assertStringContainsString( "https://s/rp
+", $t['corpo'] );
+		self::assertStringContainsString( 'ana@x.pt', $t['corpo'] );
+	}
+
+	public function test_convite_sem_nome_nem_empresas(): void {
+		$t = cp_ac_calc_texto_convite( '', [], 'a@x.pt', 'u', 'v' );
+		self::assertStringStartsWith( "Olá,
+", $t['corpo'] );
+		self::assertStringContainsString( 'Área de Cliente da Entre Números. ', $t['corpo'] );
 	}
 }

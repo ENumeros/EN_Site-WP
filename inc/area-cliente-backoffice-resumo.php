@@ -141,7 +141,7 @@ function cp_bo_resumo() {
 		'empresas'   => [], 'conversas' => [], 'lembretes_lista' => [], 'pedidos' => [],
 	];
 
-	$empresas = get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC' ] );
+	$empresas = cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'post_status' => 'publish', 'orderby' => 'title', 'order' => 'ASC' ] ) );
 	foreach ( $empresas as $empresa ) {
 		$id   = $empresa->ID;
 		$nome = $empresa->post_title;

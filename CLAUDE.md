@@ -285,7 +285,10 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   cliente não é avisado — o recibo aparece na conta corrente. Ecrã: os por
   tratar em lista à esquerda e o painel do escolhido à direita (como Mais ›
   Recibos na Work); o escolhido fica em `#rec-<id>`, que é também para onde o
-  servidor volta quando um pedido tem erros. Funções puras
+  servidor volta quando um pedido tem erros. Listas de empresas para a
+  equipa: rótulo `cp_ac_empresa_label()` = número de cliente da Work
+  (`_cp_codigo`, ex. "002") + nome, nunca o `_cp_work_id`; ordem por esse
+  número com `cp_ac_ordenar_empresas()`. Funções puras
   `cp_rec_calc_*` em `tests/Unit/RecebimentosTest.php`.
 
 ## Convenções gerais (nas três superfícies)

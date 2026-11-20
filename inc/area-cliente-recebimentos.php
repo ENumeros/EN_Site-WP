@@ -443,7 +443,7 @@ function cp_rec_render_vista() {
 	// Empresas e faturas em aberto de cada uma (da conta corrente sincronizada).
 	$empresas = [];
 	$abertas  = [];
-	foreach ( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) as $e ) {
+	foreach ( cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) ) as $e ) {
 		$wid = (string) get_post_meta( $e->ID, '_cp_work_id', true );
 		if ( '' === $wid ) continue;
 		$empresas[ $wid ] = cp_ac_empresa_label( $e->ID );

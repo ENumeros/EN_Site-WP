@@ -141,6 +141,14 @@ final class RecebimentosTest extends TestCase {
 		self::assertSame( 'Entre Números, Lda', cp_ac_empresa_label( 2 ), 'sem código: só o nome, nunca o 33' );
 	}
 
+	public function test_empresas_ordenadas_pelo_numero_de_cliente(): void {
+		$cod = [ 1 => '033', 2 => '', 3 => '005', 4 => 'A01', 5 => '100' ];
+		\Brain\Monkey\Functions\when( 'get_post_meta' )->alias( function ( $id ) use ( $cod ) { return $cod[ $id ]; } );
+		$e = function ( $id, $nome ) { return (object) [ 'ID' => $id, 'post_title' => $nome ]; };
+		$r = cp_ac_ordenar_empresas( [ $e( 1, 'Entre Números' ), $e( 2, 'Sem código' ), $e( 3, 'Zeta' ), $e( 4, 'Consultoria' ), $e( 5, 'Alfa' ) ] );
+		self::assertSame( [ 3, 1, 5, 4, 2 ], array_column( $r, 'ID' ) );
+	}
+
 	public function test_contagem(): void {
 		$n = cp_rec_calc_contagem( [ [ 'estado' => 'novo' ], [ 'estado' => 'erro' ], [ 'estado' => 'novo' ], [ 'estado' => 'emitido' ] ] );
 		self::assertSame( 2, $n['novo'] );

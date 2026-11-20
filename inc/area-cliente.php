@@ -123,6 +123,20 @@ function cp_ac_empresa_label( $empresa_id ) {
 	return '' !== $codigo ? $codigo . ' - ' . $nome : $nome;
 }
 
+// Ordena empresas (posts cp_empresa) pelo número de cliente da Work, como a
+// equipa as conhece (001, 002, …, A01, …; ordem natural). As que ainda não
+// receberam o número vão no fim, por nome.
+function cp_ac_ordenar_empresas( array $empresas ) {
+	usort( $empresas, function ( $a, $b ) {
+		$ca = (string) get_post_meta( $a->ID, '_cp_codigo', true );
+		$cb = (string) get_post_meta( $b->ID, '_cp_codigo', true );
+		if ( ( '' === $ca ) !== ( '' === $cb ) ) return '' === $ca ? 1 : -1;
+		$r = strnatcasecmp( $ca, $cb );
+		return 0 !== $r ? $r : strnatcasecmp( $a->post_title, $b->post_title );
+	} );
+	return $empresas;
+}
+
 // ─── Associação Utilizador ↔ Empresas ──────────────────────────────────────
 // Lista de IDs de "cp_empresa" guardada no usermeta 'cp_empresas'.
 
@@ -144,7 +158,7 @@ function cp_ac_set_user_empresas( $user_id, array $empresa_ids ) {
 // associar empresas. O nonce é o nativo do próprio formulário de perfil.
 function cp_ac_user_profile_empresas_field( $user ) {
 	if ( ! current_user_can( 'edit_users' ) ) return;
-	$empresas     = get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] );
+	$empresas     = cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) );
 	$selecionadas = cp_ac_user_empresas( $user->ID );
 	?>
 	<h2><?php esc_html_e( 'Área de Cliente — Empresas', 'contabilidade-pro' ); ?></h2>
@@ -290,7 +304,7 @@ function cp_ac_render_matriz_page() {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Matriz atualizada.', 'contabilidade-pro' ) . '</p></div>';
 	}
 
-	$empresas    = get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] );
+	$empresas    = cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) );
 	$ferramentas = cp_ac_ferramentas();
 	?>
 	<div class="wrap">

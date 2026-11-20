@@ -235,7 +235,10 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
 - **Resumo (página inicial, SITE-009)**: `inc/area-cliente-backoffice-resumo.php`.
   Só leitura do que já vive no WP — documentos por recolher, conversas cuja
   última mensagem é do cliente, respostas a pendentes por confirmar,
-  lembretes em aberto, pedidos sem resposta (documentos em falta e
+  lembretes em aberto, recibos por emitir (recebimentos novos/não emitidos
+  de `cp_recebimentos`, com valor, o mais antigo e quantos já estão pedidos
+  à Work — `cp_rec_calc_por_emitir()`; o card abre `?vista=recebimentos`),
+  pedidos sem resposta (documentos em falta e
   movimentos, só nas empresas com essa ferramenta ligada), contas no site e
   o feed. As tarefas internas ficam na Work e nunca entram aqui. Os
   cálculos são as funções `cp_bo_calc_*` (puras, testadas em
@@ -247,8 +250,8 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   janela de 30 min) e a opção `cp_work_ultima_recolha` (gravada em
   `GET /documentos/novos`). Os eventos ganharam `tipo` (último argumento de
   `cp_push_notificar_equipa()`); nos antigos é deduzido do título. Regras:
-  estados vazios com texto, nunca zeros; no telemóvel os quatro números
-  ficam em 2×2, visíveis sem scroll.
+  estados vazios com texto, nunca zeros; cinco cards numa linha no
+  computador e em 2 colunas no telemóvel, visíveis sem scroll.
 - **Equipa sem empresas vai direta ao Backoffice**: quem tem acesso ao
   Backoffice e não tem `cp_empresas` é levado para `/backoffice` ao
   iniciar sessão (`login_redirect`) e ao abrir `/area-de-cliente`

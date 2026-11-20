@@ -197,6 +197,27 @@ function cp_rec_calc_contagem( array $itens ) {
 	return $n;
 }
 
+// Card "Recibos por emitir" do Resumo: recebimentos que esperam pela equipa
+// (novo/erro), quanto valem, desde quando, e quantos já estão pedidos à Work.
+function cp_rec_calc_por_emitir( array $itens ) {
+	$r = [ 'total' => 0, 'erros' => 0, 'valor' => 0.0, 'desde' => '', 'pedidos' => 0 ];
+	foreach ( $itens as $i ) {
+		$estado = isset( $i['estado'] ) ? $i['estado'] : '';
+		if ( 'pedido' === $estado ) {
+			$r['pedidos']++;
+			continue;
+		}
+		if ( ! in_array( $estado, [ 'novo', 'erro' ], true ) ) continue;
+		$r['total']++;
+		if ( 'erro' === $estado ) $r['erros']++;
+		$r['valor'] += (float) ( isset( $i['valor'] ) ? $i['valor'] : 0 );
+		$data = isset( $i['data'] ) ? (string) $i['data'] : '';
+		if ( $data && ( ! $r['desde'] || $data < $r['desde'] ) ) $r['desde'] = $data;
+	}
+	$r['valor'] = cp_rec_calc_arred( $r['valor'] );
+	return $r;
+}
+
 // ─── Guardar ────────────────────────────────────────────────────────────────
 
 function cp_rec_itens() {

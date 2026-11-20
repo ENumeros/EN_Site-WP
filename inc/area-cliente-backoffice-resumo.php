@@ -213,6 +213,7 @@ function cp_bo_resumo() {
 		'inativas'     => count( array_filter( $clientes, function ( $c ) use ( $limite_inativo ) { return '' !== $c['acesso'] && $c['acesso'] < $limite_inativo; } ) ),
 	];
 	$r['work_recolha'] = (string) get_option( 'cp_work_ultima_recolha', '' );
+	$r['recibos']      = cp_rec_calc_por_emitir( cp_rec_itens() );
 
 	return $r;
 }
@@ -268,6 +269,19 @@ function cp_bo_render_resumo( $r = null ) {
 			[ __( 'Lembretes em aberto', 'contabilidade-pro' ), $r['lembretes'], '',
 				$r['lembretes'] ? __( 'entre todas as empresas', 'contabilidade-pro' ) : __( 'Nenhum lembrete em aberto', 'contabilidade-pro' ), '#cp-bo-lembretes' ],
 		];
+		$rec    = $r['recibos'];
+		$rec_sub = [];
+		if ( $rec['total'] ) {
+			$rec_sub[] = cp_rec_euros( $rec['valor'] );
+			if ( $rec['desde'] ) $rec_sub[] = sprintf( __( 'o mais antigo %s', 'contabilidade-pro' ), cp_bo_ha( $rec['desde'] ) );
+			if ( $rec['erros'] ) $rec_sub[] = cp_bo_plural( $rec['erros'], __( '%d não emitido', 'contabilidade-pro' ), __( '%d não emitidos', 'contabilidade-pro' ) );
+		} else {
+			$rec_sub[] = __( 'Nada por emitir', 'contabilidade-pro' );
+		}
+		if ( $rec['pedidos'] ) $rec_sub[] = cp_bo_plural( $rec['pedidos'], __( '%d pedido à Work', 'contabilidade-pro' ), __( '%d pedidos à Work', 'contabilidade-pro' ) );
+		$cartoes[] = [ __( 'Recibos por emitir', 'contabilidade-pro' ), $rec['total'],
+			$rec['erros'] ? 'var(--ac-badge-red-fg)' : ( $rec['total'] ? 'var(--ac-badge-amber-fg)' : '' ),
+			implode( ' · ', $rec_sub ), cp_rec_url() ];
 		foreach ( $cartoes as $c ) :
 			?>
 			<a class="ac-card ac-bo-kpi" href="<?php echo esc_attr( $c[4] ); ?>">

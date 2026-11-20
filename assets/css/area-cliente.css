@@ -433,6 +433,7 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-bo-chip:hover{border-color:var(--ac-blue);color:var(--ac-text)}
 .ac-bo-chip.is-on{background:var(--ac-navy);border-color:var(--ac-navy);color:var(--ac-on-navy)}
 .ac-nav-conta{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.14);color:var(--ac-on-navy);font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.ac-bo-kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
 .ac-bo-kpi{padding:20px 22px;color:inherit;display:block}
 .ac-bo-kpi-num{font-family:'Fraunces',serif;font-size:32px;margin-top:8px}
 @media (max-width:860px){

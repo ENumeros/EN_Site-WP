@@ -12,6 +12,7 @@ namespace ContabilidadePro\Tests\Unit;
  * @covers cp_rec_calc_validar
  * @covers cp_rec_calc_abertas
  * @covers cp_rec_calc_contagem
+ * @covers cp_rec_calc_por_emitir
  */
 final class RecebimentosTest extends TestCase {
 
@@ -154,5 +155,20 @@ final class RecebimentosTest extends TestCase {
 		self::assertSame( 2, $n['novo'] );
 		self::assertSame( 1, $n['erro'] );
 		self::assertSame( 1, $n['emitido'] );
+	}
+
+	public function test_recibos_por_emitir_contam_novos_e_erros(): void {
+		$r = cp_rec_calc_por_emitir( [
+			[ 'estado' => 'novo', 'valor' => 100.1, 'data' => '2026-11-10' ],
+			[ 'estado' => 'erro', 'valor' => 50.2, 'data' => '2026-11-05' ],
+			[ 'estado' => 'pedido', 'valor' => 999, 'data' => '2026-10-01' ],
+			[ 'estado' => 'emitido', 'valor' => 999, 'data' => '2026-10-01' ],
+			[ 'estado' => 'ignorado', 'valor' => 999, 'data' => '2026-10-01' ],
+		] );
+		self::assertSame( 2, $r['total'] );
+		self::assertSame( 1, $r['erros'] );
+		self::assertSame( 150.3, $r['valor'] );
+		self::assertSame( '2026-11-05', $r['desde'] );
+		self::assertSame( 1, $r['pedidos'] );
 	}
 }

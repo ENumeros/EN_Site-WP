@@ -282,7 +282,10 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   guarda o pedido: a Work lê `GET cp/v1/recebimentos/pedidos` em cada ronda
   (15 min), volta a confirmar tudo na CentralGest, emite e responde em
   `POST cp/v1/recebimentos/resultado` (emitido/erro; erro avisa a equipa). O
-  cliente não é avisado — o recibo aparece na conta corrente. Funções puras
+  cliente não é avisado — o recibo aparece na conta corrente. Ecrã: os por
+  tratar em lista à esquerda e o painel do escolhido à direita (como Mais ›
+  Recibos na Work); o escolhido fica em `#rec-<id>`, que é também para onde o
+  servidor volta quando um pedido tem erros. Funções puras
   `cp_rec_calc_*` em `tests/Unit/RecebimentosTest.php`.
 
 ## Convenções gerais (nas três superfícies)

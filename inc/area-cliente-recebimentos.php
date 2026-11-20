@@ -477,24 +477,48 @@ function cp_rec_render_vista() {
 		<?php cp_ac_vazio( __( 'Sem recebimentos', 'contabilidade-pro' ), __( 'A Work envia as entradas no banco uma vez por dia (ou pelo botão "Sincronizar com o Backoffice" em Mais › Recibos).', 'contabilidade-pro' ) ); ?>
 	<?php endif; ?>
 
-	<?php foreach ( $por_tratar as $item ) :
+	<?php if ( $por_tratar ) : ?>
+	<?php /* À esquerda a lista; ao escolher um recebimento, o painel à direita
+	   mostra o recibo a pedir (como em Mais › Recibos na Work e na Validação
+	   do IVA). Os painéis vêm todos daqui; o JS só mostra o escolhido. */ ?>
+	<div class="cp-rec-trabalho">
+		<div class="cp-rec-lista" aria-label="<?php esc_attr_e( 'Recebimentos por tratar', 'contabilidade-pro' ); ?>">
+			<?php foreach ( $por_tratar as $item ) :
+				$wid_l = $item['work_id']; ?>
+				<button type="button" class="cp-rec-item" data-rec="<?php echo esc_attr( $item['id'] ); ?>">
+					<span class="cp-rec-item-l1">
+						<?php if ( 'erro' === $item['estado'] ) : ?>
+							<span class="ac-badge ac-badge-red"><?php esc_html_e( 'Não emitido', 'contabilidade-pro' ); ?></span>
+						<?php elseif ( isset( $cores[ $item['sugestao'] ] ) ) : ?>
+							<span class="ac-badge <?php echo esc_attr( $cores[ $item['sugestao'] ] ); ?>"><?php echo esc_html( $rotulo[ $item['sugestao'] ] ); ?></span>
+						<?php endif; ?>
+						<span class="cp-rec-item-data"><?php echo esc_html( $item['data'] ? date_i18n( 'd/m/Y', strtotime( $item['data'] ) ) : '' ); ?></span>
+						<span class="cp-rec-item-valor"><?php echo esc_html( cp_rec_euros( $item['valor'] ) ); ?></span>
+					</span>
+					<span class="cp-rec-item-quem"><?php echo esc_html( $item['pagador'] ? $item['pagador'] : $item['descricao'] ); ?></span>
+					<span class="cp-rec-item-cliente"><?php echo esc_html( isset( $empresas[ $wid_l ] ) ? $empresas[ $wid_l ] : __( '— sem cliente —', 'contabilidade-pro' ) ); ?></span>
+				</button>
+			<?php endforeach; ?>
+		</div>
+		<div class="cp-rec-lado" aria-live="polite">
+		<?php foreach ( $por_tratar as $item ) :
 		$wid     = $item['work_id'];
 		$aloc    = [];
 		foreach ( $item['alocacao'] as $a ) $aloc[ $a['ext_poc_cab_id'] ] = $a['valor'];
 		$linhas  = $wid && isset( $abertas[ $wid ] ) ? cp_rec_calc_abertas( cp_ac_conta_corrente( cp_ac_empresa_by_work_id( $wid ) )['linhas'], $item, $wid ) : [];
 		$erros   = ( $erro_form && $erro_form['id'] === $item['id'] ) ? $erro_form['erros'] : [];
 		?>
-		<div class="ac-card cp-rec" id="rec-<?php echo esc_attr( $item['id'] ); ?>" data-valor="<?php echo esc_attr( $item['valor'] ); ?>" data-sugerido="<?php echo esc_attr( $wid ); ?>" data-aloc="<?php echo esc_attr( wp_json_encode( $aloc ) ); ?>" style="padding:20px;margin-top:16px">
-			<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+		<div class="ac-card cp-rec" id="rec-<?php echo esc_attr( $item['id'] ); ?>" data-rec="<?php echo esc_attr( $item['id'] ); ?>" data-valor="<?php echo esc_attr( $item['valor'] ); ?>" data-sugerido="<?php echo esc_attr( $wid ); ?>" data-aloc="<?php echo esc_attr( wp_json_encode( $aloc ) ); ?>" hidden>
+				<div class="cp-rec-etq"><?php echo esc_html( sprintf( __( 'Recibo a pedir · %1$s · conta %2$s', 'contabilidade-pro' ), $item['data'] ? date_i18n( 'd/m/Y', strtotime( $item['data'] ) ) : '', $item['conta'] ) ); ?></div>
+			<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:4px">
+				<span style="font-family:'Fraunces',serif;font-size:24px"><?php echo esc_html( cp_rec_euros( $item['valor'] ) ); ?></span>
 				<?php if ( 'erro' === $item['estado'] ) : ?>
 					<span class="ac-badge ac-badge-red"><?php esc_html_e( 'Não emitido', 'contabilidade-pro' ); ?></span>
 				<?php elseif ( isset( $cores[ $item['sugestao'] ] ) ) : ?>
 					<span class="ac-badge <?php echo esc_attr( $cores[ $item['sugestao'] ] ); ?>"><?php echo esc_html( $rotulo[ $item['sugestao'] ] ); ?></span>
 				<?php endif; ?>
-				<strong><?php echo esc_html( $item['data'] ? date_i18n( 'd/m/Y', strtotime( $item['data'] ) ) : '' ); ?></strong>
-				<span style="font-family:'Fraunces',serif;font-size:20px"><?php echo esc_html( cp_rec_euros( $item['valor'] ) ); ?></span>
-				<span class="ac-sec-sub" style="flex:1 1 240px;min-width:0;overflow-wrap:anywhere"><?php echo esc_html( $item['descricao'] ); ?></span>
 			</div>
+			<div class="ac-sec-sub" style="margin-top:4px;overflow-wrap:anywhere"><?php echo esc_html( $item['descricao'] ); ?></div>
 			<?php if ( 'erro' === $item['estado'] && ! empty( $item['resultado']['mensagem'] ) ) : ?>
 				<div class="ac-sec-sub" style="color:var(--ac-badge-red-fg);margin-top:8px"><?php echo esc_html( $item['resultado']['mensagem'] ); ?></div>
 			<?php endif; ?>
@@ -551,6 +575,9 @@ function cp_rec_render_vista() {
 			</form>
 		</div>
 	<?php endforeach; ?>
+		</div>
+	</div>
+	<?php endif; ?>
 
 	<?php if ( $pedidos ) : ?>
 		<h2 style="font-size:17px;margin-top:30px"><?php esc_html_e( 'À espera da Work', 'contabilidade-pro' ); ?></h2>
@@ -607,6 +634,27 @@ function cp_rec_render_vista() {
 		</div>
 	<?php endif; ?>
 
+	<style>
+		.cp-rec-trabalho{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start;margin-top:16px}
+		.cp-rec-lista{display:flex;flex-direction:column;gap:8px}
+		.cp-rec-item{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:12px 14px;font:inherit;color:var(--ac-text);cursor:pointer;background:var(--ac-surface);border:1px solid var(--ac-line);border-radius:12px}
+		.cp-rec-item:hover{background:var(--ac-row-hover)}
+		.cp-rec-item.sel{border-color:var(--ac-gold);box-shadow:0 0 0 1px var(--ac-gold)}
+		.cp-rec-item-l1{display:flex;gap:10px;align-items:center}
+		.cp-rec-item-data{font-size:13px;font-weight:600}
+		.cp-rec-item-valor{margin-left:auto;font-family:'Fraunces',serif;font-size:17px;white-space:nowrap}
+		.cp-rec-item-quem{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+		.cp-rec-item-cliente{font-size:12.5px;color:var(--ac-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+		.cp-rec-lado{position:sticky;top:16px}
+		.cp-rec-lado .cp-rec{padding:20px;max-height:calc(100vh - 32px);overflow:auto}
+		.cp-rec-lado .cp-rec[hidden]{display:none}
+		.cp-rec-etq{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ac-muted);font-weight:600}
+		.cp-rec .ac-table th,.cp-rec .ac-table td{padding:8px 8px;font-size:13px}
+		.cp-rec .ac-table{min-width:0}
+		.cp-rec .ac-table td{white-space:nowrap}
+		.cp-rec .cp-rec-aloc{width:84px !important}
+		@media (max-width:1000px){.cp-rec-trabalho{grid-template-columns:minmax(0,1fr)}.cp-rec-lado{position:static}.cp-rec-lado .cp-rec{max-height:none}}
+	</style>
 	<script type="application/json" id="cp-rec-abertas"><?php echo wp_json_encode( $json_abertas ); ?></script>
 	<script>
 	(function () {
@@ -653,6 +701,26 @@ function cp_rec_render_vista() {
 			});
 			recalcular(caixa);
 		});
+
+		// Lista à esquerda → painel à direita. O escolhido fica no endereço
+		// (#rec-<id>), que é também para onde o servidor volta quando um pedido
+		// tem erros; se já não existir, abre o primeiro.
+		var itens = Array.prototype.slice.call(document.querySelectorAll('.cp-rec-item'));
+		var paineis = document.querySelectorAll('.cp-rec');
+		function escolher(id, rolar) {
+			itens.forEach(function (b) { var s = b.dataset.rec === id; b.classList.toggle('sel', s); b.setAttribute('aria-pressed', s); });
+			paineis.forEach(function (p) { p.hidden = p.dataset.rec !== id; });
+			history.replaceState(null, '', location.pathname + location.search + '#rec-' + encodeURIComponent(id));
+			if (rolar && window.matchMedia('(max-width: 1000px)').matches) {
+				document.querySelector('.cp-rec-lado').scrollIntoView({behavior: 'smooth', block: 'start'});
+			}
+		}
+		itens.forEach(function (b) { b.addEventListener('click', function () { escolher(b.dataset.rec, true); }); });
+		if (itens.length) {
+			var pedido = decodeURIComponent((location.hash || '').replace(/^#rec-/, ''));
+			var existe = itens.some(function (b) { return b.dataset.rec === pedido; });
+			escolher(existe ? pedido : itens[0].dataset.rec, false);
+		}
 	})();
 	</script>
 	<?php

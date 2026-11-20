@@ -454,6 +454,18 @@ document.addEventListener( 'keydown', function ( e ) {
         window.location.href = '<?php echo $url_area_cliente; ?>';
     }
 } );
+// No telemóvel não há teclado: 5 toques seguidos no logótipo (em menos de
+// 3 segundos) fazem o mesmo que o atalho.
+( function () {
+    var img = document.querySelector( '.cp-ec img' ), toques = [];
+    if ( ! img ) return;
+    img.addEventListener( 'click', function () {
+        var agora = Date.now();
+        toques = toques.filter( function ( t ) { return agora - t < 3000; } );
+        toques.push( agora );
+        if ( toques.length >= 5 ) window.location.href = '<?php echo $url_area_cliente; ?>';
+    } );
+} )();
 </script>
 </body>
 </html>

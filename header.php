@@ -56,13 +56,17 @@
             <a href="#contacto" class="btn btn--primary site-nav__cta">
                 <?php esc_html_e( 'Marcar reunião', 'contabilidade-pro' ); ?>
             </a>
+            <?php /* No telemóvel os botões do cabeçalho escondem-se: o da Área de Cliente vive também no menu ☰. */ ?>
+            <a href="<?php echo esc_url( cp_opt( 'cp_client_area_url', home_url( '/area-de-cliente' ) ) ); ?>" class="btn btn--outline site-nav__cta cp-client-area-link"<?php echo is_user_logged_in() ? '' : ' hidden'; ?>>
+                <?php esc_html_e( 'Área de Cliente', 'contabilidade-pro' ); ?>
+            </a>
         </nav>
 
         <div class="site-header__actions">
             <a href="#contacto" class="btn btn--primary btn--sm">
                 <?php esc_html_e( 'Marcar reunião', 'contabilidade-pro' ); ?>
             </a>
-            <a href="<?php echo esc_url( cp_opt( 'cp_client_area_url', home_url( '/area-de-cliente' ) ) ); ?>" class="btn btn--outline btn--sm" id="cp-client-area-link" hidden>
+            <a href="<?php echo esc_url( cp_opt( 'cp_client_area_url', home_url( '/area-de-cliente' ) ) ); ?>" class="btn btn--outline btn--sm cp-client-area-link" id="cp-client-area-link"<?php echo is_user_logged_in() ? '' : ' hidden'; ?>>
                 <?php esc_html_e( 'Área de Cliente', 'contabilidade-pro' ); ?>
             </a>
             <button class="theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="<?php esc_attr_e( 'Alternar modo escuro', 'contabilidade-pro' ); ?>">
@@ -80,11 +84,13 @@
 <script>
 (function () {
     try {
-        var link = document.getElementById( 'cp-client-area-link' );
-        if ( ! link ) return;
+        // Quem tem sessão iniciada já vê o botão (PHP). Para os outros, o
+        // botão aparece com o atalho Ctrl+Alt+Shift+A e fica lembrado.
+        var links = document.querySelectorAll( '.cp-client-area-link' );
+        if ( ! links.length ) return;
         var CHAVE = 'cp-ac-revelado';
         function revelar() {
-            link.hidden = false;
+            links.forEach( function ( l ) { l.hidden = false; } );
             try { localStorage.setItem( CHAVE, '1' ); } catch ( e ) {}
         }
         if ( localStorage.getItem( CHAVE ) === '1' ) revelar();

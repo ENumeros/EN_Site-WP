@@ -6,6 +6,7 @@ use Brain\Monkey\Functions;
 
 /**
  * @covers cp_ac_calc_texto_convite
+ * @covers cp_ac_calc_destino_login
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -164,5 +165,18 @@ final class AreaClienteTest extends TestCase {
 		self::assertStringStartsWith( "Olá,
 ", $t['corpo'] );
 		self::assertStringContainsString( 'Área de Cliente da Entre Números. ', $t['corpo'] );
+	}
+
+	public function test_destino_login_cliente_vai_para_area_de_cliente(): void {
+		$area = 'https://s/area-de-cliente/';
+		self::assertSame( $area, cp_ac_calc_destino_login( true, '', 'https://s/wp-admin/', $area ) );
+		self::assertSame( $area, cp_ac_calc_destino_login( true, 'https://s/wp-admin/profile.php', 'https://s/wp-admin/profile.php', $area ) );
+		self::assertSame( $area, cp_ac_calc_destino_login( true, 'https://s/wp-login.php?checkemail=confirm', 'x', $area ) );
+	}
+
+	public function test_destino_login_respeita_pagina_pedida_e_equipa(): void {
+		$area = 'https://s/area-de-cliente/';
+		self::assertSame( 'https://s/area-de-cliente/?empresa=3', cp_ac_calc_destino_login( true, 'https://s/area-de-cliente/?empresa=3', 'https://s/area-de-cliente/?empresa=3', $area ) );
+		self::assertSame( 'https://s/wp-admin/', cp_ac_calc_destino_login( false, '', 'https://s/wp-admin/', $area ) );
 	}
 }

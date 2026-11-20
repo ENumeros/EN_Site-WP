@@ -548,6 +548,7 @@ img { max-width: 100%; display: block; }
 /* ─── Mobile ──────────────────────────────────────────────────────────── */
 
 .site-nav__cta { display: none; }
+.site-nav__cta[hidden] { display: none !important; }
 
 @media (max-width: 760px) {
   /* Cabeçalho compacto: logótipo + modo escuro + menu numa só linha. */

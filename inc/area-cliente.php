@@ -866,6 +866,51 @@ function cp_ac_email_convite( $email, $user, $blogname ) {
 }
 add_filter( 'wp_new_user_notification_email', 'cp_ac_email_convite', 10, 3 );
 
+// ─── Clientes nunca vão parar ao wp-admin ──────────────────────────────────
+// Depois de definir a senha (link do convite ou "Esqueceu-se da sua
+// senha?"), o cliente entra em wp-login.php e o WordPress mandava-o para o
+// wp-admin, que para um subscriber é o ecrã Perfil (paleta de cores, etc.).
+// Quem não é da equipa (sem cp_backoffice nem manage_options) vai sempre
+// para a Área de Cliente: ao entrar (login_redirect) e se abrir qualquer
+// página do wp-admin (admin_init). admin-post.php e admin-ajax.php ficam
+// livres — os formulários da Área de Cliente passam por lá.
+
+function cp_ac_area_cliente_url() {
+    $pagina = get_page_by_path( 'area-de-cliente' );
+    return $pagina ? get_permalink( $pagina ) : home_url( '/area-de-cliente/' );
+}
+
+function cp_ac_so_cliente( $user_id ) {
+    return $user_id && ! cp_backoffice_utilizador_tem_acesso( $user_id );
+}
+
+// Pura (testada): para onde vai um utilizador depois de entrar.
+// Um cliente vai para a Área de Cliente se não pediu nada ou se o pedido
+// era o wp-admin; um pedido para outra página do site é respeitado.
+function cp_ac_calc_destino_login( $e_cliente, $pedido, $redirect_to, $url_area ) {
+    if ( ! $e_cliente ) return $redirect_to;
+    $pedido = (string) $pedido;
+    if ( '' === $pedido || false !== strpos( $pedido, '/wp-admin' ) || false !== strpos( $pedido, 'wp-login.php' ) ) {
+        return $url_area;
+    }
+    return $redirect_to;
+}
+
+function cp_ac_login_redirect( $redirect_to, $requested_redirect_to, $user ) {
+    if ( ! ( $user instanceof WP_User ) ) return $redirect_to;
+    return cp_ac_calc_destino_login( cp_ac_so_cliente( $user->ID ), $requested_redirect_to, $redirect_to, cp_ac_area_cliente_url() );
+}
+add_filter( 'login_redirect', 'cp_ac_login_redirect', 30, 3 );
+
+function cp_ac_fechar_wp_admin_a_clientes() {
+    if ( wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) return;
+    if ( 'admin-post.php' === ( $GLOBALS['pagenow'] ?? '' ) ) return;
+    if ( ! cp_ac_so_cliente( get_current_user_id() ) ) return;
+    wp_safe_redirect( cp_ac_area_cliente_url() );
+    exit;
+}
+add_action( 'admin_init', 'cp_ac_fechar_wp_admin_a_clientes' );
+
 function cp_ac_rest_routes_convite() {
     register_rest_route( 'cp/v1', '/utilizadores/convite', [
         'methods'             => 'POST',

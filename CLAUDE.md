@@ -266,6 +266,14 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`template_redirect`) — `cp_backoffice_e_destino_do_utilizador()`. Um
   administrador que pediu o `wp-admin` continua a ir para lá; quem da
   equipa também é cliente (tem empresas) segue o fluxo normal.
+- **Clientes nunca vão parar ao `wp-admin`**: quem não é da equipa (sem
+  `cp_backoffice` nem `manage_options`) é levado para `/area-de-cliente`
+  ao iniciar sessão (`cp_ac_login_redirect`, `login_redirect` prioridade
+  30 — também depois de definir a senha pelo convite) e se abrir qualquer
+  página do `wp-admin` (`cp_ac_fechar_wp_admin_a_clientes`, `admin_init`).
+  `admin-post.php`, AJAX, cron e REST ficam livres. Decisão pura em
+  `cp_ac_calc_destino_login()` (testada): um pedido para outra página do
+  site é respeitado.
 - **Feed de eventos**: `cp_backoffice_registar_evento()`/
   `cp_backoffice_listar_eventos()` (`inc/area-cliente-backoffice.php`)
   guardam na opção `cp_eventos_staff` (array, mais recente primeiro,

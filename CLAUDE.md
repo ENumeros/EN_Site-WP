@@ -266,6 +266,11 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`template_redirect`) — `cp_backoffice_e_destino_do_utilizador()`. Um
   administrador que pediu o `wp-admin` continua a ir para lá; quem da
   equipa também é cliente (tem empresas) segue o fluxo normal.
+- **Conta desativada pela Work** (SITE-001): `POST /cp/v1/utilizadores`
+  aceita `ativo` (bool, opcional). `false` grava `_cp_inativo`, termina as
+  sessões e bloqueia o login (`wp_authenticate_user`) e a reposição de senha
+  (`allow_password_reset`); `true` apaga a marca. Nunca em administradores;
+  nada é apagado. Decisão pura em `cp_ac_calc_conta_bloqueada()` (testada).
 - **Email de pendentes pedido pela Work** (WORK-032/033): `POST
   /cp/v1/pendentes/email` {work_id, assunto, corpo, emails?} — o site envia
   o texto (já revisto na Work) com `wp_mail` e manda um push à empresa.

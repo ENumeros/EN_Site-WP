@@ -607,6 +607,10 @@ function cp_ac_rest_routes_utilizadores() {
                 // Omitido = comportamento antigo (cria como cliente e, numa
                 // atualização, não mexe no papel).
                 'tipo'     => [ 'required' => false, 'type' => 'string', 'enum' => [ 'cliente', 'equipa' ] ],
+                // Opcional (SITE-001): false desativa a conta (não entra, sessões
+                // abertas terminadas, sem apagar nada); true reativa. Omitido = não
+                // mexe. Nunca se aplica a administradores.
+                'ativo'    => [ 'required' => false, 'type' => 'boolean' ],
                 // Opcional: { "<work_id empresa>": null | ["chave", ...] }.
                 // Omitido = não mexe nos acessos do utilizador; enviado (mesmo
                 // {}) substitui o mapa inteiro. null ou empresa ausente = herda
@@ -736,6 +740,7 @@ function cp_ac_rest_criar_utilizador( $request ) {
             update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
         }
         cp_ac_rest_aplicar_acessos( $user_id, $request->get_param( 'acessos' ), $post_por_work, $tipo );
+        cp_ac_aplicar_ativo( $user_id, $request->get_param( 'ativo' ) );
         return rest_ensure_response( [
             'id'                       => $user_id,
             'criado'                   => false,
@@ -795,11 +800,15 @@ function cp_ac_rest_criar_utilizador( $request ) {
         update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
     }
     cp_ac_rest_aplicar_acessos( $user_id, $request->get_param( 'acessos' ), $post_por_work, $tipo );
+    cp_ac_aplicar_ativo( $user_id, $request->get_param( 'ativo' ) );
 
     // Dispara o fluxo nativo do WordPress para o cliente definir a própria
     // password (a password gerada acima nunca é enviada nem devolvida). Para
     // clientes, o texto é o convite da Entre Números (cp_ac_email_convite).
-    wp_new_user_notification( $user_id, null, 'user' );
+    // Uma conta criada já desativada não recebe convite.
+    if ( false !== $request->get_param( 'ativo' ) ) {
+        wp_new_user_notification( $user_id, null, 'user' );
+    }
 
     return rest_ensure_response( [
         'id'                       => $user_id,
@@ -809,6 +818,45 @@ function cp_ac_rest_criar_utilizador( $request ) {
     ] );
 }
 
+
+// ─── Conta desativada pela Work (SITE-001) ─────────────────────────────────
+// Desativar um utilizador na Work grava `_cp_inativo` aqui: deixa de conseguir
+// entrar (nem repor a senha) e as sessões abertas terminam. Nada é apagado —
+// reativar volta a dar o acesso tal como estava. Administradores nunca.
+
+// Pura (testada): esta conta está bloqueada?
+function cp_ac_calc_conta_bloqueada( $marca_inativo, $e_admin ) {
+    return ! $e_admin && ! empty( $marca_inativo );
+}
+
+function cp_ac_conta_bloqueada( $user_id ) {
+    return cp_ac_calc_conta_bloqueada( get_user_meta( $user_id, '_cp_inativo', true ), user_can( $user_id, 'manage_options' ) );
+}
+
+function cp_ac_aplicar_ativo( $user_id, $ativo ) {
+    if ( null === $ativo || user_can( $user_id, 'manage_options' ) ) return;
+    if ( $ativo ) {
+        delete_user_meta( $user_id, '_cp_inativo' );
+        return;
+    }
+    update_user_meta( $user_id, '_cp_inativo', current_time( 'mysql' ) );
+    if ( class_exists( 'WP_Session_Tokens' ) ) {
+        WP_Session_Tokens::get_instance( $user_id )->destroy_all();
+    }
+}
+
+function cp_ac_bloquear_login_inativo( $user, $password ) {
+    if ( $user instanceof WP_User && cp_ac_conta_bloqueada( $user->ID ) ) {
+        return new WP_Error( 'cp_conta_inativa', __( 'Esta conta está desativada. Se precisa de acesso, contacte a Entre Números.', 'contabilidade-pro' ) );
+    }
+    return $user;
+}
+add_filter( 'wp_authenticate_user', 'cp_ac_bloquear_login_inativo', 10, 2 );
+
+function cp_ac_sem_reposicao_inativo( $permitir, $user_id ) {
+    return cp_ac_conta_bloqueada( $user_id ) ? false : $permitir;
+}
+add_filter( 'allow_password_reset', 'cp_ac_sem_reposicao_inativo', 10, 2 );
 
 // ─── Convite para a Área de Cliente ────────────────────────────────────────
 // O email nativo "definir a senha" do WordPress, com o texto da Entre Números,

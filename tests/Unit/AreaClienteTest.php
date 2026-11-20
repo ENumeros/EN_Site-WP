@@ -8,6 +8,7 @@ use Brain\Monkey\Functions;
  * @covers cp_ac_calc_texto_convite
  * @covers cp_ac_calc_destino_login
  * @covers cp_ac_calc_filtrar_destinatarios
+ * @covers cp_ac_calc_conta_bloqueada
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -191,5 +192,11 @@ final class AreaClienteTest extends TestCase {
 		$r = cp_ac_calc_filtrar_destinatarios( [ 'Ana@X.pt', 'b@x.pt' ], [ 'ana@x.pt', 'intruso@y.pt', 'ANA@x.pt' ] );
 		self::assertSame( [ 'Ana@X.pt' ], $r['enviar'] );
 		self::assertSame( [ 'intruso@y.pt' ], $r['ignorados'] );
+	}
+
+	public function test_conta_bloqueada_so_com_marca_e_nunca_admin(): void {
+		self::assertTrue( cp_ac_calc_conta_bloqueada( '2026-11-20 10:00:00', false ) );
+		self::assertFalse( cp_ac_calc_conta_bloqueada( '', false ) );
+		self::assertFalse( cp_ac_calc_conta_bloqueada( '2026-11-20 10:00:00', true ) );
 	}
 }

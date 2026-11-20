@@ -114,10 +114,13 @@ add_action( 'init', 'cp_ac_registar_cpt_empresa' );
 // empresa certa (o code interno da app Work só interessa à equipa — o
 // cliente nunca vê isto, só o nome). Sem work_id (empresa ainda não
 // sincronizada), mostra só o nome.
+// Código do cliente na Work (o que a equipa conhece) + nome. O _cp_work_id é
+// só o id interno da Work e não se mostra; uma empresa sincronizada antes de
+// a Work enviar o código aparece só com o nome.
 function cp_ac_empresa_label( $empresa_id ) {
-	$work_id = get_post_meta( $empresa_id, '_cp_work_id', true );
-	$nome    = get_the_title( $empresa_id );
-	return $work_id ? $work_id . ' - ' . $nome : $nome;
+	$codigo = (string) get_post_meta( $empresa_id, '_cp_codigo', true );
+	$nome   = get_the_title( $empresa_id );
+	return '' !== $codigo ? $codigo . ' - ' . $nome : $nome;
 }
 
 // ─── Associação Utilizador ↔ Empresas ──────────────────────────────────────
@@ -418,6 +421,7 @@ function cp_ac_rest_listar_empresas( $request ) {
 function cp_ac_rest_sincronizar_empresa( $request ) {
     $work_id = sanitize_text_field( $request->get_param( 'work_id' ) );
     $nome    = sanitize_text_field( $request->get_param( 'nome' ) );
+    $codigo  = $request->get_param( 'codigo' );
     $ferramentas_param = $request->get_param( 'ferramentas' );
 
     if ( '' === $work_id || '' === $nome ) {
@@ -455,6 +459,11 @@ function cp_ac_rest_sincronizar_empresa( $request ) {
         }
         update_post_meta( $post_id, '_cp_work_id', $work_id );
         $criado = true;
+    }
+
+    // Sem 'codigo' no pedido (versões antigas da Work) não se mexe no que há.
+    if ( null !== $codigo ) {
+        update_post_meta( $post_id, '_cp_codigo', sanitize_text_field( (string) $codigo ) );
     }
 
     if ( is_array( $ferramentas_param ) ) {

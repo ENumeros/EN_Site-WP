@@ -132,6 +132,15 @@ final class RecebimentosTest extends TestCase {
 		self::assertSame( [ '{N}' ], array_column( cp_rec_calc_abertas( $linhas, $item, '8' ), 'ext_poc_cab_id' ) );
 	}
 
+	public function test_rotulo_da_empresa_usa_o_codigo_do_cliente_e_nunca_o_work_id(): void {
+		\Brain\Monkey\Functions\when( 'get_the_title' )->justReturn( 'Entre Números, Lda' );
+		\Brain\Monkey\Functions\when( 'get_post_meta' )->alias( function ( $id, $chave ) {
+			return [ '_cp_work_id' => '33', '_cp_codigo' => 1 === $id ? 'EN001' : '' ][ $chave ];
+		} );
+		self::assertSame( 'EN001 - Entre Números, Lda', cp_ac_empresa_label( 1 ) );
+		self::assertSame( 'Entre Números, Lda', cp_ac_empresa_label( 2 ), 'sem código: só o nome, nunca o 33' );
+	}
+
 	public function test_contagem(): void {
 		$n = cp_rec_calc_contagem( [ [ 'estado' => 'novo' ], [ 'estado' => 'erro' ], [ 'estado' => 'novo' ], [ 'estado' => 'emitido' ] ] );
 		self::assertSame( 2, $n['novo'] );

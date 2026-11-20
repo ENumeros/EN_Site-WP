@@ -140,11 +140,12 @@ function cp_ac_pagamentos_gravar( $empresa_id, $dados ) {
 	update_post_meta( $empresa_id, '_cp_pagamentos', $dados );
 }
 
-/** Clientes (não equipa) com acesso à empresa e email. */
+/** Clientes (não equipa) com acesso à empresa, a "Pagamentos ao Estado" nela, e email. */
 function cp_ac_pag_destinatarios( $empresa_id ) {
 	$destinatarios = [];
 	foreach ( get_users( [ 'meta_key' => 'cp_empresas', 'meta_compare' => 'EXISTS' ] ) as $u ) {
 		if ( ! in_array( (int) $empresa_id, cp_ac_user_empresas( $u->ID ), true ) ) continue;
+		if ( ! cp_ac_utilizador_tem_ferramenta( $u->ID, (int) $empresa_id, 'pagamentos' ) ) continue;
 		if ( cp_backoffice_utilizador_tem_acesso( $u->ID ) ) continue;
 		if ( ! is_email( $u->user_email ) ) continue;
 		$destinatarios[] = $u;
@@ -315,7 +316,8 @@ function cp_ac_rest_pagamentos_notificar( $request ) {
 			count( $por_pagar ),
 			cp_ac_pag_nome_mes( $mes )
 		),
-		$url
+		$url,
+		'pagamentos'
 	);
 
 	$dados['meses'][ $chave ]['notificado_em'] = current_time( 'mysql' );
@@ -378,7 +380,7 @@ function cp_ac_handle_pagamento_indicar() {
 	$pago       = ! empty( $_POST['pago'] );
 	$voltar     = wp_get_referer() ? wp_get_referer() : add_query_arg( 'vista', 'pagamentos', home_url( '/area-de-cliente/' ) );
 
-	$guia = ( $empresa_id && cp_ac_empresa_tem_ferramenta( $empresa_id, 'pagamentos' ) && preg_match( '/^\d{4}-\d{2}$/', $chave ) )
+	$guia = ( $empresa_id && cp_ac_utilizador_tem_ferramenta( $user_id, $empresa_id, 'pagamentos' ) && preg_match( '/^\d{4}-\d{2}$/', $chave ) )
 		? cp_ac_pag_indicar_pago( $empresa_id, $chave, $guia_id, $pago, $user_id )
 		: null;
 	if ( ! $guia ) {

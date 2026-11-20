@@ -295,6 +295,9 @@ function cp_ac_mensagens_rest_resolver_empresa( $request, $user_id ) {
 	if ( ! $empresa_id || 'cp_empresa' !== get_post_type( $empresa_id ) ) {
 		return new WP_Error( 'cp_empresa_invalida', __( 'Empresa inválida.', 'contabilidade-pro' ), [ 'status' => 400 ] );
 	}
+	if ( ! cp_ac_pode_usar_ferramenta( $empresa_id, 'mensagens', $user_id ) ) {
+		return new WP_Error( 'cp_sem_acesso', __( 'Não tem acesso a esta ferramenta.', 'contabilidade-pro' ), [ 'status' => 403 ] );
+	}
 	return $empresa_id;
 }
 
@@ -446,7 +449,8 @@ function cp_ac_mensagens_notificar( $empresa_id, $assunto, $texto, $equipa ) {
 			$empresa_id,
 			sprintf( /* translators: %s: assunto da conversa */ __( 'Nova mensagem — %s', 'contabilidade-pro' ), $assunto ),
 			$texto,
-			home_url( '/area-de-cliente/' )
+			home_url( '/area-de-cliente/' ),
+			'mensagens'
 		);
 	} else {
 		cp_push_notificar_equipa(

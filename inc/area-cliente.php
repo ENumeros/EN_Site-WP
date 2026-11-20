@@ -180,6 +180,29 @@ function cp_ac_user_profile_empresas_field( $user ) {
 				<p class="description"><?php esc_html_e( 'A que empresa(s) este utilizador tem acesso na Área de Cliente.', 'contabilidade-pro' ); ?></p>
 			</td>
 		</tr>
+		<?php if ( $selecionadas ) :
+			$acessos  = cp_ac_user_acessos( $user->ID );
+			$nomes    = wp_list_pluck( cp_ac_ferramentas(), 'label' ); ?>
+		<tr>
+			<th><?php esc_html_e( 'Ferramentas por empresa', 'contabilidade-pro' ); ?></th>
+			<td>
+				<?php foreach ( $selecionadas as $empresa_id ) :
+					$ativas = cp_ac_utilizador_ferramentas_ativas( $user->ID, $empresa_id ); ?>
+					<p style="margin:0 0 6px">
+						<strong><?php echo esc_html( cp_ac_empresa_label( $empresa_id ) ); ?>:</strong>
+						<?php if ( ! array_key_exists( $empresa_id, $acessos ) ) :
+							esc_html_e( 'tudo o que a empresa tem', 'contabilidade-pro' );
+						elseif ( ! $ativas ) :
+							esc_html_e( 'só o Dashboard', 'contabilidade-pro' );
+						else :
+							echo esc_html( implode( ', ', array_map( function ( $k ) use ( $nomes ) { return $nomes[ $k ]; }, $ativas ) ) );
+						endif; ?>
+					</p>
+				<?php endforeach; ?>
+				<p class="description"><?php esc_html_e( 'Definido na Work, na ficha do cliente (Acessos à Área de Cliente).', 'contabilidade-pro' ); ?></p>
+			</td>
+		</tr>
+		<?php endif; ?>
 	</table>
 	<?php
 }
@@ -213,6 +236,51 @@ function cp_ac_set_empresa_ferramentas( $empresa_id, array $chaves ) {
 	$validas = array_keys( cp_ac_ferramentas() );
 	$chaves  = array_values( array_intersect( $chaves, $validas ) );
 	update_post_meta( $empresa_id, '_cp_ferramentas_ativas', $chaves );
+}
+
+// ─── Acessos por utilizador (dentro de cada empresa) ───────────────────────
+// A matriz da empresa é o teto; cada utilizador pode ficar restrito a parte
+// dela, empresa a empresa. Usermeta 'cp_ferramentas_por_empresa' =
+// [ empresa_post_id => [chaves] ]. Empresa ausente do mapa = o utilizador
+// herda tudo o que a empresa tem (é o caso de quase todos, e da equipa).
+// Uma empresa presente com uma lista é "restrita": ferramenta nova ligada na
+// empresa não aparece a este utilizador até a Work a acrescentar. Quem manda
+// é a Work (campo "acessos" em POST /cp/v1/utilizadores).
+
+function cp_ac_user_acessos( $user_id ) {
+	$mapa = get_user_meta( $user_id, 'cp_ferramentas_por_empresa', true );
+	if ( ! is_array( $mapa ) ) return [];
+	$limpo = [];
+	foreach ( $mapa as $empresa_id => $chaves ) {
+		if ( is_array( $chaves ) ) $limpo[ (int) $empresa_id ] = array_values( array_map( 'strval', $chaves ) );
+	}
+	return $limpo;
+}
+
+function cp_ac_set_user_acessos( $user_id, array $mapa ) {
+	$validas = array_keys( cp_ac_ferramentas() );
+	$limpo   = [];
+	foreach ( $mapa as $empresa_id => $chaves ) {
+		if ( ! (int) $empresa_id || ! is_array( $chaves ) ) continue;
+		$limpo[ (int) $empresa_id ] = array_values( array_intersect( array_map( 'strval', $chaves ), $validas ) );
+	}
+	if ( $limpo ) {
+		update_user_meta( $user_id, 'cp_ferramentas_por_empresa', $limpo );
+	} else {
+		delete_user_meta( $user_id, 'cp_ferramentas_por_empresa' );
+	}
+}
+
+// Ferramentas que este utilizador vê nesta empresa: empresa ∩ utilizador.
+function cp_ac_utilizador_ferramentas_ativas( $user_id, $empresa_id ) {
+	$da_empresa = cp_ac_empresa_ferramentas_ativas( $empresa_id );
+	$acessos    = cp_ac_user_acessos( $user_id );
+	if ( ! array_key_exists( (int) $empresa_id, $acessos ) ) return $da_empresa;
+	return array_values( array_intersect( $da_empresa, $acessos[ (int) $empresa_id ] ) );
+}
+
+function cp_ac_utilizador_tem_ferramenta( $user_id, $empresa_id, $chave ) {
+	return in_array( $chave, cp_ac_utilizador_ferramentas_ativas( $user_id, $empresa_id ), true );
 }
 
 // ─── Empresa ativa na sessão ────────────────────────────────────────────────
@@ -260,11 +328,28 @@ function cp_ac_handle_pedidos_url() {
 add_action( 'template_redirect', 'cp_ac_handle_pedidos_url' );
 
 // ─── Gate principal: o utilizador atual tem a ferramenta X na empresa ativa? ──
+// Empresa ∩ acessos do próprio utilizador (ver cp_ac_utilizador_ferramentas_ativas).
 
 function cp_ac_tem_ferramenta( $chave ) {
 	$empresa = cp_ac_empresa_ativa();
 	if ( ! $empresa ) return false;
-	return cp_ac_empresa_tem_ferramenta( $empresa, $chave );
+	return cp_ac_utilizador_tem_ferramenta( get_current_user_id(), $empresa, $chave );
+}
+
+// ─── Gate dos formulários do cliente (admin-post / REST) ───────────────────
+// Esconder o ecrã não chega: um pedido feito à mão chegava ao handler. Cada
+// ação do cliente confirma que ele tem a ferramenta nesta empresa. A equipa
+// (Backoffice) não passa por aqui — trabalha em qualquer empresa.
+
+function cp_ac_pode_usar_ferramenta( $empresa_id, $chave, $user_id = 0 ) {
+	$user_id = $user_id ?: get_current_user_id();
+	if ( function_exists( 'cp_backoffice_utilizador_tem_acesso' ) && cp_backoffice_utilizador_tem_acesso( $user_id ) ) return true;
+	return $empresa_id && cp_ac_utilizador_tem_ferramenta( $user_id, (int) $empresa_id, $chave );
+}
+
+function cp_ac_exigir_ferramenta( $empresa_id, $chave ) {
+	if ( cp_ac_pode_usar_ferramenta( $empresa_id, $chave ) ) return;
+	wp_die( esc_html__( 'Não tem acesso a esta ferramenta.', 'contabilidade-pro' ), '', [ 'response' => 403 ] );
 }
 
 // ─── Administração: matriz de ferramentas por empresa ─────────────────────
@@ -522,11 +607,35 @@ function cp_ac_rest_routes_utilizadores() {
                 // Omitido = comportamento antigo (cria como cliente e, numa
                 // atualização, não mexe no papel).
                 'tipo'     => [ 'required' => false, 'type' => 'string', 'enum' => [ 'cliente', 'equipa' ] ],
+                // Opcional: { "<work_id empresa>": null | ["chave", ...] }.
+                // Omitido = não mexe nos acessos do utilizador; enviado (mesmo
+                // {}) substitui o mapa inteiro. null ou empresa ausente = herda
+                // tudo o que a empresa tem; lista = só essas (∩ empresa). Ver
+                // cp_ac_utilizador_ferramentas_ativas().
+                'acessos'  => [ 'required' => false ],
             ],
         ],
     ] );
 }
 add_action( 'rest_api_init', 'cp_ac_rest_routes_utilizadores' );
+
+// Campo "acessos" do POST /cp/v1/utilizadores (ver o comentário nos args).
+// Só aceita empresas que vieram em "empresas" neste mesmo pedido — um acesso
+// a uma empresa que o utilizador não tem não faz sentido e é ignorado.
+function cp_ac_rest_aplicar_acessos( $user_id, $acessos, array $post_por_work, $tipo ) {
+    if ( 'equipa' === $tipo ) {
+        delete_user_meta( $user_id, 'cp_ferramentas_por_empresa' );
+        return;
+    }
+    if ( ! is_array( $acessos ) ) return; // omitido: não mexe
+    $mapa = [];
+    foreach ( $acessos as $empresa_work_id => $chaves ) {
+        $empresa_work_id = (string) $empresa_work_id;
+        if ( ! isset( $post_por_work[ $empresa_work_id ] ) || ! is_array( $chaves ) ) continue;
+        $mapa[ $post_por_work[ $empresa_work_id ] ] = array_map( 'sanitize_key', $chaves );
+    }
+    cp_ac_set_user_acessos( $user_id, $mapa );
+}
 
 function cp_ac_rest_permissao_utilizadores() {
     return current_user_can( 'create_users' );
@@ -546,6 +655,7 @@ function cp_ac_rest_listar_utilizadores( $request ) {
             'work_id'  => get_user_meta( $utilizador->ID, '_cp_work_id', true ),
             'tipo'     => in_array( 'equipa_en', (array) $utilizador->roles, true ) ? 'equipa' : 'cliente',
             'empresas' => get_user_meta( $utilizador->ID, 'cp_empresas', true ),
+            'acessos'  => cp_ac_user_acessos( $utilizador->ID ),
         ];
     }
     return rest_ensure_response( $resultado );
@@ -578,6 +688,7 @@ function cp_ac_rest_criar_utilizador( $request ) {
     // de a sincronizar primeiro.
     $empresas_ids    = [];
     $nao_encontradas = [];
+    $post_por_work   = [];
     foreach ( $empresas_work as $empresa_work_id ) {
         $posts = get_posts( [
             'post_type'   => 'cp_empresa',
@@ -587,7 +698,8 @@ function cp_ac_rest_criar_utilizador( $request ) {
             'post_status' => 'any',
         ] );
         if ( ! empty( $posts ) ) {
-            $empresas_ids[] = $posts[0]->ID;
+            $empresas_ids[]                            = $posts[0]->ID;
+            $post_por_work[ (string) $empresa_work_id ] = (int) $posts[0]->ID;
         } else {
             $nao_encontradas[] = $empresa_work_id;
         }
@@ -622,6 +734,7 @@ function cp_ac_rest_criar_utilizador( $request ) {
         } elseif ( ! empty( $empresas_ids ) ) {
             update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
         }
+        cp_ac_rest_aplicar_acessos( $user_id, $request->get_param( 'acessos' ), $post_por_work, $tipo );
         return rest_ensure_response( [
             'id'                       => $user_id,
             'criado'                   => false,
@@ -643,6 +756,7 @@ function cp_ac_rest_criar_utilizador( $request ) {
             ( new WP_User( $user_id_existente ) )->set_role( 'equipa_en' );
         }
         delete_user_meta( $user_id_existente, 'cp_empresas' );
+        delete_user_meta( $user_id_existente, 'cp_ferramentas_por_empresa' );
         return rest_ensure_response( [
             'id'                       => $user_id_existente,
             'criado'                   => false,
@@ -679,6 +793,7 @@ function cp_ac_rest_criar_utilizador( $request ) {
     if ( ! empty( $empresas_ids ) ) {
         update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresas_ids ) );
     }
+    cp_ac_rest_aplicar_acessos( $user_id, $request->get_param( 'acessos' ), $post_por_work, $tipo );
 
     // Dispara o fluxo nativo do WordPress para o cliente definir a própria
     // password (a password gerada acima nunca é enviada nem devolvida).
@@ -915,7 +1030,8 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
             $empresa_id,
             __( 'Novos documentos em falta', 'contabilidade-pro' ),
             __( 'Tem documentos novos à espera de resposta.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'documentos_em_falta', home_url( '/area-de-cliente/' ) )
+            add_query_arg( 'vista', 'documentos_em_falta', home_url( '/area-de-cliente/' ) ),
+            'documentos_em_falta'
         );
     }
     if ( $ha_movimento_novo && cp_ac_empresa_tem_ferramenta( $empresa_id, 'movimentos_a_esclarecer' ) ) {
@@ -923,7 +1039,8 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
             $empresa_id,
             __( 'Novos movimentos a esclarecer', 'contabilidade-pro' ),
             __( 'Tem movimentos bancários novos à espera de resposta.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'movimentos_a_esclarecer', home_url( '/area-de-cliente/' ) )
+            add_query_arg( 'vista', 'movimentos_a_esclarecer', home_url( '/area-de-cliente/' ) ),
+            'movimentos_a_esclarecer'
         );
     }
 
@@ -971,6 +1088,12 @@ function cp_ac_handle_pendente_resposta() {
     $item_id    = isset( $_POST['item_id'] ) ? sanitize_text_field( wp_unslash( $_POST['item_id'] ) ) : '';
     $tipo_in    = isset( $_POST['tipo'] ) ? sanitize_key( wp_unslash( $_POST['tipo'] ) ) : '';
     $tipo       = in_array( $tipo_in, [ 'documento', 'extrato', 'saft' ], true ) ? $tipo_in : 'movimento';
+    cp_ac_exigir_ferramenta( $empresa_id, [
+        'documento' => 'documentos_em_falta',
+        'movimento' => 'movimentos_a_esclarecer',
+        'extrato'   => 'extratos',
+        'saft'      => 'saft',
+    ][ $tipo ] );
     $texto      = isset( $_POST['texto'] ) ? sanitize_textarea_field( wp_unslash( $_POST['texto'] ) ) : '';
     // "Sem dados este mês" só faz sentido em Extratos e SAF-T — um mês sem
     // movimento bancário ou sem SAF-T é uma situação real, não um
@@ -1157,7 +1280,8 @@ function cp_ac_rest_sincronizar_extratos( $request ) {
             $empresa_id,
             __( 'Novos extratos pedidos', 'contabilidade-pro' ),
             __( 'Há extratos bancários novos à espera de si.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'extratos', home_url( '/area-de-cliente/' ) )
+            add_query_arg( 'vista', 'extratos', home_url( '/area-de-cliente/' ) ),
+            'extratos'
         );
     }
 
@@ -1183,7 +1307,8 @@ function cp_ac_rest_sincronizar_saft( $request ) {
             $empresa_id,
             __( 'Novo SAF-T pedido', 'contabilidade-pro' ),
             __( 'Há um SAF-T novo à espera de si.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'saft', home_url( '/area-de-cliente/' ) )
+            add_query_arg( 'vista', 'saft', home_url( '/area-de-cliente/' ) ),
+            'saft'
         );
     }
 
@@ -1492,7 +1617,8 @@ function cp_ac_rest_sincronizar_mapa_gestao( $request ) {
             $empresa_id,
             __( 'Novo mapa de gestão', 'contabilidade-pro' ),
             $titulo,
-            add_query_arg( 'vista', 'mapas_gestao', home_url( '/area-de-cliente/' ) )
+            add_query_arg( 'vista', 'mapas_gestao', home_url( '/area-de-cliente/' ) ),
+            'mapas_gestao'
         );
     }
 

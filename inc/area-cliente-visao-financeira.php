@@ -82,7 +82,8 @@ function cp_ac_rest_sincronizar_visao_financeira( $request ) {
 			$empresa_id,
 			__( 'Novas contas disponíveis', 'contabilidade-pro' ),
 			sprintf( /* translators: %s: mês no formato AAAA-MM */ __( 'Contas de %s disponíveis', 'contabilidade-pro' ), $ultimo_novo ),
-			add_query_arg( 'vista', 'visao_financeira', home_url( '/area-de-cliente/' ) )
+			add_query_arg( 'vista', 'visao_financeira', home_url( '/area-de-cliente/' ) ),
+			'visao_financeira'
 		);
 	}
 

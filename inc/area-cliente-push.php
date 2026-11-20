@@ -297,7 +297,10 @@ function cp_push_rest_cancelar( $request ) {
 
 // ─── Notificar todos os utilizadores de uma empresa ────────────────────────
 
-function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '' ) {
+// $ferramenta: chave de cp_ac_ferramentas() a que a notificação diz respeito.
+// Só a recebe quem tem essa ferramenta nesta empresa (empresa ∩ acessos do
+// utilizador, ver cp_ac_utilizador_tem_ferramenta). Vazio = todos.
+function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '', $ferramenta = '' ) {
 	$empresa_id = (int) $empresa_id;
 	if ( ! $empresa_id ) return;
 
@@ -317,6 +320,9 @@ function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '' ) {
 	$utilizadores = get_users( [ 'meta_key' => 'cp_empresas', 'meta_compare' => 'EXISTS' ] );
 	foreach ( $utilizadores as $utilizador ) {
 		if ( ! in_array( $empresa_id, cp_ac_user_empresas( $utilizador->ID ), true ) ) {
+			continue;
+		}
+		if ( '' !== $ferramenta && ! cp_ac_utilizador_tem_ferramenta( $utilizador->ID, $empresa_id, $ferramenta ) ) {
 			continue;
 		}
 		foreach ( cp_push_subscricoes_utilizador( $utilizador->ID ) as $subscricao ) {

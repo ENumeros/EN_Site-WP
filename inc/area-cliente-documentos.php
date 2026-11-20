@@ -161,6 +161,7 @@ function cp_ac_handle_documento_upload() {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_sem_empresa', $voltar ) );
 		exit;
 	}
+	cp_ac_exigir_ferramenta( $empresa_id, 'documentos' );
 	$ficheiros = cp_ac_documento_ficheiros_do_pedido( $_FILES );
 	if ( ! $ficheiros ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_em_falta', $voltar ) );
@@ -287,6 +288,7 @@ function cp_ac_handle_documento_apagar() {
 	$anexo_id   = isset( $_POST['anexo_id'] ) ? absint( $_POST['anexo_id'] ) : 0;
 	$voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
 	$anexo      = $anexo_id ? get_post( $anexo_id ) : null;
+	cp_ac_exigir_ferramenta( $empresa_id, 'documentos' );
 
 	if ( ! $anexo || (int) $anexo->post_parent !== (int) $empresa_id || '1' !== get_post_meta( $anexo_id, '_cp_doc_cliente', true ) ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_invalido', $voltar ) );

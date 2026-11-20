@@ -94,6 +94,7 @@ function cp_ac_handle_tarefa_criar() {
 	$user_id    = get_current_user_id();
 	$equipa     = cp_backoffice_utilizador_tem_acesso( $user_id );
 	$empresa_id = cp_ac_tarefa_resolver_empresa( isset( $_POST['empresa_id'] ) ? absint( $_POST['empresa_id'] ) : 0, $user_id );
+	if ( $empresa_id ) cp_ac_exigir_ferramenta( $empresa_id, 'tarefas' );
 	$titulo     = isset( $_POST['titulo'] ) ? sanitize_text_field( wp_unslash( $_POST['titulo'] ) ) : '';
 	$voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
 
@@ -109,7 +110,8 @@ function cp_ac_handle_tarefa_criar() {
 			$empresa_id,
 			__( 'Novo lembrete', 'contabilidade-pro' ),
 			$titulo,
-			home_url( '/area-de-cliente/' )
+			home_url( '/area-de-cliente/' ),
+			'tarefas'
 		);
 	} else {
 		cp_push_notificar_equipa(
@@ -141,6 +143,7 @@ function cp_ac_handle_tarefa_concluir() {
 
 	$user_id    = get_current_user_id();
 	$empresa_id = cp_ac_tarefa_resolver_empresa( isset( $_POST['empresa_id'] ) ? absint( $_POST['empresa_id'] ) : 0, $user_id );
+	if ( $empresa_id ) cp_ac_exigir_ferramenta( $empresa_id, 'tarefas' );
 	$tarefa_id  = isset( $_POST['tarefa_id'] ) ? sanitize_text_field( wp_unslash( $_POST['tarefa_id'] ) ) : '';
 	$concluido  = ! empty( $_POST['concluido'] );
 	$voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
@@ -160,7 +163,7 @@ function cp_ac_handle_tarefa_concluir() {
 			}
 		}
 		if ( cp_backoffice_utilizador_tem_acesso( $user_id ) ) {
-			cp_push_notificar_empresa( $empresa_id, __( 'Lembrete concluído', 'contabilidade-pro' ), $titulo, home_url( '/area-de-cliente/' ) );
+			cp_push_notificar_empresa( $empresa_id, __( 'Lembrete concluído', 'contabilidade-pro' ), $titulo, home_url( '/area-de-cliente/' ), 'tarefas' );
 		} else {
 			cp_push_notificar_equipa(
 				__( 'Lembrete concluído pelo cliente', 'contabilidade-pro' ),
@@ -192,6 +195,7 @@ function cp_ac_handle_tarefa_apagar() {
 
 	$user_id    = get_current_user_id();
 	$empresa_id = cp_ac_tarefa_resolver_empresa( isset( $_POST['empresa_id'] ) ? absint( $_POST['empresa_id'] ) : 0, $user_id );
+	if ( $empresa_id ) cp_ac_exigir_ferramenta( $empresa_id, 'tarefas' );
 	$tarefa_id  = isset( $_POST['tarefa_id'] ) ? sanitize_text_field( wp_unslash( $_POST['tarefa_id'] ) ) : '';
 	$voltar     = wp_get_referer() ? wp_get_referer() : home_url( '/' );
 

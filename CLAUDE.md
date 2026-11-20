@@ -67,7 +67,18 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   1. entrada em `cp_ac_ferramentas()` (label, grupo, ícone);
   2. `cp_ac_vista_<chave>()` em `area-cliente-vistas.php`;
   3. gate com `cp_ac_tem_ferramenta( 'chave' )` antes de mostrar dados —
-     nunca assumir que está ativa.
+     nunca assumir que está ativa;
+  4. nas ações do cliente (admin-post/REST), `cp_ac_exigir_ferramenta()` ou
+     `cp_ac_pode_usar_ferramenta()`, e a chave como 5.º argumento de
+     `cp_push_notificar_empresa()`.
+- **Acessos por utilizador** (usermeta `cp_ferramentas_por_empresa` =
+  `[ empresa_id => [chaves] ]`): a matriz da empresa é o teto e cada
+  utilizador pode ficar restrito a parte dela. Empresa ausente do mapa =
+  herda tudo. O que um utilizador vê é sempre empresa ∩ utilizador
+  (`cp_ac_utilizador_ferramentas_ativas()`); `cp_ac_tem_ferramenta()`, os
+  pushes e os emails de pagamentos já o respeitam. Quem manda é a Work
+  (campo `acessos` em `POST /cp/v1/utilizadores`); o perfil no wp-admin só
+  mostra.
 - Enquanto não há dados reais de uma ferramenta, a vista mostra **estado
   vazio honesto** (`cp_ac_vazio()`), nunca números/documentos inventados.
   Mantém esse princípio ao ligar fontes de dados reais: um erro de sync

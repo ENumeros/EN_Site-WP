@@ -290,6 +290,13 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`_cp_codigo`, ex. "002") + nome, nunca o `_cp_work_id`; ordem por esse
   número com `cp_ac_ordenar_empresas()`. Funções puras
   `cp_rec_calc_*` em `tests/Unit/RecebimentosTest.php`.
+- **Contas correntes (`?vista=contas`, `inc/area-cliente-backoffice-contas.php`)**:
+  só leitura. Lista das empresas (por número de cliente) com saldo e faturas
+  em dívida à esquerda; a conta corrente da escolhida à direita (os mesmos
+  dados que o cliente vê: `_cp_conta_corrente`, mais `_cp_conta_corrente_em`
+  gravado pelo `POST cp/v1/conta-corrente`). Procura e filtro "só em dívida"
+  no browser. Atualizar é sempre na Work. `cp_bocc_calc_item()` testada em
+  `tests/Unit/ContasCorrentesTest.php`.
 
 ## Convenções gerais (nas três superfícies)
 

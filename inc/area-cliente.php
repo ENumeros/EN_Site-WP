@@ -1355,6 +1355,8 @@ function cp_ac_rest_sincronizar_conta_corrente( $request ) {
     }
 
     update_post_meta( $empresa_id, '_cp_conta_corrente', [ 'resumo' => $resumo, 'linhas' => $linhas ] );
+    // Quando chegou (mostrado no Backoffice › Contas correntes).
+    update_post_meta( $empresa_id, '_cp_conta_corrente_em', current_time( 'mysql' ) );
 
     return rest_ensure_response( [ 'ok' => true, 'total_linhas' => count( $linhas ) ] );
 }

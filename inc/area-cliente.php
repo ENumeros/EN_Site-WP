@@ -1125,6 +1125,95 @@ function cp_ac_rest_routes_pendentes() {
 }
 add_action( 'rest_api_init', 'cp_ac_rest_routes_pendentes' );
 
+// ─── Email de pendentes pedido pela Work (WORK-032/033, Etapas 5 e 6) ──────
+// A Work prepara o texto (modelo revisto pela equipa) e pede ao site que o
+// envie — o site é quem tem o email (wp_mail) e a notificação push. Só sai
+// para utilizadores da empresa que veem Documentos em Falta ou Movimentos a
+// Esclarecer (nunca equipa); se a Work mandar a lista `emails`, envia só à
+// interseção. Nunca é automático: só quando alguém carrega na Work.
+
+function cp_ac_pend_destinatarios( $empresa_id ) {
+    $destinatarios = [];
+    foreach ( get_users( [ 'meta_key' => 'cp_empresas', 'meta_compare' => 'EXISTS' ] ) as $u ) {
+        if ( ! in_array( (int) $empresa_id, cp_ac_user_empresas( $u->ID ), true ) ) continue;
+        if ( ! cp_ac_utilizador_tem_ferramenta( $u->ID, (int) $empresa_id, 'documentos_em_falta' )
+            && ! cp_ac_utilizador_tem_ferramenta( $u->ID, (int) $empresa_id, 'movimentos_a_esclarecer' ) ) continue;
+        if ( cp_backoffice_utilizador_tem_acesso( $u->ID ) ) continue;
+        if ( ! is_email( $u->user_email ) ) continue;
+        $destinatarios[] = $u;
+    }
+    return $destinatarios;
+}
+
+// Pura (testada): dos emails válidos da empresa, quais recebem. Sem pedido
+// (null) recebem todos; com pedido, só os pedidos que são válidos.
+function cp_ac_calc_filtrar_destinatarios( array $validos, $pedidos ) {
+    $validos_min = array_map( 'strtolower', $validos );
+    if ( null === $pedidos ) return [ 'enviar' => $validos, 'ignorados' => [] ];
+    $enviar = $ignorados = [];
+    foreach ( (array) $pedidos as $email ) {
+        $i = array_search( strtolower( trim( (string) $email ) ), $validos_min, true );
+        if ( false === $i ) $ignorados[] = (string) $email;
+        elseif ( ! in_array( $validos[ $i ], $enviar, true ) ) $enviar[] = $validos[ $i ];
+    }
+    return [ 'enviar' => $enviar, 'ignorados' => $ignorados ];
+}
+
+function cp_ac_rest_routes_pendentes_email() {
+    register_rest_route( 'cp/v1', '/pendentes/email', [
+        'methods'             => 'POST',
+        'callback'            => 'cp_ac_rest_pendentes_email',
+        'permission_callback' => 'cp_ac_rest_permissao',
+        'args'                => [
+            'work_id' => [ 'required' => true, 'type' => 'string' ],
+            'assunto' => [ 'required' => true, 'type' => 'string' ],
+            'corpo'   => [ 'required' => true, 'type' => 'string' ],
+            'emails'  => [ 'required' => false, 'type' => 'array' ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_pendentes_email' );
+
+function cp_ac_rest_pendentes_email( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+    $assunto = trim( wp_strip_all_tags( (string) $request->get_param( 'assunto' ) ) );
+    $corpo   = trim( (string) $request->get_param( 'corpo' ) );
+    if ( '' === $assunto || '' === $corpo ) {
+        return new WP_Error( 'cp_email_vazio', __( 'Falta o assunto ou o texto do email.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+    }
+
+    $validos = [];
+    foreach ( cp_ac_pend_destinatarios( $empresa_id ) as $u ) $validos[] = $u->user_email;
+    $pedidos = $request->get_param( 'emails' );
+    $escolha = cp_ac_calc_filtrar_destinatarios( $validos, null === $pedidos ? null : (array) $pedidos );
+    if ( empty( $escolha['enviar'] ) ) {
+        return new WP_Error( 'cp_sem_destinatarios', __( 'Nenhum utilizador desta empresa vê os Pendentes no site.', 'contabilidade-pro' ), [ 'status' => 409, 'ignorados' => $escolha['ignorados'] ] );
+    }
+
+    $enviados = [];
+    $falhados = [];
+    foreach ( $escolha['enviar'] as $email ) {
+        if ( wp_mail( $email, $assunto, $corpo, [ 'Content-Type: text/plain; charset=UTF-8' ] ) ) $enviados[] = $email;
+        else $falhados[] = $email;
+    }
+    if ( $enviados ) {
+        cp_push_notificar_empresa(
+            $empresa_id,
+            __( 'Pendentes', 'contabilidade-pro' ),
+            $assunto,
+            add_query_arg( 'vista', 'documentos_em_falta', home_url( '/area-de-cliente/' ) ),
+            'documentos_em_falta'
+        );
+    }
+    return rest_ensure_response( [
+        'ok'        => ! empty( $enviados ),
+        'enviados'  => $enviados,
+        'falhados'  => $falhados,
+        'ignorados' => $escolha['ignorados'],
+    ] );
+}
+
 function cp_ac_rest_sincronizar_pendentes( $request ) {
     $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
     if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();

@@ -266,6 +266,13 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`template_redirect`) — `cp_backoffice_e_destino_do_utilizador()`. Um
   administrador que pediu o `wp-admin` continua a ir para lá; quem da
   equipa também é cliente (tem empresas) segue o fluxo normal.
+- **Email de pendentes pedido pela Work** (WORK-032/033): `POST
+  /cp/v1/pendentes/email` {work_id, assunto, corpo, emails?} — o site envia
+  o texto (já revisto na Work) com `wp_mail` e manda um push à empresa.
+  Destinatários: `cp_ac_pend_destinatarios()` (utilizadores da empresa com
+  Documentos em Falta ou Movimentos a Esclarecer, nunca equipa); com
+  `emails`, só a interseção (`cp_ac_calc_filtrar_destinatarios()`,
+  testada). Nunca automático: só quando alguém carrega na Work.
 - **Clientes nunca vão parar ao `wp-admin`**: quem não é da equipa (sem
   `cp_backoffice` nem `manage_options`) é levado para `/area-de-cliente`
   ao iniciar sessão (`cp_ac_login_redirect`, `login_redirect` prioridade

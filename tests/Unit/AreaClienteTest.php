@@ -7,6 +7,7 @@ use Brain\Monkey\Functions;
 /**
  * @covers cp_ac_calc_texto_convite
  * @covers cp_ac_calc_destino_login
+ * @covers cp_ac_calc_filtrar_destinatarios
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -178,5 +179,17 @@ final class AreaClienteTest extends TestCase {
 		$area = 'https://s/area-de-cliente/';
 		self::assertSame( 'https://s/area-de-cliente/?empresa=3', cp_ac_calc_destino_login( true, 'https://s/area-de-cliente/?empresa=3', 'https://s/area-de-cliente/?empresa=3', $area ) );
 		self::assertSame( 'https://s/wp-admin/', cp_ac_calc_destino_login( false, '', 'https://s/wp-admin/', $area ) );
+	}
+
+	public function test_filtrar_destinatarios_sem_pedido_envia_a_todos(): void {
+		$r = cp_ac_calc_filtrar_destinatarios( [ 'a@x.pt', 'b@x.pt' ], null );
+		self::assertSame( [ 'a@x.pt', 'b@x.pt' ], $r['enviar'] );
+		self::assertSame( [], $r['ignorados'] );
+	}
+
+	public function test_filtrar_destinatarios_so_os_pedidos_validos(): void {
+		$r = cp_ac_calc_filtrar_destinatarios( [ 'Ana@X.pt', 'b@x.pt' ], [ 'ana@x.pt', 'intruso@y.pt', 'ANA@x.pt' ] );
+		self::assertSame( [ 'Ana@X.pt' ], $r['enviar'] );
+		self::assertSame( [ 'intruso@y.pt' ], $r['ignorados'] );
 	}
 }

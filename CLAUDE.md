@@ -266,6 +266,11 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`template_redirect`) — `cp_backoffice_e_destino_do_utilizador()`. Um
   administrador que pediu o `wp-admin` continua a ir para lá; quem da
   equipa também é cliente (tem empresas) segue o fluxo normal.
+- **Matriz de ferramentas só de leitura no wp-admin** (SITE-002): a Work é
+  a única dona (cada `POST /cp/v1/empresas` com `ferramentas` substitui a
+  lista). `cp_ac_render_matriz_page()` só mostra ✓/— com uma nota a dizer
+  que se gere na Work; não há formulário nem tratamento de POST. Não voltar a
+  pôr edição aqui.
 - **Conta desativada pela Work** (SITE-001): `POST /cp/v1/utilizadores`
   aceita `ativo` (bool, opcional). `false` grava `_cp_inativo`, termina as
   sessões e bloqueia o login (`wp_authenticate_user`) e a reposição de senha

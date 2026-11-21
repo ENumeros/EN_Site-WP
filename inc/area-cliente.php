@@ -378,80 +378,50 @@ add_action( 'admin_menu', 'cp_ac_admin_menu' );
 function cp_ac_render_matriz_page() {
 	if ( ! current_user_can( 'manage_options' ) ) return;
 
-	if ( isset( $_POST['cp_ac_matriz_nonce'] ) && wp_verify_nonce( $_POST['cp_ac_matriz_nonce'], 'cp_ac_matriz' ) ) {
-		$empresas = get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1 ] );
-		foreach ( $empresas as $empresa ) {
-			$chaves = isset( $_POST['ferramentas'][ $empresa->ID ] )
-				? array_map( 'sanitize_key', (array) $_POST['ferramentas'][ $empresa->ID ] )
-				: [];
-			cp_ac_set_empresa_ferramentas( $empresa->ID, $chaves );
-		}
-		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Matriz atualizada.', 'contabilidade-pro' ) . '</p></div>';
-	}
-
+	// SITE-002: a matriz é gerida só na Work (Portal do cliente › Ferramentas).
+	// Cada POST /cp/v1/empresas com "ferramentas" substitui a lista inteira, por
+	// isso o que se ligasse aqui era apagado na gravação seguinte da Work. Aqui
+	// fica só a consulta — sem formulário nem tratamento de POST.
 	$empresas    = cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) );
 	$ferramentas = cp_ac_ferramentas();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Ferramentas por Empresa', 'contabilidade-pro' ); ?></h1>
-		<p><?php esc_html_e( 'Liga cada ferramenta só às empresas que a devem ver — útil para testar uma funcionalidade nova em 1 cliente antes de a ligar a todos. O Dashboard está sempre visível e não aparece aqui.', 'contabilidade-pro' ); ?></p>
+		<div class="notice notice-info inline" style="margin:12px 0 0">
+			<p><?php esc_html_e( 'Só de leitura. A matriz de ferramentas gere-se na app Work (Portal do cliente › Ferramentas), que a envia para aqui — o que se mudasse neste ecrã seria apagado no envio seguinte. O Dashboard está sempre visível e não aparece aqui.', 'contabilidade-pro' ); ?></p>
+		</div>
 
 		<?php if ( empty( $empresas ) ) : ?>
-			<p><em>
-				<?php
-				printf(
-					/* translators: %s: link para criar empresa */
-					esc_html__( 'Ainda não existem empresas. Cria a primeira em %s.', 'contabilidade-pro' ),
-					'<a href="' . esc_url( admin_url( 'post-new.php?post_type=cp_empresa' ) ) . '">' . esc_html__( 'Empresas → Adicionar Empresa', 'contabilidade-pro' ) . '</a>'
-				);
-				?>
-			</em></p>
+			<p><em><?php esc_html_e( 'Ainda não existem empresas. São criadas pela Work ao sincronizar cada cliente.', 'contabilidade-pro' ); ?></em></p>
 		<?php else : ?>
-		<form method="post">
-			<?php wp_nonce_field( 'cp_ac_matriz', 'cp_ac_matriz_nonce' ); ?>
-			<table class="widefat striped" style="margin-top:16px">
-				<thead>
+		<table class="widefat striped" style="margin-top:16px">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Empresa', 'contabilidade-pro' ); ?></th>
+					<?php foreach ( $ferramentas as $chave => $info ) : ?>
+						<th style="text-align:center"><?php echo esc_html( $info['label'] ); ?></th>
+					<?php endforeach; ?>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $empresas as $empresa ) :
+					$ativas = cp_ac_empresa_ferramentas_ativas( $empresa->ID ); ?>
 					<tr>
-						<th><?php esc_html_e( 'Empresa', 'contabilidade-pro' ); ?></th>
-						<?php foreach ( $ferramentas as $chave => $info ) : ?>
-							<th style="text-align:center">
-								<?php echo esc_html( $info['label'] ); ?><br>
-								<a href="#" class="cp-ac-marcar-coluna" data-chave="<?php echo esc_attr( $chave ); ?>" data-valor="1" style="font-weight:400;font-size:11px"><?php esc_html_e( 'ligar a todas', 'contabilidade-pro' ); ?></a>
-								·
-								<a href="#" class="cp-ac-marcar-coluna" data-chave="<?php echo esc_attr( $chave ); ?>" data-valor="0" style="font-weight:400;font-size:11px"><?php esc_html_e( 'desligar de todas', 'contabilidade-pro' ); ?></a>
-							</th>
+						<td><strong><?php echo esc_html( $empresa->post_title ); ?></strong></td>
+						<?php foreach ( $ferramentas as $chave => $info ) :
+							$ligada = in_array( $chave, $ativas, true ); ?>
+							<td style="text-align:center" title="<?php echo esc_attr( $ligada ? __( 'Ligada', 'contabilidade-pro' ) : __( 'Desligada', 'contabilidade-pro' ) ); ?>">
+								<?php if ( $ligada ) : ?>
+									<span class="dashicons dashicons-yes" style="color:#2f6b3e" aria-label="<?php esc_attr_e( 'Ligada', 'contabilidade-pro' ); ?>"></span>
+								<?php else : ?>
+									<span style="color:#a7aaad" aria-label="<?php esc_attr_e( 'Desligada', 'contabilidade-pro' ); ?>">—</span>
+								<?php endif; ?>
+							</td>
 						<?php endforeach; ?>
 					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $empresas as $empresa ) :
-						$ativas = cp_ac_empresa_ferramentas_ativas( $empresa->ID ); ?>
-						<tr>
-							<td><strong><?php echo esc_html( $empresa->post_title ); ?></strong></td>
-							<?php foreach ( $ferramentas as $chave => $info ) : ?>
-								<td style="text-align:center">
-									<input type="checkbox"
-										class="cp-ac-check cp-ac-check-<?php echo esc_attr( $chave ); ?>"
-										name="ferramentas[<?php echo esc_attr( $empresa->ID ); ?>][]"
-										value="<?php echo esc_attr( $chave ); ?>"
-										<?php checked( in_array( $chave, $ativas, true ) ); ?>>
-								</td>
-							<?php endforeach; ?>
-						</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-			<p class="submit"><button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar matriz', 'contabilidade-pro' ); ?></button></p>
-		</form>
-		<script>
-		document.querySelectorAll('.cp-ac-marcar-coluna').forEach(function (a) {
-			a.addEventListener('click', function (e) {
-				e.preventDefault();
-				var chave = this.dataset.chave, valor = this.dataset.valor === '1';
-				document.querySelectorAll('.cp-ac-check-' + chave).forEach(function (cb) { cb.checked = valor; });
-			});
-		});
-		</script>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
 		<?php endif; ?>
 
 		<?php

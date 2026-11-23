@@ -111,7 +111,11 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   confirma sempre `cp_ac_empresa_tem_ferramenta( $empresa_id, 'chave' )`
   primeiro — nunca notificar sobre uma ferramenta que a empresa não tem
   ligada na matriz. `cp_push_notificar_empresa()` notifica os clientes de
-  uma empresa; `cp_push_notificar_equipa()` (mesmo ficheiro) notifica a
+  uma empresa (nunca quem tem acesso ao Backoffice, mesmo com empresas
+  associadas). Extratos e SAF-T não avisam quando chega um mês novo: os
+  lembretes (dia 02 SAF-T, dia 05 extratos) são decididos pela Work e
+  pedidos por `POST /cp/v1/lembrete` (`cp_ac_rest_lembrete()`).
+  `cp_push_notificar_equipa()` (mesmo ficheiro) notifica a
   equipa — ver secção "Backoffice".
 - **Lembretes** (`inc/area-cliente-tarefas.php`): ao contrário das outras
   ferramentas, não é "Work escreve, cliente responde" — é uma lista

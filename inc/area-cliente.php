@@ -1533,25 +1533,14 @@ function cp_ac_rest_sincronizar_extratos( $request ) {
     $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
     if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
 
-    $ids_antes = wp_list_pluck( cp_ac_extratos( $empresa_id ), 'id' );
-
+    // Sem push aqui: o aviso ao cliente é o lembrete do dia 05, que a Work
+    // pede por POST /lembrete (ver cp_ac_rest_lembrete).
     $extratos = [];
     foreach ( (array) $request->get_param( 'extratos' ) as $item ) {
         $normalizado = cp_ac_normalizar_item_checklist( $item, [ 'conta_id', 'conta_nome' ] );
         if ( $normalizado ) $extratos[] = $normalizado;
     }
     update_post_meta( $empresa_id, '_cp_extratos', $extratos );
-
-    $ha_novidade = array_diff( wp_list_pluck( $extratos, 'id' ), $ids_antes );
-    if ( $ha_novidade && cp_ac_empresa_tem_ferramenta( $empresa_id, 'extratos' ) ) {
-        cp_push_notificar_empresa(
-            $empresa_id,
-            __( 'Novos extratos pedidos', 'contabilidade-pro' ),
-            __( 'Há extratos bancários novos à espera de si.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'extratos', home_url( '/area-de-cliente/' ) ),
-            'extratos'
-        );
-    }
 
     return rest_ensure_response( [ 'ok' => true, 'total' => count( $extratos ) ] );
 }
@@ -1560,8 +1549,7 @@ function cp_ac_rest_sincronizar_saft( $request ) {
     $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
     if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
 
-    $ids_antes = wp_list_pluck( cp_ac_saft( $empresa_id ), 'id' );
-
+    // Sem push aqui: o aviso ao cliente é o lembrete do dia 02 (POST /lembrete).
     $saft = [];
     foreach ( (array) $request->get_param( 'saft' ) as $item ) {
         $normalizado = cp_ac_normalizar_item_checklist( $item );
@@ -1569,18 +1557,51 @@ function cp_ac_rest_sincronizar_saft( $request ) {
     }
     update_post_meta( $empresa_id, '_cp_saft', $saft );
 
-    $ha_novidade = array_diff( wp_list_pluck( $saft, 'id' ), $ids_antes );
-    if ( $ha_novidade && cp_ac_empresa_tem_ferramenta( $empresa_id, 'saft' ) ) {
-        cp_push_notificar_empresa(
-            $empresa_id,
-            __( 'Novo SAF-T pedido', 'contabilidade-pro' ),
-            __( 'Há um SAF-T novo à espera de si.', 'contabilidade-pro' ),
-            add_query_arg( 'vista', 'saft', home_url( '/area-de-cliente/' ) ),
-            'saft'
-        );
-    }
-
     return rest_ensure_response( [ 'ok' => true, 'total' => count( $saft ) ] );
+}
+
+// ─── Lembretes push pedidos pela Work ──────────────────────────────────────
+// A Work decide quando (dia 02 SAF-T, dia 05 extratos), a quem (só o que
+// ainda falta, conforme a configuração na ficha do cliente) e o texto. O
+// site só confirma que a ferramenta está ligada e entrega o push aos
+// utilizadores da empresa que a veem. Ferramenta desligada não é erro
+// (enviado = false), para a Work não insistir.
+
+function cp_ac_rest_routes_lembrete() {
+    register_rest_route( 'cp/v1', '/lembrete', [
+        'methods'             => 'POST',
+        'callback'            => 'cp_ac_rest_lembrete',
+        'permission_callback' => 'cp_ac_rest_permissao',
+        'args'                => [
+            'work_id'    => [ 'required' => true, 'type' => 'string' ],
+            'ferramenta' => [ 'required' => true, 'type' => 'string', 'enum' => [ 'saft', 'extratos' ] ],
+            'titulo'     => [ 'required' => true, 'type' => 'string' ],
+            'corpo'      => [ 'required' => true, 'type' => 'string' ],
+        ],
+    ] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_lembrete' );
+
+function cp_ac_rest_lembrete( $request ) {
+    $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+    if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+    $ferramenta = (string) $request->get_param( 'ferramenta' );
+    $titulo     = sanitize_text_field( (string) $request->get_param( 'titulo' ) );
+    $corpo      = sanitize_text_field( (string) $request->get_param( 'corpo' ) );
+    if ( '' === $titulo || '' === $corpo ) {
+        return new WP_Error( 'cp_lembrete_vazio', __( 'Falta o título ou o texto do lembrete.', 'contabilidade-pro' ), [ 'status' => 400 ] );
+    }
+    if ( ! cp_ac_empresa_tem_ferramenta( $empresa_id, $ferramenta ) ) {
+        return rest_ensure_response( [ 'ok' => true, 'enviado' => false, 'motivo' => 'ferramenta_desligada' ] );
+    }
+    cp_push_notificar_empresa(
+        $empresa_id,
+        $titulo,
+        $corpo,
+        add_query_arg( 'vista', $ferramenta, home_url( '/area-de-cliente/' ) ),
+        $ferramenta
+    );
+    return rest_ensure_response( [ 'ok' => true, 'enviado' => true ] );
 }
 
 

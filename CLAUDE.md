@@ -173,7 +173,10 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   **Exceção ao "o WordPress apaga a sua cópia"** descrito acima: aqui a
   confirmação só grava `_cp_doc_work_recebido` no anexo e **não apaga
   nada** até haver indicação em contrário (decisão de 2026-11-12). Depois
-  de recebido, o cliente já não pode apagar o documento, só a equipa. Ao
+  de recebido, o cliente já não pode apagar o documento, só a equipa. Quando a equipa
+  apaga um documento na Work, a Work chama `POST cp/v1/documentos/apagar`
+  (`work_id`, `ids`), que faz `wp_delete_attachment` (id que já não existe
+  conta como apagado; anexo de outra empresa dá erro 400). Ao
   cliente só se mostra "enviado"; o estado na CentralGest é controlado na
   Work. Só PDF/JPG/PNG (`cp_ac_documento_mimes_permitidos()`), até 10 MB
   (filtro `cp_ac_documento_max_mb`, valor ainda por avaliar).

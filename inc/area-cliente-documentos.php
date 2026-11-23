@@ -14,7 +14,9 @@
  * anexo como recebido ('_cp_doc_work_recebido') — **não apaga nada**: o
  * WordPress guarda o ficheiro até haver indicação em contrário (decisão de
  * 2026-11-12). Ao cliente só interessa saber que está enviado; o estado na
- * CentralGest é controlado do lado da Work.
+ * CentralGest é controlado do lado da Work. Quando a equipa apaga um
+ * documento na Work, a Work pede aqui para o apagar também
+ * (POST cp/v1/documentos/apagar).
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -341,6 +343,17 @@ function cp_ac_rest_routes_documentos() {
 			],
 		],
 	] );
+	register_rest_route( 'cp/v1', '/documentos/apagar', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_documentos_apagar',
+			'permission_callback' => 'cp_ac_rest_permissao',
+			'args'                => [
+				'work_id' => [ 'required' => true, 'type' => 'string' ],
+				'ids'     => [ 'required' => true, 'type' => 'array' ],
+			],
+		],
+	] );
 }
 add_action( 'rest_api_init', 'cp_ac_rest_routes_documentos' );
 
@@ -408,6 +421,33 @@ function cp_ac_rest_documentos_confirmar( $request ) {
 		$confirmados++;
 	}
 	return rest_ensure_response( [ 'ok' => true, 'confirmados' => $confirmados ] );
+}
+
+// A equipa apagou o documento na Work (2026-11-23): apaga o anexo e o
+// ficheiro. Só documentos de cliente desta empresa; um id que já cá não
+// está (o cliente ou a equipa apagou-o no site) conta como apagado.
+function cp_ac_rest_documentos_apagar( $request ) {
+	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+	$validos  = array_map( 'intval', wp_list_pluck( cp_ac_documentos( $empresa_id ), 'ID' ) );
+	$apagados = 0;
+	$ausentes = 0;
+	foreach ( (array) $request->get_param( 'ids' ) as $id ) {
+		$id = absint( $id );
+		if ( ! $id ) continue;
+		if ( ! in_array( $id, $validos, true ) ) {
+			$anexo = get_post( $id );
+			// Existe mas é de outra empresa ou não é documento de cliente: recusa.
+			if ( $anexo && 'attachment' === $anexo->post_type ) {
+				return new WP_Error( 'cp_documento_invalido', 'O documento não pertence a esta empresa.', [ 'status' => 400 ] );
+			}
+			$ausentes++;
+			continue;
+		}
+		if ( wp_delete_attachment( $id, true ) ) $apagados++;
+	}
+	return rest_ensure_response( [ 'ok' => true, 'apagados' => $apagados, 'ja_nao_existiam' => $ausentes ] );
 }
 
 // ─── UI partilhada ──────────────────────────────────────────────────────────

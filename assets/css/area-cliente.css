@@ -520,3 +520,31 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-pre-visualizacao-faixa .ac-nav-ativa{margin-left:0;width:16px;height:16px;vertical-align:-3px}
 .ac-pre-visualizacao-legenda{display:block;margin-top:2px;font-size:12px}
 .ac-nav-inativa-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Pedir faturas (inc/area-cliente-faturas.php) */
+.ac-fat-bloco{margin-bottom:22px}
+.ac-fat-bloco-titulo{font-size:13px;font-weight:700;color:var(--ac-text);margin-bottom:10px}
+.ac-fat-bloco .ac-field input,.ac-fat-bloco .ac-field select{width:100%}
+.ac-fat-novo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.ac-fat-novo[hidden]{display:none}
+.ac-fat-largo{grid-column:1 / -1}
+.ac-fat-linhas-cab,.ac-fat-linha{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,2fr) 70px 110px 82px 96px 32px;gap:8px;align-items:center}
+.ac-fat-linhas-cab{font-size:11.5px;font-weight:600;color:var(--ac-muted);margin-bottom:6px}
+.ac-fat-linha{margin-bottom:8px}
+.ac-fat-linha .ac-field input,.ac-fat-linha .ac-field select{padding:9px 10px}
+.ac-fat-rotulo-movel{display:none !important}
+.ac-fat-total-linha{text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;white-space:nowrap}
+.ac-fat-totais{margin:14px 0 0 auto;max-width:280px;font-size:13.5px}
+.ac-fat-totais div{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-variant-numeric:tabular-nums}
+.ac-fat-totais span{color:var(--ac-muted)}
+.ac-fat-total{border-top:1px solid var(--ac-line);margin-top:4px;padding-top:8px !important;font-size:15px}
+@media (max-width:760px){
+  .ac-fat-linhas-cab{display:none}
+  .ac-fat-linha{grid-template-columns:1fr 1fr;padding:12px;border:1px solid var(--ac-line);border-radius:10px;position:relative}
+  .ac-fat-linha .ac-field:nth-child(1),.ac-fat-linha .ac-field:nth-child(2){grid-column:1 / -1}
+  .ac-fat-rotulo-movel{display:block !important}
+  .ac-fat-total-linha{grid-column:1 / -1;font-weight:600}
+  .ac-fat-linha .cp-fat-remover{position:absolute;top:8px;right:8px}
+  .ac-fat-linha .ac-field:nth-child(1){padding-right:36px}
+  .ac-fat-totais{max-width:none}
+}

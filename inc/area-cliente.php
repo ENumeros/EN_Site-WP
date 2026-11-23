@@ -43,6 +43,11 @@ function cp_ac_ferramentas() {
 			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
 			'icon'  => '<rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18"></path><path d="M7 15h4"></path>',
 		],
+		'pedir_faturas'      => [
+			'label' => __( 'Pedir faturas', 'contabilidade-pro' ),
+			'grupo' => __( 'Gestão', 'contabilidade-pro' ),
+			'icon'  => '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path>',
+		],
 		'calendario_fiscal'  => [
 			'label' => __( 'Calendário', 'contabilidade-pro' ),
 			'grupo' => __( 'Gestão', 'contabilidade-pro' ),

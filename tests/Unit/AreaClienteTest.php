@@ -31,6 +31,7 @@ final class AreaClienteTest extends TestCase {
 				'visao_financeira',
 				'conta_corrente',
 				'pagamentos',
+				'pedir_faturas',
 				'calendario_fiscal',
 				'documentos',
 				'documentos_em_falta',

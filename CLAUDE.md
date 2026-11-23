@@ -365,6 +365,25 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   no browser. Atualizar é sempre na Work. `cp_bocc_calc_item()` testada em
   `tests/Unit/ContasCorrentesTest.php`.
 
+- **Pedir faturas** (`inc/area-cliente-faturas.php`, ferramenta
+  `pedir_faturas`, 2026-11-23): o cliente pede à Entre Números que emita uma
+  fatura (a quem, o quê, por quanto). Só recolha de dados; a equipa emite na
+  CentralGest e a Work devolve o estado. A Work envia o catálogo
+  (`POST cp/v1/faturas/catalogo`: artigos e clientes da empresa na CG,
+  substitui tudo, meta `_cp_fat_catalogo`); o cliente escolhe da lista ou
+  escreve (cliente novo, artigo "Outro"). Um cliente ou artigo escolhido da
+  lista vem sempre do catálogo, nunca do que o browser manda
+  (`cp_ac_fat_validar_pedido()`). Pedido por admin-post `cp_fatura_pedir`
+  (com erros, o formulário volta preenchido via transient de 2 min) e push à
+  equipa. A Work vai buscar em `GET cp/v1/faturas/pedidos/novos` e confirma em
+  `/confirmar` (passa a "Em preparação"); depois `POST /faturas/pedidos/estado`
+  (`emitida` com número e data, `recusada` com motivo, `recebido` para
+  reabrir; push ao cliente) e `/documento` (PDF, multipart). **Outra exceção
+  ao "o WordPress apaga a sua cópia"**: os pedidos ficam em `_cp_fat_pedidos`
+  (até 200, só se cortam tratados) porque o cliente acompanha o estado. O
+  cliente só cancela antes de a Work receber. IVA 0% obriga a motivo nas
+  observações. Funções puras `cp_ac_fat_*` em `tests/Unit/FaturasTest.php`.
+
 ## Convenções gerais (nas três superfícies)
 
 - Prefixo de função: `cp_` no geral, `cp_ac_` para tudo da Área de

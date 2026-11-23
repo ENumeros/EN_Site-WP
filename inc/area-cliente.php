@@ -143,6 +143,11 @@ function cp_ac_ordenar_empresas( array $empresas ) {
 function cp_ac_user_empresas( $user_id = null ) {
 	$user_id = $user_id ?: get_current_user_id();
 	if ( ! $user_id ) return [];
+	// Equipa em "Ver como o cliente" (ver inc/area-cliente-backoffice.php):
+	// só ao desenhar /area-de-cliente e só para o próprio utilizador.
+	if ( (int) $user_id === get_current_user_id() && function_exists( 'cp_bo_pre_visualizacao' ) && cp_bo_pre_visualizacao() ) {
+		return [ cp_bo_pre_visualizacao() ];
+	}
 	$ids = get_user_meta( $user_id, 'cp_empresas', true );
 	$ids = is_array( $ids ) ? array_map( 'intval', $ids ) : [];
 	return array_values( array_filter( $ids, function ( $id ) {
@@ -289,6 +294,9 @@ function cp_ac_utilizador_tem_ferramenta( $user_id, $empresa_id, $chave ) {
 
 function cp_ac_empresa_ativa( $user_id = null ) {
 	$user_id  = $user_id ?: get_current_user_id();
+	if ( (int) $user_id === get_current_user_id() && function_exists( 'cp_bo_pre_visualizacao' ) && cp_bo_pre_visualizacao() ) {
+		return cp_bo_pre_visualizacao(); // sem gravar cp_empresa_ativa da equipa
+	}
 	$empresas = cp_ac_user_empresas( $user_id );
 	if ( empty( $empresas ) ) return 0;
 

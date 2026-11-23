@@ -510,3 +510,9 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
   .ac-pag-linha.ativa td{box-shadow:none}
   .ac-pag-linha.ativa{box-shadow:inset 3px 0 0 var(--ac-gold)}
 }
+
+/* "Ver como o cliente" — equipa em pré-visualização só de leitura (inc/area-cliente-backoffice.php) */
+.ac-pre-visualizacao-faixa{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 32px;background:var(--ac-gold);color:#16293B;font-size:13px}
+.ac-pre-visualizacao-faixa .ac-btn{padding:6px 12px;background:rgba(255,255,255,.55);border-color:transparent;color:#16293B}
+.ac-pre-visualizacao #cp-push-btn,.ac-pre-visualizacao #cp-pwa-install-btn{display:none !important}
+@media (max-width:760px){.ac-pre-visualizacao-faixa{padding:10px 16px}}

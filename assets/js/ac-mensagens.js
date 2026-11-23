@@ -13,6 +13,11 @@
 	var INTERVALO_MS = 12000;
 
 	function pedirApi( metodo, caminho, corpo ) {
+		// "Ver como o cliente" (equipa, só leitura): lê, mas não grava nada —
+		// nem sequer marca conversas como lidas.
+		if ( window.cpPreVisualizacao && 'GET' !== metodo ) {
+			return Promise.resolve( {} );
+		}
 		var opcoes = {
 			method: metodo,
 			headers: { 'X-WP-Nonce': window.cpMensagens.restNonce },

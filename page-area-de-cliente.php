@@ -137,6 +137,7 @@ else :
 			</nav>
 
 			<main class="ac-main">
+				<?php cp_bo_render_faixa_pre_visualizacao(); ?>
 				<header class="ac-topbar">
 					<div style="display:flex;align-items:center;gap:14px">
 						<button type="button" class="ac-sidebar-toggle" id="ac-sidebar-toggle" aria-expanded="false" aria-controls="ac-sidebar" aria-label="<?php esc_attr_e( 'Abrir menu', 'contabilidade-pro' ); ?>">

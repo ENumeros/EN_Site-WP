@@ -8,6 +8,7 @@ use Brain\Monkey\Functions;
  * @covers cp_backoffice_utilizador_tem_acesso
  * @covers cp_backoffice_registar_evento
  * @covers cp_backoffice_listar_eventos
+ * @covers cp_bo_calc_empresa_pre_visualizacao
  */
 final class BackofficeTest extends TestCase {
 
@@ -79,5 +80,12 @@ final class BackofficeTest extends TestCase {
 
 		self::assertCount( 2, cp_backoffice_listar_eventos( 2 ) );
 		self::assertCount( 3, cp_backoffice_listar_eventos( 0 ) );
+	}
+
+	public function test_pre_visualizacao_so_para_a_equipa_e_empresa_valida(): void {
+		self::assertSame( 7, cp_bo_calc_empresa_pre_visualizacao( true, '7', [ 7 ] ) );
+		self::assertSame( 0, cp_bo_calc_empresa_pre_visualizacao( false, 7, [ 7 ] ), 'cliente nunca entra em pré-visualização' );
+		self::assertSame( 0, cp_bo_calc_empresa_pre_visualizacao( true, 8, [ 7 ] ), 'empresa inexistente/apagada' );
+		self::assertSame( 0, cp_bo_calc_empresa_pre_visualizacao( true, 0, [ 0 ] ) );
 	}
 }

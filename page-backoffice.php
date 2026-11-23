@@ -221,6 +221,9 @@ else :
 									<option value="<?php echo esc_attr( $bo_empresa->ID ); ?>" <?php selected( $bo_empresa_id, $bo_empresa->ID ); ?>><?php echo esc_html( cp_ac_empresa_label( $bo_empresa->ID ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
+							<?php if ( $bo_empresa_id && cp_bo_empresa_publicada( $bo_empresa_id ) ) : ?>
+								<a class="ac-btn ac-btn-ghost" style="margin-left:auto" href="<?php echo esc_url( cp_bo_url_ver_como_cliente( $bo_empresa_id ) ); ?>" title="<?php esc_attr_e( 'Abre a Área de Cliente tal como esta empresa a vê (só leitura)', 'contabilidade-pro' ); ?>"><?php esc_html_e( 'Ver como o cliente', 'contabilidade-pro' ); ?></a>
+							<?php endif; ?>
 						</form>
 					</div>
 

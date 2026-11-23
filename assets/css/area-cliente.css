@@ -189,6 +189,7 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-doc-dado{font-size:12.5px;color:var(--ac-muted);white-space:nowrap}
 .ac-doc-acoes{display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .ac-doc-acoes form{margin:0}
+.ac-doc-estado-ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;color:var(--ac-muted);cursor:help}
 @media (max-width:640px){
 .ac-doc-cab{display:none}
 .ac-doc-linha{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nome acoes" "dados acoes";row-gap:2px}

@@ -17,6 +17,15 @@
  * CentralGest é controlado do lado da Work. Quando a equipa apaga um
  * documento na Work, a Work pede aqui para o apagar também
  * (POST cp/v1/documentos/apagar).
+ *
+ * Apagar no site (2026-11-23): enquanto a Work não recebeu o documento,
+ * apaga logo. Depois de recebido, fica só um pedido (meta
+ * '_cp_doc_apagar_pedido'), que a Work lê em /documentos/novos
+ * ("apagar_pedidos") e trata com as regras da CentralGest: só se apaga o
+ * que ainda está em "Documentos não classificados" na Client Connect. Se
+ * apagar, chama /documentos/apagar; se recusar, devolve o motivo em
+ * /documentos/apagar-recusado (meta '_cp_doc_apagar_recusado') e o
+ * documento deixa de ter o botão de apagar.
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -47,6 +56,7 @@ function cp_ac_documento_max_ficheiros() {
 // Com vários ficheiros, $n diz quantos foram aceites e $recusados quantos não.
 function cp_ac_documento_sucesso_titulo( $sucesso, $n = 1, $recusados = 0 ) {
 	if ( 'documento_apagado' === $sucesso ) return __( 'Documento apagado', 'contabilidade-pro' );
+	if ( 'documento_apagar_pedido' === $sucesso ) return __( 'Pedido para apagar enviado · fica apagado dentro de minutos, se ainda não tiver sido lançado na contabilidade', 'contabilidade-pro' );
 	if ( 'documento_enviado' !== $sucesso ) return '';
 	$n = max( 1, (int) $n );
 	$titulo = 1 === $n
@@ -75,7 +85,7 @@ function cp_ac_documento_erro_texto( $erro ) {
 			__( 'O ficheiro é demasiado grande. O máximo é %s.', 'contabilidade-pro' ),
 			size_format( cp_ac_documento_max_bytes() )
 		),
-		'documento_ja_recebido' => __( 'Este documento já foi recebido pela contabilidade e não pode ser apagado.', 'contabilidade-pro' ),
+		'documento_ja_recebido' => __( 'Este documento já foi lançado na contabilidade e não pode ser apagado.', 'contabilidade-pro' ),
 		'documento_destino'     => __( 'Escolha a pasta, o ano e o mês do documento.', 'contabilidade-pro' ),
 		'documento_demasiados'  => sprintf(
 			/* translators: %d: número máximo de ficheiros */
@@ -142,12 +152,22 @@ function cp_ac_documentos( $empresa_id ) {
 	] );
 }
 
-// Quem enviou o documento, ou qualquer elemento da equipa, pode apagá-lo.
-// Depois de a Work o receber, só a equipa: o documento já seguiu para a
-// contabilidade e apagá-lo aqui não o tirava da CentralGest.
+function cp_ac_documento_apagar_pedido( $anexo_id ) {
+	return '' !== (string) get_post_meta( $anexo_id, '_cp_doc_apagar_pedido', true );
+}
+
+function cp_ac_documento_apagar_recusado( $anexo_id ) {
+	return (string) get_post_meta( $anexo_id, '_cp_doc_apagar_recusado', true );
+}
+
+// Quem enviou o documento, ou qualquer elemento da equipa, pode apagá-lo
+// (ou, depois de a Work o receber, pedir para o apagar). Não há botão
+// enquanto há um pedido por tratar nem depois de a Work o recusar
+// (documento já classificado na CentralGest).
 function cp_ac_documento_pode_apagar( $anexo, $user_id ) {
+	if ( cp_ac_documento_apagar_pedido( $anexo->ID ) || '' !== cp_ac_documento_apagar_recusado( $anexo->ID ) ) return false;
 	if ( cp_backoffice_utilizador_tem_acesso( $user_id ) ) return true;
-	return (int) $anexo->post_author === (int) $user_id && ! cp_ac_documento_recebido_work( $anexo->ID );
+	return (int) $anexo->post_author === (int) $user_id;
 }
 
 function cp_ac_handle_documento_upload() {
@@ -297,8 +317,16 @@ function cp_ac_handle_documento_apagar() {
 		exit;
 	}
 	if ( ! cp_ac_documento_pode_apagar( $anexo, get_current_user_id() ) ) {
-		$codigo = cp_ac_documento_recebido_work( $anexo_id ) ? 'documento_ja_recebido' : 'documento_invalido';
+		$codigo = '' !== cp_ac_documento_apagar_recusado( $anexo_id ) ? 'documento_ja_recebido' : 'documento_invalido';
 		wp_safe_redirect( add_query_arg( 'cp_erro', $codigo, $voltar ) );
+		exit;
+	}
+
+	// Já recebido pela Work: só ela sabe se ainda se pode apagar na
+	// CentralGest. Fica o pedido; a Work trata-o na ronda seguinte.
+	if ( cp_ac_documento_recebido_work( $anexo_id ) ) {
+		update_post_meta( $anexo_id, '_cp_doc_apagar_pedido', current_time( 'mysql' ) );
+		wp_safe_redirect( add_query_arg( 'cp_sucesso', 'documento_apagar_pedido', $voltar ) );
 		exit;
 	}
 
@@ -343,6 +371,17 @@ function cp_ac_rest_routes_documentos() {
 			],
 		],
 	] );
+	register_rest_route( 'cp/v1', '/documentos/apagar-recusado', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_documentos_apagar_recusado',
+			'permission_callback' => 'cp_ac_rest_permissao',
+			'args'                => [
+				'work_id' => [ 'required' => true, 'type' => 'string' ],
+				'itens'   => [ 'required' => true, 'type' => 'array' ],
+			],
+		],
+	] );
 	register_rest_route( 'cp/v1', '/documentos/apagar', [
 		[
 			'methods'             => 'POST',
@@ -364,9 +403,18 @@ function cp_ac_rest_documentos_novos( $request ) {
 	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
 	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
 
-	$documentos = [];
+	$documentos     = [];
+	$apagar_pedidos = [];
 	foreach ( array_reverse( cp_ac_documentos( $empresa_id ) ) as $doc ) {
-		if ( cp_ac_documento_recebido_work( $doc->ID ) ) continue;
+		if ( cp_ac_documento_recebido_work( $doc->ID ) ) {
+			if ( cp_ac_documento_apagar_pedido( $doc->ID ) ) {
+				$apagar_pedidos[] = [
+					'id'        => (string) $doc->ID,
+					'pedido_em' => (string) get_post_meta( $doc->ID, '_cp_doc_apagar_pedido', true ),
+				];
+			}
+			continue;
+		}
 		$caminho      = get_attached_file( $doc->ID );
 		$documentos[] = [
 			'id'         => (string) $doc->ID,
@@ -381,7 +429,9 @@ function cp_ac_rest_documentos_novos( $request ) {
 			'mes'        => (int) get_post_meta( $doc->ID, '_cp_doc_mes', true ) ?: null,
 		];
 	}
-	return rest_ensure_response( [ 'documentos' => $documentos ] );
+	// apagar_pedidos: documentos já recebidos que alguém pediu para apagar
+	// no site (a Work decide com as regras da CentralGest).
+	return rest_ensure_response( [ 'documentos' => $documentos, 'apagar_pedidos' => $apagar_pedidos ] );
 }
 
 // Substitui as pastas da empresa pelas que a Work envia (lista completa;
@@ -448,6 +498,25 @@ function cp_ac_rest_documentos_apagar( $request ) {
 		if ( wp_delete_attachment( $id, true ) ) $apagados++;
 	}
 	return rest_ensure_response( [ 'ok' => true, 'apagados' => $apagados, 'ja_nao_existiam' => $ausentes ] );
+}
+
+// A Work recusou apagar (documento já classificado na CentralGest): tira o
+// pedido e guarda o motivo, que o cliente vê no lugar do botão.
+function cp_ac_rest_documentos_apagar_recusado( $request ) {
+	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
+	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
+
+	$validos = array_map( 'intval', wp_list_pluck( cp_ac_documentos( $empresa_id ), 'ID' ) );
+	$n       = 0;
+	foreach ( (array) $request->get_param( 'itens' ) as $item ) {
+		$id = is_array( $item ) ? absint( $item['id'] ?? 0 ) : 0;
+		if ( ! $id || ! in_array( $id, $validos, true ) ) continue;
+		$motivo = sanitize_text_field( (string) ( $item['motivo'] ?? '' ) );
+		update_post_meta( $id, '_cp_doc_apagar_recusado', $motivo ?: __( 'Não pode ser apagado.', 'contabilidade-pro' ) );
+		delete_post_meta( $id, '_cp_doc_apagar_pedido' );
+		$n++;
+	}
+	return rest_ensure_response( [ 'ok' => true, 'recusados' => $n ] );
 }
 
 // ─── UI partilhada ──────────────────────────────────────────────────────────
@@ -679,6 +748,14 @@ function cp_ac_render_documentos( $empresa_id ) {
 											<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg>
 										</button>
 									</form>
+								<?php elseif ( cp_ac_documento_apagar_pedido( $doc->ID ) ) : ?>
+									<span class="ac-doc-estado-ico" title="<?php esc_attr_e( 'A apagar — fica feito dentro de minutos, se ainda não tiver sido lançado na contabilidade.', 'contabilidade-pro' ); ?>" aria-label="<?php esc_attr_e( 'A apagar', 'contabilidade-pro' ); ?>">
+										<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+									</span>
+								<?php elseif ( '' !== ( $recusa = cp_ac_documento_apagar_recusado( $doc->ID ) ) ) : ?>
+									<span class="ac-doc-estado-ico" title="<?php echo esc_attr( $recusa ); ?>" aria-label="<?php echo esc_attr( $recusa ); ?>">
+										<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+									</span>
 								<?php endif; ?>
 							</div>
 						</div>

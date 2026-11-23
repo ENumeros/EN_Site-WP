@@ -381,8 +381,11 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   reabrir; push ao cliente) e `/documento` (PDF, multipart). **Outra exceção
   ao "o WordPress apaga a sua cópia"**: os pedidos ficam em `_cp_fat_pedidos`
   (até 200, só se cortam tratados) porque o cliente acompanha o estado. O
-  cliente só cancela antes de a Work receber. IVA 0% obriga a motivo nas
-  observações. Funções puras `cp_ac_fat_*` em `tests/Unit/FaturasTest.php`.
+  cliente só cancela antes de a Work receber. O cliente não indica o IVA
+  (decisão de 2026-11-23): as linhas são {artigo, descricao, quantidade,
+  preco} e os totais só `total`; a taxa decide-se ao emitir. No seletor de
+  cliente, vazio = por escolher (erro) e `CP_AC_FAT_NOVO` = cliente novo.
+  Funções puras `cp_ac_fat_*` em `tests/Unit/FaturasTest.php`.
 
 ## Convenções gerais (nas três superfícies)
 

@@ -51,10 +51,10 @@ final class FaturasTest extends TestCase {
 
 	public function test_totais_arredondam_por_linha(): void {
 		$t = cp_ac_fat_totais( [
-			[ 'quantidade' => 3, 'preco' => 0.333, 'taxa_iva' => 23 ],   // 1,00 + 0,23
-			[ 'quantidade' => 1, 'preco' => 100, 'taxa_iva' => 6 ],      // 100 + 6
+			[ 'quantidade' => 3, 'preco' => 0.333 ],   // 0,999 → 1,00
+			[ 'quantidade' => 1, 'preco' => 100 ],
 		] );
-		self::assertSame( [ 'base' => 101.0, 'iva' => 6.23, 'total' => 107.23 ], $t );
+		self::assertSame( [ 'total' => 101.0 ], $t ); // sem IVA: o cliente não escolhe a taxa
 	}
 
 	public function test_normalizar_catalogo_ignora_incompletos_e_taxas_invalidas(): void {
@@ -72,8 +72,8 @@ final class FaturasTest extends TestCase {
 			'destinatario_conta' => '211110003',
 			'destinatario'       => [ 'nome' => 'Ignorado' ],
 			'linhas'             => [
-				[ 'artigo' => '0001', 'descricao' => '', 'quantidade' => '2', 'preco' => '150', 'taxa_iva' => '' ],
-				[ 'artigo' => '', 'descricao' => '', 'quantidade' => '1', 'preco' => '', 'taxa_iva' => '23' ], // em branco
+				[ 'artigo' => '0001', 'descricao' => '', 'quantidade' => '2', 'preco' => '150' ],
+				[ 'artigo' => '', 'descricao' => '', 'quantidade' => '1', 'preco' => '' ], // em branco
 			],
 			'observacoes'        => '',
 		], $this->catalogo() );
@@ -82,41 +82,40 @@ final class FaturasTest extends TestCase {
 		self::assertFalse( $r['pedido']['destinatario']['novo'] );
 		self::assertCount( 1, $r['pedido']['linhas'] );
 		self::assertSame( 'Consultoria', $r['pedido']['linhas'][0]['descricao'] );
-		self::assertSame( 23.0, $r['pedido']['linhas'][0]['taxa_iva'] );
-		self::assertSame( 369.0, $r['pedido']['totais']['total'] );
+		self::assertArrayNotHasKey( 'taxa_iva', $r['pedido']['linhas'][0] );
+		self::assertSame( 300.0, $r['pedido']['totais']['total'] );
 	}
 
 	public function test_cliente_novo_e_texto_livre(): void {
 		$r = cp_ac_fat_validar_pedido( [
-			'destinatario_conta' => '',
+			'destinatario_conta' => 'novo',
 			'destinatario'       => [ 'nome' => 'Novo Lda', 'nif' => '501442600', 'pais' => 'pt' ],
-			'linhas'             => [ [ 'artigo' => '', 'descricao' => 'Serviço novo', 'quantidade' => '1', 'preco' => '1.000,00', 'taxa_iva' => '13' ] ],
+			'linhas'             => [ [ 'artigo' => '', 'descricao' => 'Serviço novo', 'quantidade' => '1', 'preco' => '1.000,00' ] ],
 		], $this->catalogo() );
 		self::assertSame( [], $r['erros'] );
 		self::assertTrue( $r['pedido']['destinatario']['novo'] );
 		self::assertSame( 'PT', $r['pedido']['destinatario']['pais'] );
-		self::assertSame( 1130.0, $r['pedido']['totais']['total'] );
+		self::assertSame( 1000.0, $r['pedido']['totais']['total'] );
 	}
 
 	public function test_erros(): void {
 		$r = cp_ac_fat_validar_pedido( [
-			'destinatario_conta' => '',
+			'destinatario_conta' => 'novo',
 			'destinatario'       => [ 'nome' => '', 'nif' => '123456780', 'email' => 'nao-e-email' ],
-			'linhas'             => [ [ 'artigo' => 'NAO', 'descricao' => 'x', 'quantidade' => '1', 'preco' => '1', 'taxa_iva' => '23' ],
-				[ 'artigo' => '', 'descricao' => 'y', 'quantidade' => '0', 'preco' => '-1', 'taxa_iva' => '17' ] ],
+			'linhas'             => [ [ 'artigo' => 'NAO', 'descricao' => 'x', 'quantidade' => '1', 'preco' => '1' ],
+				[ 'artigo' => '', 'descricao' => 'y', 'quantidade' => '0', 'preco' => '-1' ] ],
 		], $this->catalogo() );
 		self::assertNull( $r['pedido'] );
 		$texto = implode( ' | ', $r['erros'] );
-		foreach ( [ 'nome do cliente', 'NIF', 'email', 'Linha 1: o artigo', 'Linha 2: a quantidade', 'Linha 2: indique o preço', 'Linha 2: escolha a taxa' ] as $esperado ) {
+		foreach ( [ 'nome do cliente', 'NIF', 'email', 'Linha 1: o artigo', 'Linha 2: a quantidade', 'Linha 2: indique o preço' ] as $esperado ) {
 			self::assertStringContainsString( $esperado, $texto );
 		}
 	}
 
-	public function test_iva_zero_exige_motivo_nas_observacoes(): void {
-		$base = [ 'destinatario_conta' => '211110003',
-			'linhas' => [ [ 'artigo' => '', 'descricao' => 'Isento', 'quantidade' => '1', 'preco' => '50', 'taxa_iva' => '0' ] ] ];
-		self::assertNotEmpty( cp_ac_fat_validar_pedido( $base, $this->catalogo() )['erros'] );
-		self::assertSame( [], cp_ac_fat_validar_pedido( $base + [ 'observacoes' => 'Artigo 9.º CIVA' ], $this->catalogo() )['erros'] );
+	public function test_cliente_por_escolher(): void {
+		$r = cp_ac_fat_validar_pedido( [ 'destinatario_conta' => '',
+			'linhas' => [ [ 'artigo' => '', 'descricao' => 'x', 'quantidade' => '1', 'preco' => '50' ] ] ], $this->catalogo() );
+		self::assertSame( [ 'Escolha o cliente.' ], $r['erros'] );
 	}
 
 	public function test_sem_linhas(): void {

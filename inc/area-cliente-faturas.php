@@ -37,6 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 const CP_AC_FAT_MAX_LINHAS  = 30;
 const CP_AC_FAT_MAX_PEDIDOS = 200;
+const CP_AC_FAT_NOVO        = 'novo'; // valor de "Cliente novo" no seletor (as contas da CG são números)
 
 // ─── Funções puras (testadas em tests/Unit/FaturasTest.php) ─────────────────
 
@@ -74,16 +75,17 @@ function cp_ac_fat_euros( $valor ) {
 	return number_format( (float) $valor, 2, ',', ' ' ) . ' €';
 }
 
-/** Totais: cada linha arredonda a base e o IVA a cêntimos, como numa fatura. */
+/**
+ * Total do pedido: soma de quantidade × preço, cada linha arredondada a
+ * cêntimos. Sem IVA: o cliente não escolhe a taxa (decisão de 2026-11-23);
+ * a equipa trata disso ao emitir.
+ */
 function cp_ac_fat_totais( $linhas ) {
-	$base = 0.0;
-	$iva  = 0.0;
+	$total = 0.0;
 	foreach ( (array) $linhas as $l ) {
-		$b     = round( (float) $l['quantidade'] * (float) $l['preco'], 2 );
-		$base += $b;
-		$iva  += round( $b * (float) $l['taxa_iva'] / 100, 2 );
+		$total += round( (float) $l['quantidade'] * (float) $l['preco'], 2 );
 	}
-	return [ 'base' => round( $base, 2 ), 'iva' => round( $iva, 2 ), 'total' => round( $base + $iva, 2 ) ];
+	return [ 'total' => round( $total, 2 ) ];
 }
 
 /** Artigos vindos da Work (ignora os sem código ou sem nome). */
@@ -126,8 +128,9 @@ function cp_ac_fat_limpar_destinatario( $d ) {
 }
 
 /**
- * Valida o que o cliente preencheu. $dados = [ destinatario_conta, destinatario
- * => {...}, linhas => [ {artigo, descricao, quantidade, preco, taxa_iva} ],
+ * Valida o que o cliente preencheu. $dados = [ destinatario_conta (conta da
+ * lista, CP_AC_FAT_NOVO para cliente novo, vazio = por escolher),
+ * destinatario => {...}, linhas => [ {artigo, descricao, quantidade, preco} ],
  * observacoes ]. Devolve [ 'pedido' => [...] | null, 'erros' => [...] ].
  * Um cliente ou artigo escolhido da lista vem sempre do catálogo (nunca do
  * que o browser manda).
@@ -136,7 +139,10 @@ function cp_ac_fat_validar_pedido( $dados, $catalogo ) {
 	$erros = [];
 
 	$conta = sanitize_text_field( $dados['destinatario_conta'] ?? '' );
-	if ( '' !== $conta ) {
+	if ( '' === $conta ) {
+		$dest    = null;
+		$erros[] = __( 'Escolha o cliente.', 'contabilidade-pro' );
+	} elseif ( CP_AC_FAT_NOVO !== $conta ) {
 		$dest = null;
 		foreach ( (array) ( $catalogo['clientes'] ?? [] ) as $c ) {
 			if ( (string) $c['conta'] === $conta ) { $dest = $c + [ 'novo' => false ]; break; }
@@ -163,7 +169,6 @@ function cp_ac_fat_validar_pedido( $dados, $catalogo ) {
 		$descricao = sanitize_textarea_field( $l['descricao'] ?? '' );
 		$qtd       = cp_ac_fat_numero( $l['quantidade'] ?? '' );
 		$preco     = cp_ac_fat_numero( $l['preco'] ?? '' );
-		$taxa      = cp_ac_fat_numero( $l['taxa_iva'] ?? '' );
 		if ( '' === $codigo && '' === trim( $descricao ) && null === $preco ) continue; // linha em branco
 
 		if ( '' !== $codigo ) {
@@ -172,20 +177,15 @@ function cp_ac_fat_validar_pedido( $dados, $catalogo ) {
 				continue;
 			}
 			if ( '' === trim( $descricao ) ) $descricao = $artigos[ $codigo ]['nome'];
-			if ( null === $taxa ) $taxa = $artigos[ $codigo ]['taxa_iva'];
 		}
 		if ( '' === trim( $descricao ) ) $erros[] = sprintf( __( 'Linha %d: descreva o que faturar.', 'contabilidade-pro' ), $n );
 		if ( null === $qtd || $qtd <= 0 ) $erros[] = sprintf( __( 'Linha %d: a quantidade tem de ser maior que zero.', 'contabilidade-pro' ), $n );
-		if ( null === $preco || $preco <= 0 ) $erros[] = sprintf( __( 'Linha %d: indique o preço (sem IVA).', 'contabilidade-pro' ), $n );
-		if ( null === $taxa || ! in_array( $taxa, cp_ac_fat_taxas_iva(), true ) ) {
-			$erros[] = sprintf( __( 'Linha %d: escolha a taxa de IVA.', 'contabilidade-pro' ), $n );
-		}
+		if ( null === $preco || $preco <= 0 ) $erros[] = sprintf( __( 'Linha %d: indique o preço.', 'contabilidade-pro' ), $n );
 		$linhas[] = [
 			'artigo'     => $codigo,
 			'descricao'  => trim( $descricao ),
 			'quantidade' => (float) $qtd,
 			'preco'      => (float) $preco,
-			'taxa_iva'   => (float) $taxa,
 		];
 	}
 	if ( ! $linhas ) $erros[] = __( 'Acrescente pelo menos uma linha com o que faturar.', 'contabilidade-pro' );
@@ -194,12 +194,6 @@ function cp_ac_fat_validar_pedido( $dados, $catalogo ) {
 	}
 
 	$observacoes = sanitize_textarea_field( $dados['observacoes'] ?? '' );
-	foreach ( $linhas as $l ) {
-		if ( 0.0 === $l['taxa_iva'] && '' === trim( $observacoes ) ) {
-			$erros[] = __( 'Há linhas sem IVA: indique nas observações o motivo da isenção.', 'contabilidade-pro' );
-			break;
-		}
-	}
 
 	if ( $erros ) return [ 'pedido' => null, 'erros' => array_values( array_unique( $erros ) ) ];
 	return [
@@ -434,7 +428,6 @@ function cp_ac_fat_pedido_do_post() {
 	$descr   = $lista( 'linha_descricao' );
 	$qtds    = $lista( 'linha_quantidade' );
 	$precos  = $lista( 'linha_preco' );
-	$taxas   = $lista( 'linha_iva' );
 	$linhas  = [];
 	$n       = max( count( $artigos ), count( $descr ), count( $qtds ), count( $precos ) );
 	for ( $i = 0; $i < min( $n, CP_AC_FAT_MAX_LINHAS + 1 ); $i++ ) {
@@ -443,7 +436,6 @@ function cp_ac_fat_pedido_do_post() {
 			'descricao'  => (string) ( $descr[ $i ] ?? '' ),
 			'quantidade' => (string) ( $qtds[ $i ] ?? '' ),
 			'preco'      => (string) ( $precos[ $i ] ?? '' ),
-			'taxa_iva'   => (string) ( $taxas[ $i ] ?? '' ),
 		];
 	}
 	$campo = function ( $nome ) { return isset( $_POST[ $nome ] ) ? (string) wp_unslash( $_POST[ $nome ] ) : ''; };
@@ -557,13 +549,10 @@ function cp_ac_vista_pedir_faturas() {
 	$anterior   = $erros ? (array) $form['dados'] : [];
 	$ok         = isset( $_GET['cp_ok'] ) ? sanitize_key( wp_unslash( $_GET['cp_ok'] ) ) : '';
 	$erro       = isset( $_GET['cp_erro'] ) ? sanitize_key( wp_unslash( $_GET['cp_erro'] ) ) : '';
-	$taxas      = cp_ac_fat_taxas_iva();
-	$fmt_taxa   = function ( $t ) { return rtrim( rtrim( number_format( (float) $t, 1, ',', '' ), '0' ), ',' ) . '%'; };
 	$dest_ant   = (array) ( $anterior['destinatario'] ?? [] );
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Pedir faturas', 'contabilidade-pro' ); ?></h1>
-		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Diga-nos a quem faturar, o quê e por quanto. Nós emitimos a fatura e ela aparece aqui.', 'contabilidade-pro' ); ?></div>
 	</div>
 
 	<?php if ( 'fatura_pedida' === $ok ) : ?>
@@ -577,12 +566,7 @@ function cp_ac_vista_pedir_faturas() {
 	<?php endif; ?>
 
 	<div class="ac-card" style="padding:22px" id="cp-fat-form">
-		<div class="ac-sec-head">
-			<div>
-				<h3 style="font-size:16px"><?php esc_html_e( 'Novo pedido', 'contabilidade-pro' ); ?></h3>
-				<div class="ac-sec-sub"><?php esc_html_e( 'Os preços são sem IVA.', 'contabilidade-pro' ); ?></div>
-			</div>
-		</div>
+		<h3 style="font-size:16px;margin-bottom:16px"><?php esc_html_e( 'Novo pedido', 'contabilidade-pro' ); ?></h3>
 
 		<?php if ( $erros ) : ?>
 			<div style="color:var(--ac-badge-red-fg);font-size:13.5px;margin-bottom:14px">
@@ -595,102 +579,99 @@ function cp_ac_vista_pedir_faturas() {
 			<input type="hidden" name="action" value="cp_fatura_pedir">
 			<input type="hidden" name="empresa_id" value="<?php echo esc_attr( $empresa_id ); ?>">
 
-			<div class="ac-fat-bloco">
-				<div class="ac-fat-bloco-titulo"><?php esc_html_e( 'A quem faturar', 'contabilidade-pro' ); ?></div>
-				<?php $conta_ant = (string) ( $anterior['destinatario_conta'] ?? '' ); ?>
-				<div class="ac-field ac-fat-largo">
-					<label for="cp-fat-cliente"><?php esc_html_e( 'Cliente', 'contabilidade-pro' ); ?></label>
+			<?php $conta_ant = (string) ( $anterior['destinatario_conta'] ?? '' ); ?>
+			<div class="ac-field ac-fat-cliente">
+				<label for="cp-fat-cliente"><?php esc_html_e( 'Cliente', 'contabilidade-pro' ); ?></label>
+				<div class="ac-fat-cliente-escolha">
 					<?php if ( count( $catalogo['clientes'] ) > 8 ) : ?>
-						<input type="search" id="cp-fat-cliente-procurar" placeholder="<?php esc_attr_e( 'Procurar por nome ou NIF…', 'contabilidade-pro' ); ?>" style="width:100%;margin-bottom:6px" autocomplete="off">
+						<input type="search" id="cp-fat-cliente-procurar" placeholder="<?php esc_attr_e( 'Procurar por nome ou NIF', 'contabilidade-pro' ); ?>" autocomplete="off" aria-label="<?php esc_attr_e( 'Procurar cliente', 'contabilidade-pro' ); ?>">
 					<?php endif; ?>
-					<select name="destinatario_conta" id="cp-fat-cliente" style="width:100%">
-						<option value=""><?php esc_html_e( '+ Novo cliente (preencher os dados)', 'contabilidade-pro' ); ?></option>
-						<?php foreach ( $catalogo['clientes'] as $c ) : ?>
-							<option value="<?php echo esc_attr( $c['conta'] ); ?>" <?php selected( $conta_ant, (string) $c['conta'] ); ?>
-								data-resumo="<?php echo esc_attr( trim( implode( ' · ', array_filter( [ $c['nif'] ? 'NIF ' . $c['nif'] : '', trim( $c['morada'] . ' ' . $c['cod_postal'] . ' ' . $c['localidade'] ) ] ) ) ) ); ?>">
-								<?php echo esc_html( $c['nome'] . ( $c['nif'] ? ' — ' . $c['nif'] : '' ) ); ?>
-							</option>
-						<?php endforeach; ?>
+					<select name="destinatario_conta" id="cp-fat-cliente" required>
+						<option value=""><?php esc_html_e( 'Escolher cliente…', 'contabilidade-pro' ); ?></option>
+						<?php if ( $catalogo['clientes'] ) : ?>
+							<optgroup label="<?php esc_attr_e( 'Os seus clientes', 'contabilidade-pro' ); ?>">
+							<?php foreach ( $catalogo['clientes'] as $c ) : ?>
+								<option value="<?php echo esc_attr( $c['conta'] ); ?>" <?php selected( $conta_ant, (string) $c['conta'] ); ?>
+									data-nome="<?php echo esc_attr( $c['nome'] ); ?>"
+									data-nif="<?php echo esc_attr( $c['nif'] ); ?>"
+									data-morada="<?php echo esc_attr( trim( $c['morada'] . ', ' . trim( $c['cod_postal'] . ' ' . $c['localidade'] ), ', ' ) ); ?>">
+									<?php echo esc_html( $c['nome'] . ( $c['nif'] ? ' · ' . $c['nif'] : '' ) ); ?>
+								</option>
+							<?php endforeach; ?>
+							</optgroup>
+						<?php endif; ?>
+						<option value="<?php echo esc_attr( CP_AC_FAT_NOVO ); ?>" <?php selected( $conta_ant, CP_AC_FAT_NOVO ); ?>><?php esc_html_e( '+ Cliente novo', 'contabilidade-pro' ); ?></option>
 					</select>
-					<div class="ac-sec-sub" id="cp-fat-cliente-resumo"></div>
 				</div>
-
-				<div class="ac-fat-novo" id="cp-fat-novo">
-					<div class="ac-field ac-fat-largo"><label for="cp-fat-nome"><?php esc_html_e( 'Nome', 'contabilidade-pro' ); ?></label>
-						<input type="text" id="cp-fat-nome" name="dest_nome" value="<?php echo esc_attr( $dest_ant['nome'] ?? '' ); ?>" maxlength="150"></div>
-					<div class="ac-field"><label for="cp-fat-nif"><?php esc_html_e( 'NIF', 'contabilidade-pro' ); ?></label>
-						<input type="text" id="cp-fat-nif" name="dest_nif" value="<?php echo esc_attr( $dest_ant['nif'] ?? '' ); ?>" inputmode="numeric" maxlength="20" placeholder="<?php esc_attr_e( 'Vazio = consumidor final', 'contabilidade-pro' ); ?>"></div>
-					<div class="ac-field"><label for="cp-fat-email"><?php esc_html_e( 'Email (opcional)', 'contabilidade-pro' ); ?></label>
-						<input type="email" id="cp-fat-email" name="dest_email" value="<?php echo esc_attr( $dest_ant['email'] ?? '' ); ?>"></div>
-					<div class="ac-field ac-fat-largo"><label for="cp-fat-morada"><?php esc_html_e( 'Morada', 'contabilidade-pro' ); ?></label>
-						<input type="text" id="cp-fat-morada" name="dest_morada" value="<?php echo esc_attr( $dest_ant['morada'] ?? '' ); ?>" maxlength="200"></div>
-					<div class="ac-field"><label for="cp-fat-cp"><?php esc_html_e( 'Código postal', 'contabilidade-pro' ); ?></label>
-						<input type="text" id="cp-fat-cp" name="dest_cod_postal" value="<?php echo esc_attr( $dest_ant['cod_postal'] ?? '' ); ?>" maxlength="20" placeholder="0000-000"></div>
-					<div class="ac-field"><label for="cp-fat-localidade"><?php esc_html_e( 'Localidade', 'contabilidade-pro' ); ?></label>
-						<input type="text" id="cp-fat-localidade" name="dest_localidade" value="<?php echo esc_attr( $dest_ant['localidade'] ?? '' ); ?>" maxlength="80"></div>
-					<div class="ac-field"><label for="cp-fat-pais"><?php esc_html_e( 'País', 'contabilidade-pro' ); ?></label>
-						<input type="text" id="cp-fat-pais" name="dest_pais" value="<?php echo esc_attr( $dest_ant['pais'] ?? 'PT' ); ?>" maxlength="2" style="text-transform:uppercase" title="<?php esc_attr_e( 'Código do país (PT, ES, FR…)', 'contabilidade-pro' ); ?>"></div>
+				<div class="ac-fat-cliente-ficha" id="cp-fat-cliente-ficha" hidden>
+					<strong class="cp-fat-ficha-nome"></strong>
+					<span class="cp-fat-ficha-nif"></span>
+					<span class="cp-fat-ficha-morada"></span>
 				</div>
 			</div>
 
-			<div class="ac-fat-bloco">
-				<div class="ac-fat-bloco-titulo"><?php esc_html_e( 'O que faturar', 'contabilidade-pro' ); ?></div>
-				<div class="ac-fat-linhas-cab" aria-hidden="true">
-					<span><?php esc_html_e( 'Artigo', 'contabilidade-pro' ); ?></span>
-					<span><?php esc_html_e( 'Descrição', 'contabilidade-pro' ); ?></span>
-					<span><?php esc_html_e( 'Qtd.', 'contabilidade-pro' ); ?></span>
-					<span><?php esc_html_e( 'Preço s/ IVA', 'contabilidade-pro' ); ?></span>
-					<span><?php esc_html_e( 'IVA', 'contabilidade-pro' ); ?></span>
-					<span style="text-align:right"><?php esc_html_e( 'Total', 'contabilidade-pro' ); ?></span>
-					<span></span>
-				</div>
-				<div id="cp-fat-linhas">
-					<?php
-					$linhas_ant = $anterior['linhas'] ?? [];
-					if ( ! $linhas_ant ) $linhas_ant = [ [] ];
-					foreach ( $linhas_ant as $l ) :
-						$art_ant  = (string) ( $l['artigo'] ?? '' );
-						$taxa_ant = cp_ac_fat_numero( $l['taxa_iva'] ?? '' );
-						?>
-						<div class="ac-fat-linha">
-							<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Artigo', 'contabilidade-pro' ); ?></label>
-								<select name="linha_artigo[]" class="cp-fat-artigo">
-									<option value=""><?php esc_html_e( 'Outro (escrever)', 'contabilidade-pro' ); ?></option>
-									<?php foreach ( $catalogo['artigos'] as $a ) : ?>
-										<option value="<?php echo esc_attr( $a['codigo'] ); ?>" <?php selected( $art_ant, (string) $a['codigo'] ); ?>><?php echo esc_html( $a['nome'] ); ?></option>
-									<?php endforeach; ?>
-								</select></div>
-							<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Descrição', 'contabilidade-pro' ); ?></label>
-								<input type="text" name="linha_descricao[]" class="cp-fat-descricao" value="<?php echo esc_attr( $l['descricao'] ?? '' ); ?>" maxlength="300"></div>
-							<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Qtd.', 'contabilidade-pro' ); ?></label>
-								<input type="text" name="linha_quantidade[]" class="cp-fat-qtd" value="<?php echo esc_attr( $l['quantidade'] ?? '1' ); ?>" inputmode="decimal"></div>
-							<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Preço s/ IVA', 'contabilidade-pro' ); ?></label>
-								<input type="text" name="linha_preco[]" class="cp-fat-preco" value="<?php echo esc_attr( $l['preco'] ?? '' ); ?>" inputmode="decimal" placeholder="0,00"></div>
-							<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'IVA', 'contabilidade-pro' ); ?></label>
-								<select name="linha_iva[]" class="cp-fat-iva">
-									<?php foreach ( $taxas as $t ) : ?>
-										<option value="<?php echo esc_attr( $t ); ?>" <?php selected( null === $taxa_ant ? 23.0 : $taxa_ant, $t ); ?>><?php echo esc_html( $fmt_taxa( $t ) ); ?></option>
-									<?php endforeach; ?>
-								</select></div>
-							<div class="ac-fat-total-linha cp-fat-total-linha">—</div>
-							<button type="button" class="ac-icon-btn-sm cp-fat-remover" title="<?php esc_attr_e( 'Remover linha', 'contabilidade-pro' ); ?>" aria-label="<?php esc_attr_e( 'Remover linha', 'contabilidade-pro' ); ?>">
-								<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
-							</button>
-						</div>
-					<?php endforeach; ?>
-				</div>
-				<button type="button" class="ac-btn ac-btn-ghost" id="cp-fat-adicionar" style="padding:8px 14px;font-size:13px;margin-top:4px">+ <?php esc_html_e( 'Adicionar linha', 'contabilidade-pro' ); ?></button>
-
-				<div class="ac-fat-totais">
-					<div><span><?php esc_html_e( 'Total sem IVA', 'contabilidade-pro' ); ?></span><strong id="cp-fat-base">0,00 €</strong></div>
-					<div><span><?php esc_html_e( 'IVA', 'contabilidade-pro' ); ?></span><strong id="cp-fat-iva">0,00 €</strong></div>
-					<div class="ac-fat-total"><span><?php esc_html_e( 'Total', 'contabilidade-pro' ); ?></span><strong id="cp-fat-total">0,00 €</strong></div>
-				</div>
+			<div class="ac-fat-novo" id="cp-fat-novo" hidden>
+				<div class="ac-field ac-fat-largo"><label for="cp-fat-nome"><?php esc_html_e( 'Nome', 'contabilidade-pro' ); ?></label>
+					<input type="text" id="cp-fat-nome" name="dest_nome" value="<?php echo esc_attr( $dest_ant['nome'] ?? '' ); ?>" maxlength="150"></div>
+				<div class="ac-field"><label for="cp-fat-nif"><?php esc_html_e( 'NIF', 'contabilidade-pro' ); ?></label>
+					<input type="text" id="cp-fat-nif" name="dest_nif" value="<?php echo esc_attr( $dest_ant['nif'] ?? '' ); ?>" inputmode="numeric" maxlength="20" placeholder="<?php esc_attr_e( 'Vazio = consumidor final', 'contabilidade-pro' ); ?>"></div>
+				<div class="ac-field"><label for="cp-fat-email"><?php esc_html_e( 'Email (opcional)', 'contabilidade-pro' ); ?></label>
+					<input type="email" id="cp-fat-email" name="dest_email" value="<?php echo esc_attr( $dest_ant['email'] ?? '' ); ?>"></div>
+				<div class="ac-field ac-fat-largo"><label for="cp-fat-morada"><?php esc_html_e( 'Morada', 'contabilidade-pro' ); ?></label>
+					<input type="text" id="cp-fat-morada" name="dest_morada" value="<?php echo esc_attr( $dest_ant['morada'] ?? '' ); ?>" maxlength="200"></div>
+				<div class="ac-field"><label for="cp-fat-cp"><?php esc_html_e( 'Código postal', 'contabilidade-pro' ); ?></label>
+					<input type="text" id="cp-fat-cp" name="dest_cod_postal" value="<?php echo esc_attr( $dest_ant['cod_postal'] ?? '' ); ?>" maxlength="20" placeholder="0000-000"></div>
+				<div class="ac-field"><label for="cp-fat-localidade"><?php esc_html_e( 'Localidade', 'contabilidade-pro' ); ?></label>
+					<input type="text" id="cp-fat-localidade" name="dest_localidade" value="<?php echo esc_attr( $dest_ant['localidade'] ?? '' ); ?>" maxlength="80"></div>
+				<div class="ac-field"><label for="cp-fat-pais"><?php esc_html_e( 'País', 'contabilidade-pro' ); ?></label>
+					<input type="text" id="cp-fat-pais" name="dest_pais" value="<?php echo esc_attr( $dest_ant['pais'] ?? 'PT' ); ?>" maxlength="2" style="text-transform:uppercase" title="<?php esc_attr_e( 'Código do país (PT, ES, FR…)', 'contabilidade-pro' ); ?>"></div>
 			</div>
 
-			<div class="ac-field" style="margin-bottom:16px">
+			<div class="ac-fat-linhas-cab" aria-hidden="true">
+				<span><?php esc_html_e( 'Artigo', 'contabilidade-pro' ); ?></span>
+				<span><?php esc_html_e( 'Descrição', 'contabilidade-pro' ); ?></span>
+				<span><?php esc_html_e( 'Qtd.', 'contabilidade-pro' ); ?></span>
+				<span><?php esc_html_e( 'Preço unit.', 'contabilidade-pro' ); ?></span>
+				<span style="text-align:right"><?php esc_html_e( 'Valor', 'contabilidade-pro' ); ?></span>
+				<span></span>
+			</div>
+			<div id="cp-fat-linhas">
+				<?php
+				$linhas_ant = $anterior['linhas'] ?? [];
+				if ( ! $linhas_ant ) $linhas_ant = [ [] ];
+				foreach ( $linhas_ant as $l ) :
+					$art_ant = (string) ( $l['artigo'] ?? '' );
+					?>
+					<div class="ac-fat-linha">
+						<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Artigo', 'contabilidade-pro' ); ?></label>
+							<select name="linha_artigo[]" class="cp-fat-artigo">
+								<option value=""><?php esc_html_e( 'Outro (escrever)', 'contabilidade-pro' ); ?></option>
+								<?php foreach ( $catalogo['artigos'] as $a ) : ?>
+									<option value="<?php echo esc_attr( $a['codigo'] ); ?>" <?php selected( $art_ant, (string) $a['codigo'] ); ?>><?php echo esc_html( $a['nome'] ); ?></option>
+								<?php endforeach; ?>
+							</select></div>
+						<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Descrição', 'contabilidade-pro' ); ?></label>
+							<input type="text" name="linha_descricao[]" class="cp-fat-descricao" value="<?php echo esc_attr( $l['descricao'] ?? '' ); ?>" maxlength="300"></div>
+						<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Qtd.', 'contabilidade-pro' ); ?></label>
+							<input type="text" name="linha_quantidade[]" class="cp-fat-qtd" value="<?php echo esc_attr( $l['quantidade'] ?? '1' ); ?>" inputmode="decimal"></div>
+						<div class="ac-field"><label class="ac-fat-rotulo-movel"><?php esc_html_e( 'Preço unit.', 'contabilidade-pro' ); ?></label>
+							<input type="text" name="linha_preco[]" class="cp-fat-preco" value="<?php echo esc_attr( $l['preco'] ?? '' ); ?>" inputmode="decimal" placeholder="0,00"></div>
+						<div class="ac-fat-total-linha cp-fat-total-linha">—</div>
+						<button type="button" class="ac-icon-btn-sm cp-fat-remover" title="<?php esc_attr_e( 'Remover linha', 'contabilidade-pro' ); ?>" aria-label="<?php esc_attr_e( 'Remover linha', 'contabilidade-pro' ); ?>">
+							<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+						</button>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<button type="button" class="ac-btn ac-btn-ghost" id="cp-fat-adicionar" style="padding:8px 14px;font-size:13px;margin-top:4px">+ <?php esc_html_e( 'Adicionar linha', 'contabilidade-pro' ); ?></button>
+
+			<div class="ac-fat-totais">
+				<div class="ac-fat-total"><span><?php esc_html_e( 'Total', 'contabilidade-pro' ); ?></span><strong id="cp-fat-total">0,00 €</strong></div>
+			</div>
+
+			<div class="ac-field" style="margin:18px 0 16px">
 				<label for="cp-fat-obs"><?php esc_html_e( 'Observações (opcional)', 'contabilidade-pro' ); ?></label>
-				<textarea id="cp-fat-obs" name="observacoes" rows="3" style="width:100%" placeholder="<?php esc_attr_e( 'Data a usar, referência de encomenda, motivo de isenção de IVA…', 'contabilidade-pro' ); ?>"><?php echo esc_textarea( $anterior['observacoes'] ?? '' ); ?></textarea>
+				<textarea id="cp-fat-obs" name="observacoes" rows="3" style="width:100%" placeholder="<?php esc_attr_e( 'Data a usar, referência de encomenda…', 'contabilidade-pro' ); ?>"><?php echo esc_textarea( $anterior['observacoes'] ?? '' ); ?></textarea>
 			</div>
 
 			<button type="submit" class="ac-btn ac-btn-primary"><?php esc_html_e( 'Enviar pedido', 'contabilidade-pro' ); ?></button>
@@ -760,8 +741,9 @@ function cp_ac_vista_pedir_faturas() {
 		var linhas = document.getElementById('cp-fat-linhas');
 		var cliente = document.getElementById('cp-fat-cliente');
 		var novo = document.getElementById('cp-fat-novo');
-		var resumo = document.getElementById('cp-fat-cliente-resumo');
+		var ficha = document.getElementById('cp-fat-cliente-ficha');
 		var procurar = document.getElementById('cp-fat-cliente-procurar');
+		var NOVO = <?php echo wp_json_encode( CP_AC_FAT_NOVO ); ?>;
 
 		function num(v) {
 			v = String(v || '').replace(/[\s €]/g, '');
@@ -774,34 +756,31 @@ function cp_ac_vista_pedir_faturas() {
 		}
 		function r2(v) { return Math.round(v * 100) / 100; }
 		function recalcular() {
-			var base = 0, iva = 0;
+			var total = 0;
 			linhas.querySelectorAll('.ac-fat-linha').forEach(function (l) {
-				var b = r2(num(l.querySelector('.cp-fat-qtd').value) * num(l.querySelector('.cp-fat-preco').value));
-				base += b;
-				iva += r2(b * num(l.querySelector('.cp-fat-iva').value) / 100);
-				l.querySelector('.cp-fat-total-linha').textContent = b ? euros(b) : '—';
+				var v = r2(num(l.querySelector('.cp-fat-qtd').value) * num(l.querySelector('.cp-fat-preco').value));
+				total += v;
+				l.querySelector('.cp-fat-total-linha').textContent = v ? euros(v) : '—';
 			});
-			document.getElementById('cp-fat-base').textContent = euros(r2(base));
-			document.getElementById('cp-fat-iva').textContent = euros(r2(iva));
-			document.getElementById('cp-fat-total').textContent = euros(r2(base + iva));
+			document.getElementById('cp-fat-total').textContent = euros(r2(total));
 		}
 		function escolherArtigo(l) {
 			var a = artigos[l.querySelector('.cp-fat-artigo').value];
 			if (!a) return;
-			var d = l.querySelector('.cp-fat-descricao'), p = l.querySelector('.cp-fat-preco');
-			d.value = a.nome;
+			var p = l.querySelector('.cp-fat-preco');
+			l.querySelector('.cp-fat-descricao').value = a.nome;
 			if (a.preco > 0 && !num(p.value)) p.value = a.preco.toFixed(2).replace('.', ',');
-			l.querySelector('.cp-fat-iva').value = String(a.taxa_iva);
 			recalcular();
+		}
+		function limpar(l) {
+			l.querySelectorAll('input').forEach(function (c) { c.value = c.classList.contains('cp-fat-qtd') ? '1' : ''; });
+			l.querySelector('.cp-fat-artigo').value = '';
 		}
 		function ligar(l) {
 			l.querySelector('.cp-fat-artigo').addEventListener('change', function () { escolherArtigo(l); });
-			l.querySelectorAll('input,select').forEach(function (c) { c.addEventListener('input', recalcular); });
+			l.querySelectorAll('input').forEach(function (c) { c.addEventListener('input', recalcular); });
 			l.querySelector('.cp-fat-remover').addEventListener('click', function () {
-				if (linhas.children.length > 1) { l.remove(); } else {
-					l.querySelectorAll('input').forEach(function (c) { c.value = c.classList.contains('cp-fat-qtd') ? '1' : ''; });
-					l.querySelector('.cp-fat-artigo').value = '';
-				}
+				if (linhas.children.length > 1) { l.remove(); } else { limpar(l); }
 				recalcular();
 			});
 		}
@@ -809,9 +788,7 @@ function cp_ac_vista_pedir_faturas() {
 		document.getElementById('cp-fat-adicionar').addEventListener('click', function () {
 			if (linhas.children.length >= <?php echo (int) CP_AC_FAT_MAX_LINHAS; ?>) return;
 			var n = linhas.firstElementChild.cloneNode(true);
-			n.querySelectorAll('input').forEach(function (c) { c.value = c.classList.contains('cp-fat-qtd') ? '1' : ''; });
-			n.querySelector('.cp-fat-artigo').value = '';
-			n.querySelector('.cp-fat-iva').value = '23';
+			limpar(n);
 			linhas.appendChild(n);
 			ligar(n);
 			recalcular();
@@ -820,18 +797,24 @@ function cp_ac_vista_pedir_faturas() {
 
 		function mudarCliente() {
 			var op = cliente.options[cliente.selectedIndex];
-			var e_novo = !cliente.value;
-			novo.hidden = !e_novo;
-			resumo.textContent = e_novo ? '' : (op.getAttribute('data-resumo') || '');
+			var da_lista = !!cliente.value && cliente.value !== NOVO;
+			novo.hidden = cliente.value !== NOVO;
+			ficha.hidden = !da_lista;
+			if (da_lista) {
+				var nif = op.getAttribute('data-nif');
+				ficha.querySelector('.cp-fat-ficha-nome').textContent = op.getAttribute('data-nome');
+				ficha.querySelector('.cp-fat-ficha-nif').textContent = nif ? 'NIF ' + nif : '';
+				ficha.querySelector('.cp-fat-ficha-morada').textContent = op.getAttribute('data-morada') || '';
+			}
 		}
 		cliente.addEventListener('change', mudarCliente);
 		if (procurar) {
 			procurar.addEventListener('input', function () {
 				var q = procurar.value.trim().toLowerCase(), primeiro = null;
-				Array.prototype.forEach.call(cliente.options, function (o) {
-					var ver = !o.value || !q || o.textContent.toLowerCase().indexOf(q) >= 0;
+				cliente.querySelectorAll('optgroup option').forEach(function (o) {
+					var ver = !q || o.textContent.toLowerCase().indexOf(q) >= 0;
 					o.hidden = !ver;
-					if (ver && o.value && !primeiro) primeiro = o;
+					if (ver && !primeiro) primeiro = o;
 				});
 				if (q && primeiro) { cliente.value = primeiro.value; mudarCliente(); }
 			});

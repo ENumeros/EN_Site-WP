@@ -339,6 +339,11 @@ add_action( 'template_redirect', 'cp_ac_handle_pedidos_url' );
 // Empresa ∩ acessos do próprio utilizador (ver cp_ac_utilizador_ferramentas_ativas).
 
 function cp_ac_tem_ferramenta( $chave ) {
+	// Equipa em "Vista cliente": vê todas as ferramentas que existem, mesmo
+	// as que o cliente não vê (a marca no menu diz quais estão ativas).
+	if ( function_exists( 'cp_bo_pre_visualizacao' ) && cp_bo_pre_visualizacao() ) {
+		return array_key_exists( $chave, cp_ac_ferramentas() );
+	}
 	$empresa = cp_ac_empresa_ativa();
 	if ( ! $empresa ) return false;
 	return cp_ac_utilizador_tem_ferramenta( get_current_user_id(), $empresa, $chave );

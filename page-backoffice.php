@@ -66,7 +66,7 @@ else :
 	$bo_vista       = isset( $_GET['vista'] ) ? sanitize_key( wp_unslash( $_GET['vista'] ) ) : '';
 	if ( $bo_empresa_id ) {
 		$bo_vista = 'empresa';
-	} elseif ( ! in_array( $bo_vista, [ 'notificacoes', 'empresa', 'recebimentos', 'contas' ], true ) ) {
+	} elseif ( ! in_array( $bo_vista, [ 'notificacoes', 'empresa', 'recebimentos', 'contas', 'cliente' ], true ) ) {
 		$bo_vista = 'resumo';
 	}
 	$bo_resumo    = cp_bo_resumo();
@@ -109,6 +109,10 @@ else :
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v11H8l-4 3.5z"></path></svg>
 					<?php esc_html_e( 'Mensagens', 'contabilidade-pro' ); ?>
 					<?php if ( $bo_resumo['mensagens'] ) : ?><span class="ac-nav-conta"><?php echo esc_html( $bo_resumo['mensagens'] ); ?></span><?php endif; ?>
+				</a>
+				<a class="ac-nav-link<?php echo 'cliente' === $bo_vista ? ' active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'vista', 'cliente', $bo_url_base ) ); ?>">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+					<?php esc_html_e( 'Vista cliente', 'contabilidade-pro' ); ?>
 				</a>
 				<a class="ac-nav-link" href="<?php echo esc_url( admin_url() ); ?>">
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
@@ -167,6 +171,8 @@ else :
 					<?php cp_rec_render_vista(); ?>
 				<?php elseif ( 'contas' === $bo_vista ) : ?>
 					<?php cp_bocc_render_vista(); ?>
+				<?php elseif ( 'cliente' === $bo_vista ) : ?>
+					<?php cp_bo_render_vista_cliente(); ?>
 				<?php elseif ( 'notificacoes' === $bo_vista ) : $eventos = cp_backoffice_listar_eventos( 50 ); ?>
 				<div>
 					<h1 style="font-size:23px"><?php esc_html_e( 'Notificações', 'contabilidade-pro' ); ?></h1>
@@ -221,9 +227,6 @@ else :
 									<option value="<?php echo esc_attr( $bo_empresa->ID ); ?>" <?php selected( $bo_empresa_id, $bo_empresa->ID ); ?>><?php echo esc_html( cp_ac_empresa_label( $bo_empresa->ID ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<?php if ( $bo_empresa_id && cp_bo_empresa_publicada( $bo_empresa_id ) ) : ?>
-								<a class="ac-btn ac-btn-ghost" style="margin-left:auto" href="<?php echo esc_url( cp_bo_url_ver_como_cliente( $bo_empresa_id ) ); ?>" title="<?php esc_attr_e( 'Abre a Área de Cliente tal como esta empresa a vê (só leitura)', 'contabilidade-pro' ); ?>"><?php esc_html_e( 'Ver como o cliente', 'contabilidade-pro' ); ?></a>
-							<?php endif; ?>
 						</form>
 					</div>
 

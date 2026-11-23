@@ -266,21 +266,26 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`template_redirect`) — `cp_backoffice_e_destino_do_utilizador()`. Um
   administrador que pediu o `wp-admin` continua a ir para lá; quem da
   equipa também é cliente (tem empresas) segue o fluxo normal.
-- **Ver como o cliente** (pré-visualização só de leitura): no Backoffice,
-  vista Lembretes/Mensagens com empresa escolhida, botão "Ver como o
-  cliente" → `/area-de-cliente/?cp_ver_empresa=ID` (nonce
+- **Vista cliente** (pré-visualização só de leitura): entrada "Vista cliente"
+  no menu do Backoffice (`?vista=cliente`, `cp_bo_render_vista_cliente()`):
+  escolhe-se a empresa e abre `/area-de-cliente/?cp_ver_empresa=ID` (nonce
   `cp_ver_empresa_<ID>`, só equipa). Grava o cookie de sessão
   `cp_bo_ver_empresa` (não usermeta — nunca afeta REST da Work nem outros
   browsers) e, só ao desenhar `/area-de-cliente` (`template_redirect`
   prioridade 1, `cp_bo_tratar_pre_visualizacao()`), `cp_ac_user_empresas()`
-  e `cp_ac_empresa_ativa()` do próprio utilizador devolvem essa empresa:
-  vê-se a matriz da empresa, sem restrições por utilizador. Faixa dourada
-  no topo com "Voltar ao Backoffice" (`?cp_sair_ver=1`, apaga o cookie);
-  o login também o apaga. Só leitura garantido no browser (submits
-  bloqueados, `ac-mensagens.js` não faz POST — nem marca lidas, botões de
+  e `cp_ac_empresa_ativa()` do próprio utilizador devolvem essa empresa e
+  `cp_ac_tem_ferramenta()` devolve true para **todas** as ferramentas que
+  existem (a equipa vê tudo, mesmo o que o cliente não vê). No menu, as que
+  estão ativas para pelo menos um utilizador-cliente ativo da empresa
+  (empresa ∩ acessos, sem equipa nem contas `_cp_inativo`) levam um ✓
+  (`cp_bo_marca_ferramenta()`); Lembretes e Mensagens, sem entrada no menu,
+  vêm na faixa dourada do topo, com "Trocar de cliente" e "Voltar ao
+  Backoffice" (`?cp_sair_ver=1|resumo`, apaga o cookie); o login também o
+  apaga. Só leitura garantido no browser (submits bloqueados,
+  `ac-mensagens.js` não faz POST — nem marca lidas, botões de
   push/instalar escondidos); não é fronteira de segurança, a equipa já pode
-  agir em qualquer empresa. Decisão pura `cp_bo_calc_empresa_pre_visualizacao()`
-  testada em `BackofficeTest`.
+  agir em qualquer empresa. Funções puras `cp_bo_calc_empresa_pre_visualizacao()`
+  e `cp_bo_calc_ferramentas_ativas_clientes()` testadas em `BackofficeTest`.
 - **Matriz de ferramentas só de leitura no wp-admin** (SITE-002): a Work é
   a única dona (cada `POST /cp/v1/empresas` com `ferramentas` substitui a
   lista). `cp_ac_render_matriz_page()` só mostra ✓/— com uma nota a dizer

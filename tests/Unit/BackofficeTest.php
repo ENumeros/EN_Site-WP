@@ -9,6 +9,7 @@ use Brain\Monkey\Functions;
  * @covers cp_backoffice_registar_evento
  * @covers cp_backoffice_listar_eventos
  * @covers cp_bo_calc_empresa_pre_visualizacao
+ * @covers cp_bo_calc_ferramentas_ativas_clientes
  */
 final class BackofficeTest extends TestCase {
 
@@ -87,5 +88,13 @@ final class BackofficeTest extends TestCase {
 		self::assertSame( 0, cp_bo_calc_empresa_pre_visualizacao( false, 7, [ 7 ] ), 'cliente nunca entra em pré-visualização' );
 		self::assertSame( 0, cp_bo_calc_empresa_pre_visualizacao( true, 8, [ 7 ] ), 'empresa inexistente/apagada' );
 		self::assertSame( 0, cp_bo_calc_empresa_pre_visualizacao( true, 0, [ 0 ] ) );
+	}
+
+	public function test_ferramentas_ativas_para_pelo_menos_um_utilizador(): void {
+		$empresa = [ 'documentos', 'pagamentos', 'saft' ];
+		self::assertSame( [], cp_bo_calc_ferramentas_ativas_clientes( $empresa, [] ), 'sem utilizadores-cliente nada está ativo' );
+		self::assertSame( $empresa, cp_bo_calc_ferramentas_ativas_clientes( $empresa, [ [ 'saft' ], null ] ), 'quem herda vê tudo' );
+		self::assertSame( [ 'documentos', 'saft' ], cp_bo_calc_ferramentas_ativas_clientes( $empresa, [ [ 'saft' ], [ 'documentos', 'extratos' ] ] ), 'união, só dentro da matriz da empresa' );
+		self::assertSame( [], cp_bo_calc_ferramentas_ativas_clientes( [], [ null, [ 'saft' ] ] ), 'empresa sem ferramentas' );
 	}
 }

@@ -66,9 +66,10 @@ function cp_backoffice_desviar_area_cliente() {
 add_action( 'template_redirect', 'cp_backoffice_desviar_area_cliente' );
 
 // ─── Ver como o cliente (pré-visualização, só leitura) ─────────────────────
-// A equipa abre /area-de-cliente exatamente como uma empresa a vê (matriz
-// de ferramentas da empresa, sem restrições por utilizador), a partir do
-// Backoffice. Fica num cookie de sessão do browser (não em usermeta), por
+// A equipa abre /area-de-cliente de uma empresa a partir do Backoffice
+// (entrada "Vista cliente" no menu). Vê TODAS as ferramentas que existem,
+// mesmo as que o cliente não vê; no menu, as que estão ativas para pelo
+// menos um utilizador (cliente) da empresa têm uma marca. Fica num cookie de sessão do browser (não em usermeta), por
 // isso só vale nesse browser e nunca contamina pedidos REST da Work (que
 // usam Application Password, sem cookie). Só é aplicado ao desenhar a
 // página /area-de-cliente — formulários e REST continuam a ver a equipa
@@ -99,8 +100,53 @@ function cp_bo_url_ver_como_cliente( $empresa_id ) {
 	return wp_nonce_url( $url, 'cp_ver_empresa_' . (int) $empresa_id );
 }
 
-function cp_bo_url_sair_pre_visualizacao() {
-	return add_query_arg( 'cp_sair_ver', '1', home_url( '/area-de-cliente/' ) );
+function cp_bo_url_vista_cliente() {
+	return add_query_arg( 'vista', 'cliente', cp_backoffice_url() );
+}
+
+// Decisão pura: chaves que pelo menos um utilizador vê nesta empresa.
+// $acessos_por_utilizador: um item por utilizador-cliente da empresa — null
+// (herda tudo o que a empresa tem) ou a lista restrita dele. Mantém a
+// ordem da matriz da empresa.
+function cp_bo_calc_ferramentas_ativas_clientes( array $da_empresa, array $acessos_por_utilizador ) {
+	$vistas = [];
+	foreach ( $acessos_por_utilizador as $acessos ) {
+		$vistas = array_merge( $vistas, null === $acessos ? $da_empresa : array_intersect( $da_empresa, (array) $acessos ) );
+	}
+	return array_values( array_intersect( $da_empresa, array_unique( $vistas ) ) );
+}
+
+// Utilizadores-cliente ativos da empresa (nunca equipa nem contas
+// desativadas pela Work). Lê o usermeta diretamente: cp_ac_user_empresas()
+// do próprio utilizador está trocada durante a pré-visualização.
+function cp_bo_ferramentas_ativas_clientes( $empresa_id ) {
+	static $cache = [];
+	$empresa_id = (int) $empresa_id;
+	if ( isset( $cache[ $empresa_id ] ) ) return $cache[ $empresa_id ];
+	$acessos = [];
+	foreach ( get_users( [ 'meta_key' => 'cp_empresas', 'meta_compare' => 'EXISTS' ] ) as $u ) {
+		$empresas = get_user_meta( $u->ID, 'cp_empresas', true );
+		if ( ! is_array( $empresas ) || ! in_array( $empresa_id, array_map( 'intval', $empresas ), true ) ) continue;
+		if ( cp_backoffice_utilizador_tem_acesso( $u->ID ) || get_user_meta( $u->ID, '_cp_inativo', true ) ) continue;
+		$mapa      = cp_ac_user_acessos( $u->ID );
+		$acessos[] = array_key_exists( $empresa_id, $mapa ) ? $mapa[ $empresa_id ] : null;
+	}
+	return $cache[ $empresa_id ] = cp_bo_calc_ferramentas_ativas_clientes( cp_ac_empresa_ferramentas_ativas( $empresa_id ), $acessos );
+}
+
+// Marca no menu da Área de Cliente (só em pré-visualização).
+function cp_bo_marca_ferramenta( $chave ) {
+	$empresa = cp_bo_pre_visualizacao();
+	if ( ! $empresa ) return '';
+	if ( in_array( $chave, cp_bo_ferramentas_ativas_clientes( $empresa ), true ) ) {
+		return '<span class="ac-nav-ativa" title="' . esc_attr__( 'Ativa para o cliente', 'contabilidade-pro' ) . '" aria-label="' . esc_attr__( 'Ativa para o cliente', 'contabilidade-pro' ) . '"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>';
+	}
+	return '<span class="ac-nav-inativa-sr">' . esc_html__( '(o cliente não vê)', 'contabilidade-pro' ) . '</span>';
+}
+
+// $para: 'cliente' (Vista cliente, para trocar de empresa) ou 'resumo'.
+function cp_bo_url_sair_pre_visualizacao( $para = 'cliente' ) {
+	return add_query_arg( 'cp_sair_ver', 'resumo' === $para ? 'resumo' : '1', home_url( '/area-de-cliente/' ) );
 }
 
 function cp_bo_gravar_cookie_ver_empresa( $valor, $expira ) {
@@ -122,11 +168,9 @@ function cp_bo_tratar_pre_visualizacao() {
 	$e_equipa = cp_backoffice_utilizador_tem_acesso( $user_id );
 
 	if ( isset( $_GET['cp_sair_ver'] ) ) {
-		$empresa = isset( $_COOKIE[ CP_BO_COOKIE_VER_EMPRESA ] ) ? absint( $_COOKIE[ CP_BO_COOKIE_VER_EMPRESA ] ) : 0;
 		cp_bo_gravar_cookie_ver_empresa( '', time() - HOUR_IN_SECONDS );
-		$destino = $e_equipa ? cp_backoffice_url() : home_url( '/area-de-cliente/' );
-		if ( $e_equipa && $empresa ) $destino = add_query_arg( 'empresa_id', $empresa, $destino );
-		wp_safe_redirect( $destino );
+		$destino = 'resumo' === $_GET['cp_sair_ver'] ? cp_backoffice_url() : cp_bo_url_vista_cliente();
+		wp_safe_redirect( $e_equipa ? $destino : home_url( '/area-de-cliente/' ) );
 		exit;
 	}
 
@@ -173,8 +217,19 @@ function cp_bo_render_faixa_pre_visualizacao() {
 			<strong><?php esc_html_e( 'Está a ver como o cliente', 'contabilidade-pro' ); ?></strong> ·
 			<?php echo esc_html( cp_ac_empresa_label( $empresa ) ); ?> ·
 			<?php esc_html_e( 'só leitura', 'contabilidade-pro' ); ?>
+			<span class="ac-pre-visualizacao-legenda">
+				<span class="ac-nav-ativa" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>
+				<?php esc_html_e( '= ativa para pelo menos um utilizador do cliente', 'contabilidade-pro' ); ?>
+				<?php $ferramentas = cp_ac_ferramentas(); foreach ( [ 'tarefas', 'mensagens' ] as $chave ) : // sem entrada no menu (vivem no Dashboard) ?>
+					· <?php echo esc_html( $ferramentas[ $chave ]['label'] ); ?>
+					<?php echo in_array( $chave, cp_bo_ferramentas_ativas_clientes( $empresa ), true ) ? esc_html__( 'ativa', 'contabilidade-pro' ) : esc_html__( 'o cliente não vê', 'contabilidade-pro' ); ?>
+				<?php endforeach; ?>
+			</span>
 		</span>
-		<a class="ac-btn ac-btn-ghost" href="<?php echo esc_url( cp_bo_url_sair_pre_visualizacao() ); ?>"><?php esc_html_e( 'Voltar ao Backoffice', 'contabilidade-pro' ); ?></a>
+		<span style="display:flex;gap:8px;flex-wrap:wrap">
+			<a class="ac-btn ac-btn-ghost" href="<?php echo esc_url( cp_bo_url_sair_pre_visualizacao() ); ?>"><?php esc_html_e( 'Trocar de cliente', 'contabilidade-pro' ); ?></a>
+			<a class="ac-btn ac-btn-ghost" href="<?php echo esc_url( cp_bo_url_sair_pre_visualizacao( 'resumo' ) ); ?>"><?php esc_html_e( 'Voltar ao Backoffice', 'contabilidade-pro' ); ?></a>
+		</span>
 	</div>
 	<script>
 	window.cpPreVisualizacao = true;
@@ -208,4 +263,32 @@ function cp_backoffice_listar_eventos( $limite = 50 ) {
 	$eventos = get_option( 'cp_eventos_staff' );
 	$eventos = is_array( $eventos ) ? $eventos : [];
 	return $limite > 0 ? array_slice( $eventos, 0, $limite ) : $eventos;
+}
+
+// Backoffice → "Vista cliente": escolher a empresa e abrir a Área de Cliente
+// como ela (cada opção leva o link já assinado com o nonce dessa empresa).
+function cp_bo_render_vista_cliente() {
+	$empresas = cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'post_status' => 'publish' ] ) );
+	?>
+	<div>
+		<h1 style="font-size:23px"><?php esc_html_e( 'Vista cliente', 'contabilidade-pro' ); ?></h1>
+		<div style="color:var(--ac-muted);font-size:14px;margin-top:6px"><?php esc_html_e( 'Abra a Área de Cliente de uma empresa, só para ver. Aparecem todas as ferramentas; as que estão ativas para o cliente têm um ✓ no menu.', 'contabilidade-pro' ); ?></div>
+	</div>
+	<?php if ( empty( $empresas ) ) : ?>
+		<?php cp_ac_vazio( __( 'Ainda não há empresas', 'contabilidade-pro' ), __( 'As empresas chegam da Work quando o cliente tem conta na Área de Cliente.', 'contabilidade-pro' ) ); ?>
+	<?php else : ?>
+		<div class="ac-card" style="padding:22px;margin-top:18px">
+			<form style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" onsubmit="event.preventDefault();if(this.elements.destino.value){window.location=this.elements.destino.value;}">
+				<label for="cp-bo-vista-cliente" style="font-size:12.5px;font-weight:600"><?php esc_html_e( 'Empresa', 'contabilidade-pro' ); ?></label>
+				<select name="destino" id="cp-bo-vista-cliente" onchange="if(this.value){window.location=this.value;}" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px;max-width:100%">
+					<option value=""><?php esc_html_e( 'Escolha uma empresa…', 'contabilidade-pro' ); ?></option>
+					<?php foreach ( $empresas as $empresa ) : ?>
+						<option value="<?php echo esc_url( cp_bo_url_ver_como_cliente( $empresa->ID ) ); ?>"><?php echo esc_html( cp_ac_empresa_label( $empresa->ID ) ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="submit" class="ac-btn ac-btn-primary"><?php esc_html_e( 'Abrir', 'contabilidade-pro' ); ?></button>
+			</form>
+		</div>
+	<?php endif; ?>
+	<?php
 }

@@ -124,6 +124,7 @@ else :
 						<a class="ac-nav-link<?php echo $vista === $chave ? ' active' : ''; ?>" href="<?php echo esc_url( cp_ac_vista_url( $chave ) ); ?>">
 							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><?php echo isset( $info['icon'] ) ? $info['icon'] : ''; ?></svg>
 							<?php echo esc_html( $info['label'] ); ?>
+							<?php echo cp_bo_marca_ferramenta( $chave ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup fixo ?>
 						</a>
 					<?php endforeach; ?>
 				</div>

@@ -516,3 +516,7 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-pre-visualizacao-faixa .ac-btn{padding:6px 12px;background:rgba(255,255,255,.55);border-color:transparent;color:#16293B}
 .ac-pre-visualizacao #cp-push-btn,.ac-pre-visualizacao #cp-pwa-install-btn{display:none !important}
 @media (max-width:760px){.ac-pre-visualizacao-faixa{padding:10px 16px}}
+.ac-nav-ativa{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:var(--ac-badge-green-bg);color:var(--ac-badge-green-fg);flex:none}
+.ac-pre-visualizacao-faixa .ac-nav-ativa{margin-left:0;width:16px;height:16px;vertical-align:-3px}
+.ac-pre-visualizacao-legenda{display:block;margin-top:2px;font-size:12px}
+.ac-nav-inativa-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

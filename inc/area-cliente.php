@@ -1376,7 +1376,11 @@ function cp_ac_handle_pendente_resposta() {
         'extrato'   => 'cp_ac_extratos',
         'saft'      => 'cp_ac_saft',
     ];
-    $ids_validos = wp_list_pluck( call_user_func( $listas_por_tipo[ $tipo ], $empresa_id ), 'id' );
+    // Um extrato/SAF-T que a Work já recebeu ('recebido') não aceita resposta.
+    $itens_tipo  = array_filter( call_user_func( $listas_por_tipo[ $tipo ], $empresa_id ), function ( $item ) {
+        return ! isset( $item['estado'] ) || 'recebido' !== $item['estado'];
+    } );
+    $ids_validos = wp_list_pluck( $itens_tipo, 'id' );
     if ( ! $empresa_id || '' === $item_id || ! in_array( $item_id, $ids_validos, true ) ) {
         wp_safe_redirect( add_query_arg( 'cp_erro', 'pendente_invalido', $voltar ) );
         exit;
@@ -1511,22 +1515,48 @@ function cp_ac_rest_routes_extratos_saft() {
 add_action( 'rest_api_init', 'cp_ac_rest_routes_extratos_saft' );
 
 // Valida e normaliza um item de checklist (Extratos ou SAF-T): id/mes
-// obrigatórios, mes no formato AAAA-MM, estado 'pendente' por omissão ou
-// 'sem_dados' quando a Work já o marcou assim. $campos_extra dá os campos
+// obrigatórios, mes no formato AAAA-MM, estado 'pendente' por omissão,
+// 'sem_dados' quando a Work já o marcou assim ou 'recebido' quando a Work já
+// o tem (desde 2026-11-23: o cliente vê também o que já entregou, a partir
+// de 2026 — a Work decide o que manda). $campos_extra dá os campos
 // específicos de cada tipo (ex.: conta_id/conta_nome, só em Extratos).
 function cp_ac_normalizar_item_checklist( $item, array $campos_extra = [] ) {
     if ( empty( $item['id'] ) || empty( $item['mes'] ) || ! preg_match( '/^\d{4}-\d{2}$/', $item['mes'] ) ) {
         return null;
     }
+    $estado      = isset( $item['estado'] ) ? $item['estado'] : '';
     $normalizado = [
         'id'     => sanitize_text_field( $item['id'] ),
         'mes'    => sanitize_text_field( $item['mes'] ),
-        'estado' => isset( $item['estado'] ) && 'sem_dados' === $item['estado'] ? 'sem_dados' : 'pendente',
+        'estado' => in_array( $estado, [ 'sem_dados', 'recebido' ], true ) ? $estado : 'pendente',
     ];
     foreach ( $campos_extra as $campo ) {
         $normalizado[ $campo ] = isset( $item[ $campo ] ) ? sanitize_text_field( $item[ $campo ] ) : '';
     }
     return $normalizado;
+}
+
+// Tabs por ano de Extratos/SAF-T: os anos que têm itens mais o ano
+// corrente, que existe sempre e é a tab por omissão; mais recente primeiro.
+// $pedido é o ?ano= do URL — se não for um destes anos, abre o corrente.
+// 'por_tratar' conta, por ano, os itens à espera do cliente ($por_tratar
+// diz se um item conta), para a tab mostrar que há lá coisas em falta.
+function cp_ac_calc_tabs_anos( array $itens, $ano_corrente, $pedido = null, $por_tratar = null ) {
+    $ano_corrente = (int) $ano_corrente;
+    $anos         = [ $ano_corrente => 0 ];
+    foreach ( $itens as $item ) {
+        if ( empty( $item['mes'] ) || ! preg_match( '/^(\d{4})-\d{2}$/', $item['mes'], $m ) ) continue;
+        $ano = (int) $m[1];
+        if ( ! isset( $anos[ $ano ] ) ) $anos[ $ano ] = 0;
+        if ( $por_tratar && call_user_func( $por_tratar, $item ) ) $anos[ $ano ]++;
+    }
+    krsort( $anos );
+    $pedido = (int) $pedido;
+    return [
+        'anos'       => array_keys( $anos ),
+        'ativo'      => isset( $anos[ $pedido ] ) ? $pedido : $ano_corrente,
+        'por_tratar' => $anos,
+    ];
 }
 
 function cp_ac_rest_sincronizar_extratos( $request ) {

@@ -174,7 +174,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 
 				<?php if ( $tem_extratos ) :
 					$extratos_por_resolver = count( array_filter( cp_ac_extratos( $empresa_id ), function ( $item ) use ( $empresa_id ) {
-						return 'sem_dados' !== $item['estado'] && ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+						return cp_ac_item_checklist_por_tratar( $empresa_id, $item );
 					} ) );
 					?>
 					<a href="<?php echo esc_url( cp_ac_vista_url( 'extratos' ) ); ?>" class="ac-resumo-row">
@@ -190,7 +190,7 @@ function cp_ac_vista_dashboard( $nome_utilizador, $ferramentas ) {
 
 				<?php if ( $tem_saft ) :
 					$saft_por_resolver = count( array_filter( cp_ac_saft( $empresa_id ), function ( $item ) use ( $empresa_id ) {
-						return 'sem_dados' !== $item['estado'] && ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+						return cp_ac_item_checklist_por_tratar( $empresa_id, $item );
 					} ) );
 					?>
 					<a href="<?php echo esc_url( cp_ac_vista_url( 'saft' ) ); ?>" class="ac-resumo-row">
@@ -619,10 +619,41 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 }
 
 // ─── Extratos ───────────────────────────────────────────────────────────────
-// Grelha mês × conta. Cada célula é um item de cp_ac_extratos() (ou está em
-// branco, se essa conta ainda não tinha pedido nesse mês). "Sem movimento"
-// pode já vir marcado pela Work (estado 'sem_dados') ou ser marcado aqui
-// pelo cliente, como alternativa a carregar o ficheiro.
+// Grelha mês × conta, numa tab por ano (o corrente é a principal). Cada
+// célula é um item de cp_ac_extratos() (ou está em branco, se essa conta
+// ainda não tinha pedido nesse mês). "Sem movimento" pode já vir marcado
+// pela Work (estado 'sem_dados') ou ser marcado aqui pelo cliente, como
+// alternativa a carregar o ficheiro; 'recebido' = a Work já o tem.
+
+// Item de Extratos/SAF-T à espera do cliente: pedido pela Work e ainda sem
+// resposta dele.
+function cp_ac_item_checklist_por_tratar( $empresa_id, $item ) {
+	return 'pendente' === $item['estado'] && ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+}
+
+// Tabs por ano (links ?ano=, sem JavaScript). Devolve o ano ativo.
+function cp_ac_render_tabs_anos( $empresa_id, array $itens, $vista ) {
+	$tabs = cp_ac_calc_tabs_anos(
+		$itens,
+		(int) current_time( 'Y' ),
+		isset( $_GET['ano'] ) ? absint( $_GET['ano'] ) : null,
+		function ( $item ) use ( $empresa_id ) { return cp_ac_item_checklist_por_tratar( $empresa_id, $item ); }
+	);
+	?>
+	<div class="ac-bo-filtros" role="tablist" style="margin-top:18px">
+		<?php foreach ( $tabs['anos'] as $ano ) :
+			$ativo = $ano === $tabs['ativo'];
+			$n     = $tabs['por_tratar'][ $ano ];
+			?>
+			<a class="ac-bo-chip<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( add_query_arg( 'ano', $ano, cp_ac_vista_url( $vista ) ) ); ?>">
+				<?php echo esc_html( $ano ); ?>
+				<?php if ( $n ) : ?><span class="ac-badge ac-badge-amber" style="margin-left:8px;padding:1px 7px" title="<?php esc_attr_e( 'Por enviar', 'contabilidade-pro' ); ?>"><?php echo esc_html( $n ); ?></span><?php endif; ?>
+			</a>
+		<?php endforeach; ?>
+	</div>
+	<?php
+	return $tabs['ativo'];
+}
 
 function cp_ac_vista_extratos() {
 	$empresa_id = cp_ac_empresa_ativa();
@@ -639,14 +670,19 @@ function cp_ac_vista_extratos() {
 	<?php if ( empty( $itens ) || empty( $contas ) ) : ?>
 		<?php cp_ac_vazio( __( 'Sem extratos pedidos de momento', 'contabilidade-pro' ), __( 'Os extratos que a Entre Números precisar vão aparecer aqui, mês a mês.', 'contabilidade-pro' ) ); ?>
 	<?php else :
+		$ano_ativo = cp_ac_render_tabs_anos( $empresa_id, $itens, 'extratos' );
 		// Agrupar por mês, mais recente primeiro; dentro de cada mês, uma
 		// coluna por conta (na ordem em que as contas foram vistas).
 		$por_mes = [];
 		foreach ( $itens as $item ) {
+			if ( 0 !== strpos( $item['mes'], $ano_ativo . '-' ) ) continue;
 			$por_mes[ $item['mes'] ][ $item['conta_id'] ] = $item;
 		}
 		krsort( $por_mes );
 		?>
+		<?php if ( empty( $por_mes ) ) : ?>
+			<?php /* translators: %d: ano */ cp_ac_vazio( sprintf( __( 'Nada em %d', 'contabilidade-pro' ), $ano_ativo ), __( 'Ainda não há extratos deste ano. Os meses vão aparecer aqui quando a Entre Números os pedir.', 'contabilidade-pro' ) ); ?>
+		<?php else : ?>
 		<div class="ac-table-wrap">
 			<table class="ac-table">
 				<thead>
@@ -669,6 +705,7 @@ function cp_ac_vista_extratos() {
 				</tbody>
 			</table>
 		</div>
+		<?php endif; ?>
 	<?php endif; ?>
 	<?php
 }
@@ -690,15 +727,24 @@ function cp_ac_vista_saft() {
 
 	<?php if ( empty( $itens ) ) : ?>
 		<?php cp_ac_vazio( __( 'Sem SAF-T pedido de momento', 'contabilidade-pro' ), __( 'Os pedidos de SAF-T da Entre Números vão aparecer aqui, mês a mês.', 'contabilidade-pro' ) ); ?>
-	<?php else : ?>
+	<?php else :
+		$ano_ativo = cp_ac_render_tabs_anos( $empresa_id, $itens, 'saft' );
+		$do_ano    = array_filter( $itens, function ( $item ) use ( $ano_ativo ) {
+			return 0 === strpos( $item['mes'], $ano_ativo . '-' );
+		} );
+		?>
+		<?php if ( empty( $do_ano ) ) : ?>
+			<?php /* translators: %d: ano */ cp_ac_vazio( sprintf( __( 'Nada em %d', 'contabilidade-pro' ), $ano_ativo ), __( 'Ainda não há SAF-T deste ano. Os meses vão aparecer aqui quando a Entre Números os pedir.', 'contabilidade-pro' ) ); ?>
+		<?php else : ?>
 		<div class="ac-card" style="padding:22px">
-			<?php foreach ( $itens as $item ) : ?>
+			<?php foreach ( $do_ano as $item ) : ?>
 				<div class="ac-req-row">
 					<div style="font-size:14px;font-weight:600"><?php echo esc_html( $item['mes'] ); ?></div>
 					<?php cp_ac_render_celula_checklist( $item, $empresa_id, 'saft' ); ?>
 				</div>
 			<?php endforeach; ?>
 		</div>
+		<?php endif; ?>
 	<?php endif; ?>
 	<?php
 }
@@ -714,9 +760,11 @@ function cp_ac_render_celula_checklist( $item, $empresa_id, $tipo ) {
 		return;
 	}
 	$resposta = cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
-	$estado   = $resposta ? $resposta['estado'] : $item['estado'];
+	$estado   = $resposta && 'recebido' !== $item['estado'] ? $resposta['estado'] : $item['estado'];
 
-	if ( 'sem_dados' === $estado ) : ?>
+	if ( 'recebido' === $estado ) : ?>
+		<span class="ac-badge ac-badge-green"><?php esc_html_e( 'Recebido', 'contabilidade-pro' ); ?></span>
+	<?php elseif ( 'sem_dados' === $estado ) : ?>
 		<span class="ac-badge ac-badge-blue"><?php esc_html_e( 'Sem dados este mês', 'contabilidade-pro' ); ?></span>
 	<?php elseif ( $resposta ) : ?>
 		<div style="display:flex;align-items:center;gap:10px">

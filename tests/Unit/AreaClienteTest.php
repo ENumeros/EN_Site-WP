@@ -200,4 +200,31 @@ final class AreaClienteTest extends TestCase {
 		self::assertFalse( cp_ac_calc_conta_bloqueada( '', false ) );
 		self::assertFalse( cp_ac_calc_conta_bloqueada( '2026-11-20 10:00:00', true ) );
 	}
+
+	public function test_item_checklist_aceita_recebido_e_sem_dados(): void {
+		$r = cp_ac_normalizar_item_checklist( [ 'id' => 'saft-2026-03', 'mes' => '2026-03', 'estado' => 'recebido' ] );
+		self::assertSame( 'recebido', $r['estado'] );
+		$r = cp_ac_normalizar_item_checklist( [ 'id' => 'saft-2026-03', 'mes' => '2026-03', 'estado' => 'sem_dados' ] );
+		self::assertSame( 'sem_dados', $r['estado'] );
+		$r = cp_ac_normalizar_item_checklist( [ 'id' => 'saft-2026-03', 'mes' => '2026-03', 'estado' => 'outro' ] );
+		self::assertSame( 'pendente', $r['estado'] );
+		self::assertNull( cp_ac_normalizar_item_checklist( [ 'id' => 'x', 'mes' => '2026-3' ] ) );
+	}
+
+	public function test_tabs_anos_corrente_sempre_e_por_omissao(): void {
+		$itens = [
+			[ 'mes' => '2026-10', 'estado' => 'pendente' ],
+			[ 'mes' => '2026-09', 'estado' => 'recebido' ],
+			[ 'mes' => '2025-12', 'estado' => 'pendente' ],
+		];
+		$pendente = function ( $item ) { return 'pendente' === $item['estado']; };
+
+		$t = cp_ac_calc_tabs_anos( $itens, 2027, null, $pendente );
+		self::assertSame( [ 2027, 2026, 2025 ], $t['anos'] );
+		self::assertSame( 2027, $t['ativo'] );
+		self::assertSame( [ 2027 => 0, 2026 => 1, 2025 => 1 ], $t['por_tratar'] );
+
+		self::assertSame( 2025, cp_ac_calc_tabs_anos( $itens, 2026, '2025' )['ativo'] );
+		self::assertSame( 2026, cp_ac_calc_tabs_anos( $itens, 2026, '1999' )['ativo'] );
+	}
 }

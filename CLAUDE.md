@@ -196,6 +196,14 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (formulário, modal e item do botão "+"; ver
   `cp_ac_documento_upload_disponivel()`).
 
+- **Extratos e SAF-T** (`POST cp/v1/extratos` e `/saft`, a Work substitui
+  a lista toda): estados `pendente` (formulário), `sem_dados` e, desde
+  2026-11-23, `recebido` — o que a Work já tem, a partir de 2026, para o
+  cliente ver o que já entregou; não aceita resposta. As vistas mostram uma
+  tab por ano (`?ano=`, sem JS; `cp_ac_calc_tabs_anos()`, testada): o ano
+  corrente existe sempre e abre por omissão, e cada tab conta os meses por
+  enviar (`cp_ac_item_checklist_por_tratar()`).
+
 - **Conta corrente** (`cp_ac_rest_sincronizar_conta_corrente`): as linhas
   passam por `cp_ac_cc_normalizar_linhas()`, que aceita o formato antigo
   (`id`, `documento`, `valor`, `estado`) e o que a Work envia de facto

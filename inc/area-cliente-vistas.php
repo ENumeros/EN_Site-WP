@@ -337,6 +337,8 @@ function cp_ac_vista_conta_corrente() {
 								<a class="ac-icon-btn-sm" href="<?php echo esc_url( $linha['anexo_url'] ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'Descarregar', 'contabilidade-pro' ); ?>">
 									<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10M8 10.5 12 14l4-3.5"></path><path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17"></path></svg>
 								</a>
+							<?php elseif ( ! empty( $linha['ficheiro_removido'] ) ) : ?>
+								<span style="font-size:12px;color:var(--ac-muted)" title="<?php esc_attr_e( 'O PDF deste documento foi retirado do site. Peça-nos uma cópia se precisar.', 'contabilidade-pro' ); ?>"><?php esc_html_e( 'PDF retirado', 'contabilidade-pro' ); ?></span>
 							<?php endif; ?>
 						</td>
 					</tr>
@@ -415,6 +417,8 @@ function cp_ac_vista_recibos_vencimento() {
 										<a class="ac-icon-btn-sm" href="<?php echo esc_url( $item['anexo_url'] ); ?>" target="_blank" rel="noopener" aria-label="<?php esc_attr_e( 'Descarregar', 'contabilidade-pro' ); ?>">
 											<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10M8 10.5 12 14l4-3.5"></path><path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17"></path></svg>
 										</a>
+									<?php elseif ( ! empty( $item['ficheiro_removido'] ) ) : ?>
+										<span style="font-size:12px;color:var(--ac-muted)" title="<?php esc_attr_e( 'O PDF deste recibo foi retirado do site. Peça-nos uma cópia se precisar.', 'contabilidade-pro' ); ?>"><?php esc_html_e( 'PDF retirado', 'contabilidade-pro' ); ?></span>
 									<?php endif; ?>
 								</td>
 							</tr>

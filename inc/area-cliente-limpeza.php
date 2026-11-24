@@ -14,11 +14,23 @@
  * tipo + item das respostas): o WordPress só confirma que cada ficheiro é
  * desta empresa e já foi recolhido, e apaga. Uma resposta ainda em
  * '_cp_pendentes_respostas' (a Work ainda não a recolheu) nunca é apagada.
- * Recibos de vencimento, guias e outros PDFs publicados pela Work ficam
- * fora (decisão de 2026-11-24: o cliente consulta-os).
  *
- * POST cp/v1/limpeza {work_id, simular?, documentos: [id], respostas: [{tipo, item_id}]}
- * → {ok, simulado, apagados, bytes, ignorados: [{id|item_id, motivo}]}
+ * Também, quando a equipa o indica (`mes` + `persistentes`), os PDFs que a
+ * Work publicou e que o cliente consulta durante um tempo: documentos da
+ * conta corrente e recibos de vencimento desse mês. Aqui é o próprio site
+ * que os encontra pelo mês (a data da linha / o ano e mês do recibo).
+ *
+ * Nada é apagado sozinho: é sempre a equipa que pede (decisão de
+ * 2026-11-24). Depois, o cliente continua a ver a linha, sem o ficheiro:
+ * nos documentos fica o anexo (só se apagam os ficheiros do disco, meta
+ * '_cp_ficheiro_removido'); na conta corrente e nos recibos a entrada fica
+ * com 'ficheiro_removido' e sem anexo_url. Os anexos de respostas não têm
+ * linha própria (o cliente vê o item como recebido/tratado): apagam-se.
+ * Guias de pagamento ficam sempre fora.
+ *
+ * POST cp/v1/limpeza {work_id, simular?, documentos: [id], respostas: [{tipo, item_id}],
+ *                     mes?: "AAAA-MM", persistentes?: ["conta_corrente", "recibos_vencimento"]}
+ * → {ok, simulado, apagados, bytes, ignorados: [{ref, motivo}]}
  */
 
 function cp_ac_rest_routes_limpeza() {
@@ -30,8 +42,10 @@ function cp_ac_rest_routes_limpeza() {
 			'args'                => [
 				'work_id'    => [ 'required' => true, 'type' => 'string' ],
 				'simular'    => [ 'required' => false, 'type' => 'boolean' ],
-				'documentos' => [ 'required' => false, 'type' => 'array' ],
-				'respostas'  => [ 'required' => false, 'type' => 'array' ],
+				'documentos'   => [ 'required' => false, 'type' => 'array' ],
+				'respostas'    => [ 'required' => false, 'type' => 'array' ],
+				'mes'          => [ 'required' => false, 'type' => 'string' ],
+				'persistentes' => [ 'required' => false, 'type' => 'array' ],
 			],
 		],
 	] );
@@ -43,7 +57,7 @@ add_action( 'rest_api_init', 'cp_ac_rest_routes_limpeza' );
  *
  * @param array $pedidos_docs      ids pedidos pela Work.
  * @param array $pedidos_respostas [{tipo, item_id}] pedidos pela Work.
- * @param array $docs              [id => recebido(bool)] documentos de cliente desta empresa.
+ * @param array $docs              [id => 'recebido'|'por_recolher'|'removido'] documentos de cliente desta empresa.
  * @param array $anexos_resposta   [{id, tipo, item_id}] anexos de resposta desta empresa.
  * @param array $por_recolher      ["tipo|item_id"] respostas ainda à espera da Work.
  * @return array {apagar: [ids], ignorados: [{ref, motivo}]}
@@ -57,7 +71,9 @@ function cp_ac_calc_limpeza( array $pedidos_docs, array $pedidos_respostas, arra
 		if ( $id <= 0 ) continue;
 		if ( ! array_key_exists( $id, $docs ) ) {
 			$ignorados[] = [ 'ref' => (string) $id, 'motivo' => 'nao_existe' ];
-		} elseif ( ! $docs[ $id ] ) {
+		} elseif ( 'removido' === $docs[ $id ] ) {
+			$ignorados[] = [ 'ref' => (string) $id, 'motivo' => 'ja_removido' ];
+		} elseif ( 'recebido' !== $docs[ $id ] ) {
 			$ignorados[] = [ 'ref' => (string) $id, 'motivo' => 'por_recolher' ];
 		} else {
 			$apagar[] = $id;
@@ -84,6 +100,77 @@ function cp_ac_calc_limpeza( array $pedidos_docs, array $pedidos_respostas, arra
 	return [ 'apagar' => array_values( array_unique( $apagar ) ), 'ignorados' => $ignorados ];
 }
 
+// Pura (testada): "AAAA-MM" de uma data da conta corrente — aceita
+// AAAA-MM-DD (com ou sem hora) e DD/MM/AAAA ou DD-MM-AAAA. '' se não der.
+function cp_ac_calc_mes_da_data( $data ) {
+	$data = trim( (string) $data );
+	if ( preg_match( '/^(\d{4})-(\d{2})-\d{2}/', $data, $m ) ) return $m[1] . '-' . $m[2];
+	if ( preg_match( '/^\d{2}[\/-](\d{2})[\/-](\d{4})/', $data, $m ) ) return $m[2] . '-' . $m[1];
+	return '';
+}
+
+/**
+ * Pura (testada): documentos da conta corrente e recibos de vencimento de
+ * um mês. Devolve os anexos a apagar e as listas já sem esses ficheiros
+ * (a entrada fica, com 'ficheiro_removido' = $agora e sem anexo).
+ *
+ * @return array {anexos: [ids], linhas: [...], recibos: [...], n_cc, n_recibos}
+ */
+function cp_ac_calc_limpeza_persistentes( array $linhas, array $recibos, $mes, array $pecas, $agora ) {
+	$anexos = [];
+	$n_cc   = 0;
+	$n_rec  = 0;
+	if ( in_array( 'conta_corrente', $pecas, true ) ) {
+		foreach ( $linhas as &$l ) {
+			if ( empty( $l['anexo_id'] ) || cp_ac_calc_mes_da_data( $l['data'] ?? '' ) !== $mes ) continue;
+			if ( ! in_array( (int) $l['anexo_id'], $anexos, true ) ) {
+				$anexos[] = (int) $l['anexo_id'];
+				$n_cc++;
+			}
+			$l['anexo_id']          = '';
+			$l['anexo_url']         = '';
+			$l['ficheiro_removido'] = $agora;
+		}
+		unset( $l );
+	}
+	if ( in_array( 'recibos_vencimento', $pecas, true ) ) {
+		foreach ( $recibos as &$r ) {
+			if ( empty( $r['anexo_id'] ) || sprintf( '%04d-%02d', (int) $r['ano'], (int) $r['mes'] ) !== $mes ) continue;
+			$anexos[]               = (int) $r['anexo_id'];
+			$n_rec++;
+			$r['anexo_id']          = '';
+			$r['anexo_url']         = '';
+			$r['ficheiro_removido'] = $agora;
+		}
+		unset( $r );
+	}
+	return [ 'anexos' => $anexos, 'linhas' => $linhas, 'recibos' => $recibos, 'n_cc' => $n_cc, 'n_recibos' => $n_rec ];
+}
+
+// Apaga do disco os ficheiros de um anexo (original e tamanhos) mas mantém
+// o anexo, marcado com '_cp_ficheiro_removido' — para o cliente continuar a
+// ver a linha do documento, sem o poder abrir.
+function cp_ac_limpeza_remover_ficheiros( $anexo_id ) {
+	$ficheiro = get_attached_file( $anexo_id );
+	$ok       = wp_delete_attachment_files(
+		$anexo_id,
+		wp_get_attachment_metadata( $anexo_id ),
+		get_post_meta( $anexo_id, '_wp_attachment_backup_sizes', true ),
+		$ficheiro
+	);
+	if ( $ok ) update_post_meta( $anexo_id, '_cp_ficheiro_removido', current_time( 'mysql' ) );
+	return $ok;
+}
+
+function cp_ac_documento_ficheiro_removido( $anexo_id ) {
+	return '' !== (string) get_post_meta( $anexo_id, '_cp_ficheiro_removido', true );
+}
+
+function cp_ac_limpeza_tamanho( $anexo_id ) {
+	$caminho = get_attached_file( $anexo_id );
+	return ( $caminho && file_exists( $caminho ) ) ? (int) filesize( $caminho ) : 0;
+}
+
 function cp_ac_rest_limpeza( $request ) {
 	$empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
 	if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
@@ -91,7 +178,8 @@ function cp_ac_rest_limpeza( $request ) {
 
 	$docs = [];
 	foreach ( cp_ac_documentos( $empresa_id ) as $doc ) {
-		$docs[ (int) $doc->ID ] = cp_ac_documento_recebido_work( $doc->ID );
+		$docs[ (int) $doc->ID ] = cp_ac_documento_ficheiro_removido( $doc->ID ) ? 'removido'
+			: ( cp_ac_documento_recebido_work( $doc->ID ) ? 'recebido' : 'por_recolher' );
 	}
 
 	$anexos_resposta = [];
@@ -126,14 +214,31 @@ function cp_ac_rest_limpeza( $request ) {
 	$bytes    = 0;
 	$apagados = 0;
 	foreach ( $plano['apagar'] as $id ) {
-		$caminho = get_attached_file( $id );
-		$tamanho = ( $caminho && file_exists( $caminho ) ) ? (int) filesize( $caminho ) : 0;
-		if ( $simular ) {
+		$tamanho = cp_ac_limpeza_tamanho( $id );
+		// Documentos: fica a linha (anexo sem ficheiro). Respostas: apaga o anexo.
+		$ok = $simular || ( array_key_exists( $id, $docs ) ? cp_ac_limpeza_remover_ficheiros( $id ) : (bool) wp_delete_attachment( $id, true ) );
+		if ( $ok ) {
 			$bytes += $tamanho;
 			$apagados++;
-		} elseif ( wp_delete_attachment( $id, true ) ) {
-			$bytes += $tamanho;
-			$apagados++;
+		}
+	}
+
+	// Persistentes (conta corrente, recibos): só com mês válido.
+	$mes          = (string) $request->get_param( 'mes' );
+	$persistentes = array_values( array_intersect( (array) $request->get_param( 'persistentes' ), [ 'conta_corrente', 'recibos_vencimento' ] ) );
+	if ( $persistentes && preg_match( '/^\d{4}-\d{2}$/', $mes ) ) {
+		$cc     = cp_ac_conta_corrente( $empresa_id );
+		$p      = cp_ac_calc_limpeza_persistentes( $cc['linhas'], cp_ac_recibos_vencimento( $empresa_id ), $mes, $persistentes, current_time( 'mysql' ) );
+		foreach ( $p['anexos'] as $id ) {
+			$tamanho = cp_ac_limpeza_tamanho( $id );
+			if ( $simular || wp_delete_attachment( $id, true ) ) {
+				$bytes += $tamanho;
+				$apagados++;
+			}
+		}
+		if ( ! $simular && $p['anexos'] ) {
+			if ( $p['n_cc'] ) update_post_meta( $empresa_id, '_cp_conta_corrente', [ 'resumo' => $cc['resumo'], 'linhas' => $p['linhas'] ] );
+			if ( $p['n_recibos'] ) update_post_meta( $empresa_id, '_cp_recibos_vencimento', $p['recibos'] );
 		}
 	}
 

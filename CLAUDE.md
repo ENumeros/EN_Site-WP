@@ -224,8 +224,16 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   `_cp_doc_work_recebido`, e anexos de resposta marcados no envio
   (`_cp_resposta_tipo` + `_cp_resposta_item`, `post_parent` = empresa —
   as respostas anteriores a esta marca não são encontradas). Uma resposta
-  ainda em `_cp_pendentes_respostas` nunca é apagada. Recibos, guias e
-  outros PDFs publicados pela Work ficam fora. Com `simular` só conta
+  ainda em `_cp_pendentes_respostas` nunca é apagada. Com `mes` +
+  `persistentes` (`conta_corrente`, `recibos_vencimento`) também os PDFs
+  que a Work publicou nesse mês, que o site encontra sozinho
+  (`cp_ac_calc_limpeza_persistentes()`, testada). **Nada sai sozinho**
+  (decisão de 2026-11-24): é sempre a equipa que pede na Work. **A linha
+  fica, sem o ficheiro**: nos documentos só se apagam os ficheiros do disco
+  e o anexo fica com `_cp_ficheiro_removido` ("ficheiro retirado" na
+  lista); na conta corrente e nos recibos a entrada fica com
+  `ficheiro_removido` ("PDF retirado"), que o `POST cp/v1/conta-corrente`
+  mantém. Guias de pagamento ficam sempre fora. Com `simular` só conta
   (ficheiros e bytes).
 
 - **Conta corrente** (`cp_ac_rest_sincronizar_conta_corrente`): as linhas

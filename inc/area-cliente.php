@@ -1821,6 +1821,10 @@ function cp_ac_rest_sincronizar_conta_corrente( $request ) {
                 'anexo_id'  => $linha['anexo_id'],
                 'anexo_url' => $linha['anexo_url'],
             ];
+        } elseif ( ! empty( $linha['ficheiro_removido'] ) ) {
+            // Ficheiro apagado pela limpeza da equipa (cp/v1/limpeza): a
+            // linha continua a dizer que o PDF foi retirado.
+            $anexos_por_id[ $linha['id'] ] = [ 'anexo_id' => '', 'anexo_url' => '', 'ficheiro_removido' => $linha['ficheiro_removido'] ];
         }
     }
 
@@ -1842,6 +1846,9 @@ function cp_ac_rest_sincronizar_conta_corrente( $request ) {
         if ( isset( $anexos_por_id[ $id ] ) ) {
             $nova['anexo_id']  = $anexos_por_id[ $id ]['anexo_id'];
             $nova['anexo_url'] = $anexos_por_id[ $id ]['anexo_url'];
+            if ( ! empty( $anexos_por_id[ $id ]['ficheiro_removido'] ) ) {
+                $nova['ficheiro_removido'] = $anexos_por_id[ $id ]['ficheiro_removido'];
+            }
         }
         $linhas[] = $nova;
     }

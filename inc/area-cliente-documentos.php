@@ -716,13 +716,17 @@ function cp_ac_render_documentos( $empresa_id ) {
 					</div>
 					<?php foreach ( $grupo['docs'] as $doc ) :
 						$nome    = cp_ac_documento_nome_ficheiro( $doc );
-						$url     = wp_get_attachment_url( $doc->ID );
+						$removido = cp_ac_documento_ficheiro_removido( $doc->ID );
+						$url     = $removido ? '' : wp_get_attachment_url( $doc->ID );
 						$e_pdf   = 'application/pdf' === get_post_mime_type( $doc );
 						$doc_mes = (int) get_post_meta( $doc->ID, '_cp_doc_mes', true );
 						$doc_ano = (int) get_post_meta( $doc->ID, '_cp_doc_ano', true );
 						?>
 						<div class="ac-doc-linha">
 							<div class="ac-doc-nome">
+								<?php if ( $removido ) : ?>
+									<span class="ac-doc-icone" title="<?php esc_attr_e( 'O ficheiro foi retirado do site depois de tratado. Peça-nos uma cópia se precisar.', 'contabilidade-pro' ); ?>" style="opacity:.45"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path></svg></span>
+								<?php else : ?>
 								<button type="button" class="ac-doc-icone ac-doc-ver" data-cp-fab-target="cp-doc-viewer"
 									data-cp-doc-url="<?php echo esc_url( $url ); ?>" data-cp-doc-tipo="<?php echo $e_pdf ? 'pdf' : 'imagem'; ?>"
 									data-cp-doc-nome="<?php echo esc_attr( $nome ); ?>"
@@ -733,7 +737,8 @@ function cp_ac_render_documentos( $empresa_id ) {
 										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="1.6"></circle><path d="m21 16-5-5-9 9"></path></svg>
 									<?php endif; ?>
 								</button>
-								<span class="ac-doc-nome-texto" title="<?php echo esc_attr( $nome ); ?>"><?php echo esc_html( $nome ); ?></span>
+								<?php endif; ?>
+								<span class="ac-doc-nome-texto" title="<?php echo esc_attr( $nome ); ?>"><?php echo esc_html( $nome ); ?><?php if ( $removido ) : ?> <small style="color:var(--ac-muted)"><?php esc_html_e( '· ficheiro retirado', 'contabilidade-pro' ); ?></small><?php endif; ?></span>
 							</div>
 							<?php $periodo = ( $doc_ano && isset( $nomes_mes[ $doc_mes ] ) ) ? $nomes_mes[ $doc_mes ] . ' ' . $doc_ano : ''; ?>
 							<div class="ac-doc-dado ac-doc-dado-data" data-periodo="<?php echo esc_attr( $periodo ? ' · ' . $periodo : '' ); ?>"><?php echo esc_html( get_post_time( 'd/m/Y', false, $doc ) ); ?></div>

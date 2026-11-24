@@ -1035,6 +1035,9 @@ function cp_ac_rest_guardar_ficheiro( $request, $campo ) {
     if ( is_wp_error( $anexo_id ) ) {
         return $anexo_id;
     }
+    // Marca de ficheiro da Área de Cliente: a limpeza de ficheiros sem dono
+    // (cp/v1/limpeza/orfaos) só mexe nos marcados (2026-11-24).
+    update_post_meta( $anexo_id, '_cp_ac_ficheiro', '1' );
     return [
         'id'  => $anexo_id,
         'url' => wp_get_attachment_url( $anexo_id ),
@@ -1877,9 +1880,12 @@ function cp_ac_rest_conta_corrente_documento( $request ) {
     // Por ext_poc_cab_id o PDF vai para todas as linhas desse documento (um
     // recibo pode dar duas linhas: o valor e uma sobra).
     $encontrada = false;
+    $anteriores = [];
     foreach ( $dados['linhas'] as &$linha ) {
         $bate = '' !== $linha_id ? $linha['id'] === $linha_id : ( isset( $linha['ext_poc_cab_id'] ) && $linha['ext_poc_cab_id'] === $ext );
         if ( $bate ) {
+            if ( ! empty( $linha['anexo_id'] ) ) $anteriores[ (int) $linha['anexo_id'] ] = true;
+            unset( $linha['ficheiro_removido'] );
             $linha['anexo_id']  = $ficheiro['id'];
             $linha['anexo_url'] = $ficheiro['url'];
             $encontrada = true;
@@ -1897,6 +1903,10 @@ function cp_ac_rest_conta_corrente_documento( $request ) {
     }
 
     update_post_meta( $empresa_id, '_cp_conta_corrente', $dados );
+
+    // PDF substituído: o anterior sai, se nenhuma outra linha o usar.
+    foreach ( $dados['linhas'] as $l ) unset( $anteriores[ (int) ( $l['anexo_id'] ?? 0 ) ] );
+    foreach ( array_keys( $anteriores ) as $id ) wp_delete_attachment( $id, true );
 
     return rest_ensure_response( [ 'ok' => true, 'anexo_id' => $ficheiro['id'], 'anexo_url' => $ficheiro['url'] ] );
 }

@@ -250,3 +250,154 @@ function cp_ac_rest_limpeza( $request ) {
 		'ignorados' => $plano['ignorados'],
 	] );
 }
+
+
+
+// ════════════════════════════════════════════════════════════════════════
+// Ficheiros sem dono (2026-11-24)
+// ════════════════════════════════════════════════════════════════════════
+// Anexos que a Área de Cliente criou e que já nenhuma ferramenta mostra:
+// PDFs substituídos, linhas da conta corrente que a Work deixou de enviar
+// (anos anteriores), faturas/guias podadas, empresas apagadas, e as
+// respostas enviadas antes de '_cp_resposta_tipo' existir. A equipa pede
+// na Work (simula primeiro) — nada sai sozinho.
+//
+// Um anexo só é candidato se for da Área de Cliente:
+//  - '_cp_ac_ficheiro' (PDFs que a Work publica, desde 2026-11-24);
+//  - '_cp_doc_cliente' / '_cp_resposta_tipo' cuja empresa já não existe
+//    (com a empresa viva, são da limpeza por mês);
+//  - antigos sem marca: sem post_parent, que não sejam imagem nem estejam
+//    citados no conteúdo do site (os media do próprio site ficam de fora).
+// E nunca se ainda houver um 'anexo_id' a apontar para ele em alguma meta
+// '_cp_*' de uma empresa, ou se for imagem destacada de algum post.
+//
+// POST cp/v1/limpeza/orfaos {simular?} → {ok, simulado, apagados, bytes, ficheiros: [{id, nome, bytes, motivo}]}
+
+function cp_ac_rest_routes_orfaos() {
+	register_rest_route( 'cp/v1', '/limpeza/orfaos', [
+		[
+			'methods'             => 'POST',
+			'callback'            => 'cp_ac_rest_limpeza_orfaos',
+			'permission_callback' => 'cp_ac_rest_permissao',
+			'args'                => [
+				'simular' => [ 'required' => false, 'type' => 'boolean' ],
+			],
+		],
+	] );
+}
+add_action( 'rest_api_init', 'cp_ac_rest_routes_orfaos' );
+
+// Pura (testada): todos os 'anexo_id' (> 0) dentro de um valor de meta, a
+// qualquer profundidade.
+function cp_ac_calc_anexos_referidos( $valor, array &$ids ) {
+	if ( ! is_array( $valor ) ) return;
+	foreach ( $valor as $chave => $v ) {
+		if ( 'anexo_id' === $chave && (int) $v > 0 ) {
+			$ids[ (int) $v ] = true;
+		} elseif ( is_array( $v ) ) {
+			cp_ac_calc_anexos_referidos( $v, $ids );
+		}
+	}
+}
+
+/**
+ * Pura (testada): quais anexos são órfãos.
+ *
+ * @param array $anexos    [{id, parent, ac, doc, resposta, imagem, citado}] (bools).
+ * @param array $referidos [id => true] ainda usados.
+ * @param array $empresas  [id => true] empresas que existem.
+ * @return array [id => motivo] — 'sem_uso' | 'empresa_apagada' | 'antigo'.
+ */
+function cp_ac_calc_orfaos( array $anexos, array $referidos, array $empresas ) {
+	$orfaos = [];
+	foreach ( $anexos as $a ) {
+		$id = (int) $a['id'];
+		if ( $id <= 0 || isset( $referidos[ $id ] ) ) continue;
+		$parent       = (int) $a['parent'];
+		$empresa_viva = $parent > 0 && isset( $empresas[ $parent ] );
+		if ( ! empty( $a['doc'] ) || ! empty( $a['resposta'] ) ) {
+			if ( ! $empresa_viva ) $orfaos[ $id ] = 'empresa_apagada';
+		} elseif ( ! empty( $a['ac'] ) ) {
+			$orfaos[ $id ] = 'sem_uso';
+		} elseif ( 0 === $parent && empty( $a['imagem'] ) && empty( $a['citado'] ) ) {
+			$orfaos[ $id ] = 'antigo';
+		}
+	}
+	return $orfaos;
+}
+
+function cp_ac_rest_limpeza_orfaos( $request ) {
+	global $wpdb;
+	$simular = (bool) $request->get_param( 'simular' );
+
+	$empresas  = [];
+	$referidos = [];
+	foreach ( get_posts( [ 'post_type' => 'cp_empresa', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids' ] ) as $eid ) {
+		$empresas[ (int) $eid ] = true;
+		foreach ( get_post_meta( $eid ) as $chave => $valores ) {
+			if ( 0 !== strpos( $chave, '_cp_' ) ) continue;
+			foreach ( $valores as $v ) cp_ac_calc_anexos_referidos( maybe_unserialize( $v ), $referidos );
+		}
+	}
+	foreach ( $wpdb->get_col( "SELECT meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_thumbnail_id'" ) as $tid ) {
+		if ( (int) $tid > 0 ) $referidos[ (int) $tid ] = true;
+	}
+
+	$linhas = $wpdb->get_results(
+		"SELECT p.ID, p.post_parent, p.post_mime_type,
+			MAX( m.meta_key = '_cp_ac_ficheiro' ) AS ac,
+			MAX( m.meta_key = '_cp_doc_cliente' ) AS doc,
+			MAX( m.meta_key = '_cp_resposta_tipo' ) AS resposta
+		 FROM {$wpdb->posts} p
+		 LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID
+		 WHERE p.post_type = 'attachment'
+		 GROUP BY p.ID, p.post_parent, p.post_mime_type",
+		ARRAY_A
+	);
+
+	$anexos = [];
+	foreach ( (array) $linhas as $l ) {
+		$id      = (int) $l['ID'];
+		$marcado = $l['ac'] || $l['doc'] || $l['resposta'];
+		$imagem  = 0 === strpos( (string) $l['post_mime_type'], 'image/' );
+		$citado  = false;
+		if ( ! $marcado && 0 === (int) $l['post_parent'] && ! $imagem && ! isset( $referidos[ $id ] ) ) {
+			$nome   = wp_basename( (string) get_attached_file( $id ) );
+			$citado = '' === $nome || (bool) $wpdb->get_var( $wpdb->prepare(
+				"SELECT 1 FROM {$wpdb->posts} WHERE post_type NOT IN ('attachment','revision') AND post_content LIKE %s LIMIT 1",
+				'%' . $wpdb->esc_like( $nome ) . '%'
+			) );
+		}
+		$anexos[] = [
+			'id'       => $id,
+			'parent'   => (int) $l['post_parent'],
+			'ac'       => (bool) $l['ac'],
+			'doc'      => (bool) $l['doc'],
+			'resposta' => (bool) $l['resposta'],
+			'imagem'   => $imagem,
+			'citado'   => $citado,
+		];
+	}
+
+	$orfaos    = cp_ac_calc_orfaos( $anexos, $referidos, $empresas );
+	$ficheiros = [];
+	$bytes     = 0;
+	$apagados  = 0;
+	foreach ( $orfaos as $id => $motivo ) {
+		$tamanho = cp_ac_limpeza_tamanho( $id );
+		$nome    = wp_basename( (string) get_attached_file( $id ) );
+		if ( $simular || wp_delete_attachment( $id, true ) ) {
+			$bytes += $tamanho;
+			$apagados++;
+			$ficheiros[] = [ 'id' => $id, 'nome' => $nome, 'bytes' => $tamanho, 'motivo' => $motivo ];
+		}
+	}
+
+	return rest_ensure_response( [
+		'ok'        => true,
+		'simulado'  => $simular,
+		'apagados'  => $apagados,
+		'bytes'     => $bytes,
+		'ficheiros' => array_slice( $ficheiros, 0, 500 ),
+	] );
+}

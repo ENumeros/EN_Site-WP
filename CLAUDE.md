@@ -236,6 +236,19 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   mantém. Guias de pagamento ficam sempre fora. Com `simular` só conta
   (ficheiros e bytes).
 
+- **Ficheiros sem dono** (mesmo ficheiro, 2026-11-24): `POST
+  cp/v1/limpeza/orfaos` {simular?} apaga os anexos da Área de Cliente que
+  já nenhuma ferramenta usa: nenhum `anexo_id` em metas `_cp_*` de uma
+  `cp_empresa` (procura recursiva, `cp_ac_calc_anexos_referidos()`) nem
+  `_thumbnail_id`. Só são candidatos (`cp_ac_calc_orfaos()`, testada em
+  `LimpezaTest`): os marcados com `_cp_ac_ficheiro` (que
+  `cp_ac_rest_guardar_ficheiro()` põe desde 2026-11-24); documentos e
+  respostas cuja empresa já não existe; e, sem marca, os sem
+  `post_parent` que não sejam imagem nem estejam citados num
+  `post_content` (media do site ficam de fora). Um PDF da conta corrente
+  substituído (`POST conta-corrente/documento`) é apagado logo, se nenhuma
+  outra linha o usar.
+
 - **Conta corrente** (`cp_ac_rest_sincronizar_conta_corrente`): as linhas
   passam por `cp_ac_cc_normalizar_linhas()`, que aceita o formato antigo
   (`id`, `documento`, `valor`, `estado`) e o que a Work envia de facto

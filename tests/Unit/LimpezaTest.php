@@ -6,6 +6,8 @@ namespace ContabilidadePro\Tests\Unit;
  * @covers cp_ac_calc_limpeza
  * @covers cp_ac_calc_limpeza_persistentes
  * @covers cp_ac_calc_mes_da_data
+ * @covers cp_ac_calc_orfaos
+ * @covers cp_ac_calc_anexos_referidos
  */
 final class LimpezaTest extends TestCase {
 
@@ -76,5 +78,32 @@ final class LimpezaTest extends TestCase {
 			[ 'ref' => 'saft|saft-2026-10', 'motivo' => 'sem_ficheiro' ],
 			[ 'ref' => 'movimento|7', 'motivo' => 'por_recolher' ],
 		], $r['ignorados'] );
+	}
+
+	public function test_anexos_referidos_em_qualquer_profundidade(): void {
+		$ids = [];
+		cp_ac_calc_anexos_referidos( [ 'linhas' => [ [ 'anexo_id' => 70 ], [ 'anexo_id' => '' ] ], 'fatura' => [ 'anexo_id' => '71' ] ], $ids );
+		cp_ac_calc_anexos_referidos( 'texto', $ids );
+		cp_ac_calc_anexos_referidos( [ [ 'anexo_id' => 0 ], [ 'outro_id' => 5 ] ], $ids );
+		self::assertSame( [ 70 => true, 71 => true ], $ids );
+	}
+
+	public function test_orfaos_so_da_area_de_cliente_e_sem_uso(): void {
+		$base   = [ 'parent' => 0, 'ac' => false, 'doc' => false, 'resposta' => false, 'imagem' => false, 'citado' => false ];
+		$anexos = [
+			[ 'id' => 1, 'ac' => true ] + $base,                             // PDF da Work já sem linha
+			[ 'id' => 2, 'ac' => true ] + $base,                             // PDF ainda usado
+			[ 'id' => 3, 'doc' => true, 'parent' => 50 ] + $base,            // documento de empresa viva
+			[ 'id' => 4, 'doc' => true ] + $base,                            // empresa apagada (parent 0)
+			[ 'id' => 5, 'resposta' => true, 'parent' => 99 ] + $base,       // empresa que já não existe
+			[ 'id' => 6 ] + $base,                                           // resposta antiga sem marca
+			[ 'id' => 7, 'imagem' => true ] + $base,                         // imagem do site
+			[ 'id' => 8, 'citado' => true ] + $base,                         // PDF citado numa página
+			[ 'id' => 9, 'parent' => 12 ] + $base,                           // media ligado a um post
+		];
+		self::assertSame(
+			[ 1 => 'sem_uso', 4 => 'empresa_apagada', 5 => 'empresa_apagada', 6 => 'antigo' ],
+			cp_ac_calc_orfaos( $anexos, [ 2 => true ], [ 50 => true ] )
+		);
 	}
 }

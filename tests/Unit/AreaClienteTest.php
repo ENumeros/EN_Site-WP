@@ -9,6 +9,8 @@ use Brain\Monkey\Functions;
  * @covers cp_ac_calc_destino_login
  * @covers cp_ac_calc_filtrar_destinatarios
  * @covers cp_ac_calc_conta_bloqueada
+ * @covers cp_ac_calc_documentos_tratados
+ * @covers cp_ac_calc_filtro_documentos
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -226,5 +228,25 @@ final class AreaClienteTest extends TestCase {
 
 		self::assertSame( 2025, cp_ac_calc_tabs_anos( $itens, 2026, '2025' )['ativo'] );
 		self::assertSame( 2026, cp_ac_calc_tabs_anos( $itens, 2026, '1999' )['ativo'] );
+	}
+
+	public function test_documentos_tratados_limpa_estado_e_mes(): void {
+		$r = cp_ac_calc_documentos_tratados( [
+			[ 'id' => '11', 'titulo' => 'Fatura FT 1', 'mes' => '2026-10', 'estado' => 'recebido' ],
+			[ 'id' => '12', 'titulo' => 'Fatura FT 2', 'mes' => '2026-1', 'estado' => 'outro' ],
+			[ 'titulo' => 'sem id' ],
+			'lixo',
+		] );
+		self::assertCount( 2, $r );
+		self::assertSame( [ 'id' => '11', 'titulo' => 'Fatura FT 1', 'pedido_em' => '', 'mes' => '2026-10', 'estado' => 'recebido' ], $r[0] );
+		self::assertSame( 'tratado', $r[1]['estado'] );
+		self::assertSame( '', $r[1]['mes'] );
+		self::assertSame( [], cp_ac_calc_documentos_tratados( null ) );
+	}
+
+	public function test_filtro_documentos_pendentes_por_omissao(): void {
+		self::assertSame( 'pendentes', cp_ac_calc_filtro_documentos( '' ) );
+		self::assertSame( 'pendentes', cp_ac_calc_filtro_documentos( 'outro' ) );
+		self::assertSame( 'tratados', cp_ac_calc_filtro_documentos( 'tratados' ) );
 	}
 }

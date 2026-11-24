@@ -204,6 +204,17 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   corrente existe sempre e abre por omissão, e cada tab conta os meses por
   enviar (`cp_ac_item_checklist_por_tratar()`).
 
+- **Documentos em Falta — Pendentes / Tratados** (2026-11-24): além de
+  `documentos` (os por responder), `POST cp/v1/pendentes` pode trazer
+  `documentos_tratados` [{id, titulo, pedido_em, mes, estado
+  `enviado`|`recebido`|`tratado`}] — meta `_cp_pendentes_documentos_tratados`,
+  limpa por `cp_ac_calc_documentos_tratados()` (testada). Lista à parte de
+  propósito: nunca aceita resposta (o envio só valida contra
+  `cp_ac_pendentes_documentos`) e uma Work antiga que não a mande deixa o
+  que estava. A vista tem dois filtros (`?filtro=`, sem JS,
+  `cp_ac_calc_filtro_documentos()`): Pendentes por omissão, Tratados só
+  leitura.
+
 - **Conta corrente** (`cp_ac_rest_sincronizar_conta_corrente`): as linhas
   passam por `cp_ac_cc_normalizar_linhas()`, que aceita o formato antigo
   (`id`, `documento`, `valor`, `estado`) e o que a Work envia de facto

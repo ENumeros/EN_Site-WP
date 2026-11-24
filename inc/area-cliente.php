@@ -1060,6 +1060,41 @@ function cp_ac_pendentes_documentos( $empresa_id ) {
     return is_array( $itens ) ? $itens : [];
 }
 
+// Documentos em falta já tratados (desde 2026-11-24): a Work envia-os à
+// parte em `documentos_tratados`, só para o cliente os ver no filtro
+// "Tratados" — nunca aceitam resposta (não estão em
+// cp_ac_pendentes_documentos, que é a lista validada no envio).
+// estado: 'enviado' (o cliente mandou), 'recebido' (a contabilidade já tem
+// o documento) ou 'tratado' (já lançado).
+function cp_ac_pendentes_documentos_tratados( $empresa_id ) {
+    $itens = get_post_meta( $empresa_id, '_cp_pendentes_documentos_tratados', true );
+    return is_array( $itens ) ? $itens : [];
+}
+
+// Pura (testada): lista de documentos tratados vinda da Work, limpa.
+// Estado desconhecido fica 'tratado'; itens sem id saem.
+function cp_ac_calc_documentos_tratados( $lista ) {
+    $saida = [];
+    foreach ( (array) $lista as $doc ) {
+        if ( ! is_array( $doc ) || empty( $doc['id'] ) ) continue;
+        $estado  = isset( $doc['estado'] ) ? (string) $doc['estado'] : '';
+        $saida[] = [
+            'id'        => sanitize_text_field( $doc['id'] ),
+            'titulo'    => isset( $doc['titulo'] ) ? sanitize_text_field( $doc['titulo'] ) : '',
+            'pedido_em' => isset( $doc['pedido_em'] ) ? sanitize_text_field( $doc['pedido_em'] ) : '',
+            'mes'       => isset( $doc['mes'] ) && preg_match( '/^\d{4}-\d{2}$/', (string) $doc['mes'] ) ? (string) $doc['mes'] : '',
+            'estado'    => in_array( $estado, [ 'enviado', 'recebido', 'tratado' ], true ) ? $estado : 'tratado',
+        ];
+    }
+    return $saida;
+}
+
+// Pura (testada): qual filtro mostrar na vista Documentos em Falta —
+// 'pendentes' por omissão, 'tratados' só se pedido.
+function cp_ac_calc_filtro_documentos( $pedido ) {
+    return 'tratados' === $pedido ? 'tratados' : 'pendentes';
+}
+
 function cp_ac_pendentes_movimentos( $empresa_id ) {
     $itens = get_post_meta( $empresa_id, '_cp_pendentes_movimentos', true );
     return is_array( $itens ) ? $itens : [];
@@ -1137,6 +1172,7 @@ function cp_ac_rest_routes_pendentes() {
                 'work_id'    => [ 'required' => true, 'type' => 'string' ],
                 'documentos' => [ 'required' => false, 'type' => 'array' ],
                 'movimentos' => [ 'required' => false, 'type' => 'array' ],
+                'documentos_tratados' => [ 'required' => false, 'type' => 'array' ],
             ],
         ],
     ] );
@@ -1290,6 +1326,11 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
 
     update_post_meta( $empresa_id, '_cp_pendentes_documentos', $documentos );
     update_post_meta( $empresa_id, '_cp_pendentes_movimentos', $movimentos );
+    // Só quando a Work manda (uma Work antiga não manda: fica o que estava).
+    $tratados_in = $request->get_param( 'documentos_tratados' );
+    if ( null !== $tratados_in ) {
+        update_post_meta( $empresa_id, '_cp_pendentes_documentos_tratados', cp_ac_calc_documentos_tratados( $tratados_in ) );
+    }
 
     $ha_documento_novo = (bool) array_diff( wp_list_pluck( $documentos, 'id' ), $ids_documentos_antes );
     $ha_movimento_novo = (bool) array_diff( wp_list_pluck( $movimentos, 'id' ), $ids_movimentos_antes );
@@ -1316,6 +1357,7 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
         'ok'                => true,
         'total_documentos'  => count( $documentos ),
         'total_movimentos'  => count( $movimentos ),
+        'total_documentos_tratados' => count( cp_ac_pendentes_documentos_tratados( $empresa_id ) ),
     ] );
 }
 

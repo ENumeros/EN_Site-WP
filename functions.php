@@ -13,6 +13,7 @@ require_once get_template_directory() . '/inc/area-cliente-backoffice.php';
 require_once get_template_directory() . '/inc/area-cliente-backoffice-resumo.php';
 require_once get_template_directory() . '/inc/area-cliente-tarefas.php';
 require_once get_template_directory() . '/inc/area-cliente-documentos.php';
+require_once get_template_directory() . '/inc/area-cliente-limpeza.php';
 require_once get_template_directory() . '/inc/area-cliente-mensagens.php';
 require_once get_template_directory() . '/inc/area-cliente-visao-financeira.php';
 require_once get_template_directory() . '/inc/area-cliente-pagamentos.php';

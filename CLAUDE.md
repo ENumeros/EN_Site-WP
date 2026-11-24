@@ -215,6 +215,19 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   `cp_ac_calc_filtro_documentos()`): Pendentes por omissão, Tratados só
   leitura.
 
+- **Limpeza por mês pedida pela Work** (`inc/area-cliente-limpeza.php`,
+  2026-11-24): `POST cp/v1/limpeza` {work_id, simular?, documentos: [ids],
+  respostas: [{tipo, item_id}]} apaga ficheiros que o cliente enviou e a
+  Work já recolheu, para libertar espaço. A Work decide o mês e manda a
+  lista; o site só confirma que é desta empresa e que já foi recolhido
+  (`cp_ac_calc_limpeza()`, testada em `LimpezaTest`): documentos com
+  `_cp_doc_work_recebido`, e anexos de resposta marcados no envio
+  (`_cp_resposta_tipo` + `_cp_resposta_item`, `post_parent` = empresa —
+  as respostas anteriores a esta marca não são encontradas). Uma resposta
+  ainda em `_cp_pendentes_respostas` nunca é apagada. Recibos, guias e
+  outros PDFs publicados pela Work ficam fora. Com `simular` só conta
+  (ficheiros e bytes).
+
 - **Conta corrente** (`cp_ac_rest_sincronizar_conta_corrente`): as linhas
   passam por `cp_ac_cc_normalizar_linhas()`, que aceita o formato antigo
   (`id`, `documento`, `valor`, `estado`) e o que a Work envia de facto

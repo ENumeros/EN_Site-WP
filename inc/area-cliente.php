@@ -1446,9 +1446,15 @@ function cp_ac_handle_pendente_resposta() {
             wp_safe_redirect( add_query_arg( 'cp_erro', 'anexo_tipo_' . $tipo, $voltar ) );
             exit;
         }
-        $resultado = media_handle_upload( 'anexo', 0, [], [ 'test_form' => false, 'mimes' => $mimes ] );
+        // Anexo ligado à empresa e marcado com o item (2026-11-24): é assim
+        // que a limpeza por mês pedida pela Work (POST cp/v1/limpeza) o
+        // encontra depois de a Work o recolher. Não aparece em Documentos
+        // (essa lista só tem os anexos com '_cp_doc_cliente').
+        $resultado = media_handle_upload( 'anexo', $empresa_id, [], [ 'test_form' => false, 'mimes' => $mimes ] );
         cp_ac_pendente_permitir_tipos( $tipo, false );
         if ( ! is_wp_error( $resultado ) ) {
+            update_post_meta( $resultado, '_cp_resposta_tipo', $tipo );
+            update_post_meta( $resultado, '_cp_resposta_item', $item_id );
             $anexo_id   = $resultado;
             $anexo_url  = wp_get_attachment_url( $resultado );
             $anexo_nome = $anexo_nome_original;

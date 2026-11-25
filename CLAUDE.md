@@ -215,7 +215,9 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   de Tratados há uma tab por mês (`?mes=AAAA-MM`, `sem` para os sem mês; sem
   JS, `cp_ac_calc_tabs_meses()`, testada). O mês vem da Work em
   `documentos[].mes`; abre o mais recente com algo por enviar. Enquanto a
-  Work não mandar meses não há tabs.
+  Work não mandar meses não há tabs. A lista de **Documentos** usa as mesmas
+  tabs (`cp_ac_render_tabs_meses()`), pelo mês escolhido no envio, com os
+  grupos por pasta dentro de cada mês; depois de enviar abre esse mês.
 
 - **Documentos em Falta — Pendentes / Tratados** (2026-11-24): além de
   `documentos` (os por responder), `POST cp/v1/pendentes` pode trazer

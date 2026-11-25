@@ -281,7 +281,8 @@ function cp_ac_handle_documento_upload() {
 		'documentos'
 	);
 
-	$args = [ 'cp_sucesso' => 'documento_enviado', 'cp_n' => count( $aceites ) ];
+	// A lista abre na tab do mês onde ficaram os documentos enviados.
+	$args = [ 'cp_sucesso' => 'documento_enviado', 'cp_n' => count( $aceites ), 'mes' => sprintf( '%04d-%02d', $ano, $mes ) ];
 	$recusados = count( $ficheiros ) - count( $aceites );
 	if ( $recusados ) $args['cp_recusados'] = $recusados;
 	wp_safe_redirect( add_query_arg( $args, $voltar ) );
@@ -674,17 +675,37 @@ function cp_ac_render_documento_modal() {
 	<?php
 }
 
-// Grupos da lista de documentos: um por pasta, pela ordem das pastas que a
-// Work enviou, e no fim "Outros documentos" (enviados antes de haver pastas,
-// ou de uma pasta que entretanto deixou de existir). Dentro de cada grupo,
-// do ano/mês mais recente para o mais antigo.
-function cp_ac_documentos_por_pasta( $empresa_id ) {
+// Mês "AAAA-MM" do documento, para as tabs; '' nos enviados antes de haver
+// pastas.
+function cp_ac_documento_mes( $anexo_id ) {
+	return cp_ac_calc_mes_valido( sprintf( '%04d-%02d', (int) get_post_meta( $anexo_id, '_cp_doc_ano', true ), (int) get_post_meta( $anexo_id, '_cp_doc_mes', true ) ) );
+}
+
+// Endereço das tabs por mês: leva o destino do último envio, para o
+// formulário não mudar ao trocar de mês.
+function cp_ac_documentos_tabs_url( $empresa_id ) {
+	$url     = cp_ac_vista_url( 'documentos' );
+	$destino = cp_ac_documento_destino_anterior( $empresa_id, $_GET );
+	if ( ! $destino ) return $url;
+	return add_query_arg( [
+		'cp_doc_pasta' => rawurlencode( $destino['pasta_id'] ),
+		'cp_doc_ano'   => $destino['ano'],
+		'cp_doc_mes'   => $destino['mes'],
+	], $url );
+}
+
+// Grupos da lista de documentos (só os de $documentos, os do mês aberto): um
+// por pasta, pela ordem das pastas que a Work enviou, e no fim "Outros
+// documentos" (enviados antes de haver pastas, ou de uma pasta que
+// entretanto deixou de existir). Dentro de cada grupo, do ano/mês mais
+// recente para o mais antigo.
+function cp_ac_documentos_por_pasta( $empresa_id, array $documentos ) {
 	$grupos = [];
 	foreach ( cp_ac_documento_pastas( $empresa_id ) as $pasta ) {
 		$grupos[ (string) $pasta['id'] ] = [ 'nome' => $pasta['nome'], 'docs' => [] ];
 	}
 	$outros = [ 'nome' => __( 'Outros documentos', 'contabilidade-pro' ), 'docs' => [] ];
-	foreach ( cp_ac_documentos( $empresa_id ) as $doc ) {
+	foreach ( $documentos as $doc ) {
 		$pasta = (string) get_post_meta( $doc->ID, '_cp_doc_pasta', true );
 		if ( isset( $grupos[ $pasta ] ) ) {
 			$grupos[ $pasta ]['docs'][] = $doc;
@@ -712,7 +733,9 @@ function cp_ac_documento_nome_ficheiro( $doc ) {
 }
 
 function cp_ac_render_documentos( $empresa_id ) {
-	$grupos    = cp_ac_documentos_por_pasta( $empresa_id );
+	$itens     = array_map( function ( $doc ) {
+		return [ 'mes' => cp_ac_documento_mes( $doc->ID ), 'doc' => $doc ];
+	}, cp_ac_documentos( $empresa_id ) );
 	$user_id   = get_current_user_id();
 	$nomes_mes = cp_ac_documento_nomes_meses();
 	?>
@@ -726,9 +749,11 @@ function cp_ac_render_documentos( $empresa_id ) {
 
 		<?php cp_ac_render_documento_form(); ?>
 
-		<?php if ( empty( $grupos ) ) : ?>
+		<?php if ( empty( $itens ) ) : ?>
 			<div style="margin-top:16px;color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não enviou nenhum documento.', 'contabilidade-pro' ); ?></div>
 		<?php else : ?>
+			<div class="ac-doc-tabs" id="lista-documentos"><?php $itens = cp_ac_render_tabs_meses( $itens, cp_ac_documentos_tabs_url( $empresa_id ), 'ac-badge-blue', null, '#lista-documentos' ); ?></div>
+			<?php $grupos = cp_ac_documentos_por_pasta( $empresa_id, array_column( $itens, 'doc' ) ); ?>
 			<?php foreach ( $grupos as $grupo ) : ?>
 				<section class="ac-doc-grupo">
 					<div class="ac-doc-grupo-head">

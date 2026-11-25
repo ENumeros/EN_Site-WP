@@ -502,16 +502,16 @@ function cp_ac_render_banner_resposta_pendente() {
 
 // ─── Documentos em Falta ────────────────────────────────────────────────────
 
-// Tabs por mês (links ?mes=, sem JS) dentro do filtro ativo. $por_tratar diz
-// que documentos contam no número da tab (null = todos). Devolve só os
+// Tabs por mês (links ?mes= a partir de $base, sem JS), em Documentos em
+// Falta e em Documentos. $por_tratar diz que documentos contam no número da
+// tab (null = todos); $badge é a classe da cor desse número; $ancora ("#id")
+// é onde a página fica ao trocar de mês. Devolve só os
 // documentos do mês aberto. Sem meses (Work antiga) não há tabs.
-function cp_ac_render_tabs_meses( array $documentos, $filtro, $por_tratar = null ) {
+function cp_ac_render_tabs_meses( array $documentos, $base, $badge, $por_tratar = null, $ancora = '' ) {
 	$pedido = isset( $_GET['mes'] ) ? sanitize_text_field( wp_unslash( $_GET['mes'] ) ) : null;
 	$tabs   = cp_ac_calc_tabs_meses( $documentos, $pedido, $por_tratar );
 	if ( ! array_filter( $tabs['meses'] ) ) return $documentos;
 
-	$base = cp_ac_vista_url( 'documentos_em_falta' );
-	if ( 'tratados' === $filtro ) $base = add_query_arg( 'filtro', 'tratados', $base );
 	$nomes     = cp_ac_documento_nomes_meses();
 	$ano_atual = current_time( 'Y' );
 	?>
@@ -524,9 +524,9 @@ function cp_ac_render_tabs_meses( array $documentos, $filtro, $por_tratar = null
 			// Nome curto, para o ano inteiro caber na barra ("Out", "Dez 2025").
 			$rotulo = '' === $mes ? $nome : mb_substr( $nome, 0, 3 ) . ( $ano === (string) $ano_atual ? '' : ' ' . $ano );
 			?>
-			<a class="ac-tab<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" title="<?php echo esc_attr( $nome ); ?>" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( add_query_arg( 'mes', '' === $mes ? 'sem' : $mes, $base ) ); ?>">
+			<a class="ac-tab<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" title="<?php echo esc_attr( $nome ); ?>" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( add_query_arg( 'mes', '' === $mes ? 'sem' : $mes, $base ) . $ancora ); ?>">
 				<?php echo esc_html( $rotulo ); ?>
-				<?php if ( $n ) : ?><span class="ac-badge <?php echo 'tratados' === $filtro ? 'ac-badge-green' : 'ac-badge-amber'; ?>" style="margin-left:6px;padding:0"><?php echo esc_html( $n ); ?></span><?php endif; ?>
+				<?php if ( $n ) : ?><span class="ac-badge <?php echo esc_attr( $badge ); ?>" style="margin-left:6px;padding:0"><?php echo esc_html( $n ); ?></span><?php endif; ?>
 			</a>
 		<?php endforeach; ?>
 	</div>
@@ -579,7 +579,7 @@ function cp_ac_vista_documentos_em_falta() {
 
 	<?php if ( 'tratados' === $filtro ) : ?>
 		<div class="ac-card" style="padding:22px">
-			<?php $tratados = cp_ac_render_tabs_meses( $tratados, 'tratados' ); ?>
+			<?php $tratados = cp_ac_render_tabs_meses( $tratados, add_query_arg( 'filtro', 'tratados', cp_ac_vista_url( 'documentos_em_falta' ) ), 'ac-badge-green' ); ?>
 			<?php if ( empty( $tratados ) ) : ?>
 				<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não há documentos tratados.', 'contabilidade-pro' ); ?></div>
 			<?php else : ?>
@@ -609,7 +609,7 @@ function cp_ac_vista_documentos_em_falta() {
 	endif; ?>
 
 	<div class="ac-card" style="padding:22px">
-		<?php $documentos = cp_ac_render_tabs_meses( $documentos, 'pendentes', $e_por_tratar ); ?>
+		<?php $documentos = cp_ac_render_tabs_meses( $documentos, cp_ac_vista_url( 'documentos_em_falta' ), 'ac-badge-amber', $e_por_tratar ); ?>
 		<div class="ac-sec-head">
 			<div></div>
 			<?php if ( ! empty( $documentos ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $documentos ) ); ?> <?php esc_html_e( 'pendentes', 'contabilidade-pro' ); ?></span><?php endif; ?>

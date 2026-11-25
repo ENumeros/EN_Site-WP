@@ -299,9 +299,12 @@ final class AreaClienteTest extends TestCase {
 		Functions\when( 'cp_ac_vista_url' )->justReturn( '/area/?vista=documentos_em_falta' );
 		Functions\when( 'add_query_arg' )->alias( fn( $k, $v, $u ) => "$u&$k=$v" );
 		Functions\when( 'wp_nonce_field' )->justReturn( '' );
+		Functions\when( 'current_time' )->justReturn( '2026' );
 
 		$_GET = [];
 		$html = $this->vista();
+		self::assertStringContainsString( 'class="ac-tab is-on"', $html );
+		self::assertStringNotContainsString( 'Pedido a', $html );
 		self::assertStringContainsString( 'Outubro 2026', $html );
 		self::assertStringContainsString( 'Setembro 2026', $html );
 		self::assertStringContainsString( 'Fatura outubro', $html );

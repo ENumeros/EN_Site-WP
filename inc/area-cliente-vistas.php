@@ -512,20 +512,31 @@ function cp_ac_render_tabs_meses( array $documentos, $filtro, $por_tratar = null
 
 	$base = cp_ac_vista_url( 'documentos_em_falta' );
 	if ( 'tratados' === $filtro ) $base = add_query_arg( 'filtro', 'tratados', $base );
-	$nomes = cp_ac_documento_nomes_meses();
+	$nomes     = cp_ac_documento_nomes_meses();
+	$ano_atual = current_time( 'Y' );
 	?>
-	<div class="ac-bo-filtros" role="tablist" aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>">
+	<div class="ac-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>" data-cp-tabs>
 		<?php foreach ( $tabs['meses'] as $mes ) :
 			$ativo  = $mes === $tabs['ativo'];
 			$n      = $tabs['contagem'][ $mes ];
-			$rotulo = '' === $mes ? __( 'Sem mês', 'contabilidade-pro' ) : $nomes[ (int) substr( $mes, 5 ) ] . ' ' . substr( $mes, 0, 4 );
+			$ano    = substr( $mes, 0, 4 );
+			$nome   = '' === $mes ? __( 'Sem mês', 'contabilidade-pro' ) : $nomes[ (int) substr( $mes, 5 ) ] . ' ' . $ano;
+			// Nome curto, para o ano inteiro caber na barra ("Out", "Dez 2025").
+			$rotulo = '' === $mes ? $nome : mb_substr( $nome, 0, 3 ) . ( $ano === (string) $ano_atual ? '' : ' ' . $ano );
 			?>
-			<a class="ac-bo-chip<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( add_query_arg( 'mes', '' === $mes ? 'sem' : $mes, $base ) ); ?>">
+			<a class="ac-tab<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" title="<?php echo esc_attr( $nome ); ?>" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( add_query_arg( 'mes', '' === $mes ? 'sem' : $mes, $base ) ); ?>">
 				<?php echo esc_html( $rotulo ); ?>
-				<?php if ( $n ) : ?><span class="ac-badge <?php echo 'tratados' === $filtro ? 'ac-badge-green' : 'ac-badge-amber'; ?>" style="margin-left:8px;padding:1px 7px"><?php echo esc_html( $n ); ?></span><?php endif; ?>
+				<?php if ( $n ) : ?><span class="ac-badge <?php echo 'tratados' === $filtro ? 'ac-badge-green' : 'ac-badge-amber'; ?>" style="margin-left:6px;padding:0"><?php echo esc_html( $n ); ?></span><?php endif; ?>
 			</a>
 		<?php endforeach; ?>
 	</div>
+	<script>
+	(function () {
+		// Em ecrãs estreitos a barra desliza: a tab aberta fica sempre à vista.
+		var barra = document.querySelector('[data-cp-tabs]'), tab = barra && barra.querySelector('.is-on');
+		if (tab) barra.scrollLeft = tab.offsetLeft - barra.offsetLeft - 16;
+	})();
+	</script>
 	<?php
 	return array_values( array_filter( $documentos, function ( $doc ) use ( $tabs ) {
 		return cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' ) === $tabs['ativo'];
@@ -567,8 +578,8 @@ function cp_ac_vista_documentos_em_falta() {
 	</div>
 
 	<?php if ( 'tratados' === $filtro ) : ?>
-		<?php $tratados = cp_ac_render_tabs_meses( $tratados, 'tratados' ); ?>
 		<div class="ac-card" style="padding:22px">
+			<?php $tratados = cp_ac_render_tabs_meses( $tratados, 'tratados' ); ?>
 			<?php if ( empty( $tratados ) ) : ?>
 				<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não há documentos tratados.', 'contabilidade-pro' ); ?></div>
 			<?php else : ?>
@@ -597,8 +608,8 @@ function cp_ac_vista_documentos_em_falta() {
 		return;
 	endif; ?>
 
-	<?php $documentos = cp_ac_render_tabs_meses( $documentos, 'pendentes', $e_por_tratar ); ?>
 	<div class="ac-card" style="padding:22px">
+		<?php $documentos = cp_ac_render_tabs_meses( $documentos, 'pendentes', $e_por_tratar ); ?>
 		<div class="ac-sec-head">
 			<div></div>
 			<?php if ( ! empty( $documentos ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $documentos ) ); ?> <?php esc_html_e( 'pendentes', 'contabilidade-pro' ); ?></span><?php endif; ?>
@@ -612,7 +623,6 @@ function cp_ac_vista_documentos_em_falta() {
 				<div class="ac-req-row">
 					<div>
 						<div style="font-size:14px;font-weight:600"><?php echo esc_html( $doc['titulo'] ); ?></div>
-						<?php if ( ! empty( $doc['pedido_em'] ) ) : ?><div style="font-size:12px;color:var(--ac-muted);margin-top:2px"><?php printf( /* translators: %s: data */ esc_html__( 'Pedido a %s', 'contabilidade-pro' ), esc_html( $doc['pedido_em'] ) ); ?></div><?php endif; ?>
 					</div>
 					<?php if ( $resposta ) : ?>
 						<div style="display:flex;align-items:center;gap:10px">

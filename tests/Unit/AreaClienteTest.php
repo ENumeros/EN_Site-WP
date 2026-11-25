@@ -11,6 +11,7 @@ use Brain\Monkey\Functions;
  * @covers cp_ac_calc_conta_bloqueada
  * @covers cp_ac_calc_documentos_tratados
  * @covers cp_ac_calc_filtro_documentos
+ * @covers cp_ac_calc_avisos_pendentes
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -45,6 +46,16 @@ final class AreaClienteTest extends TestCase {
 			],
 			$chaves
 		);
+	}
+
+	public function test_pendentes_novos_so_avisam_o_que_a_work_pede(): void {
+		// Importação do e-fatura (ou Work antiga, sem o campo): nunca avisa.
+		self::assertSame( [], cp_ac_calc_avisos_pendentes( null, true, true ) );
+		self::assertSame( [], cp_ac_calc_avisos_pendentes( [], true, true ) );
+		// Ações da equipa: só do tipo pedido, e só se houver novidade.
+		self::assertSame( [ 'documentos' ], cp_ac_calc_avisos_pendentes( [ 'documentos' ], true, true ) );
+		self::assertSame( [ 'movimentos' ], cp_ac_calc_avisos_pendentes( [ 'movimentos' ], true, true ) );
+		self::assertSame( [], cp_ac_calc_avisos_pendentes( [ 'documentos' ], false, true ) );
 	}
 
 	public function test_empresa_sem_a_ferramenta_ativa_nao_tem_acesso(): void {

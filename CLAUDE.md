@@ -206,6 +206,11 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   corrente existe sempre e abre por omissão, e cada tab conta os meses por
   enviar (`cp_ac_item_checklist_por_tratar()`).
 
+- **Avisos de pendentes** (2026-11-25): `POST cp/v1/pendentes` só manda push
+  do que vier em `notificar` (`documentos`, `movimentos`), que a Work só
+  envia em ações da equipa. A importação do e-fatura corre todos os dias e
+  nunca avisa o cliente; sem o campo não há push.
+
 - **Documentos em Falta — Pendentes / Tratados** (2026-11-24): além de
   `documentos` (os por responder), `POST cp/v1/pendentes` pode trazer
   `documentos_tratados` [{id, titulo, pedido_em, mes, estado

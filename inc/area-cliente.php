@@ -1198,6 +1198,7 @@ function cp_ac_rest_routes_pendentes() {
                 'documentos' => [ 'required' => false, 'type' => 'array' ],
                 'movimentos' => [ 'required' => false, 'type' => 'array' ],
                 'documentos_tratados' => [ 'required' => false, 'type' => 'array' ],
+                'notificar'  => [ 'required' => false, 'type' => 'array' ],
             ],
         ],
     ] );
@@ -1311,6 +1312,19 @@ function cp_ac_rest_pendentes_email( $request ) {
     ] );
 }
 
+// Pura (testada): de que novidades se avisa o cliente. Só do que a Work pede
+// em `notificar` ("documentos", "movimentos"), que é sempre uma ação da
+// equipa. A importação do e-fatura corre todos os dias e nunca o pede: o
+// cliente não pode receber um aviso por dia (decisão de 2026-11-25). Sem o
+// campo não avisa.
+function cp_ac_calc_avisos_pendentes( $notificar, $ha_documento_novo, $ha_movimento_novo ) {
+    $pedidos = is_array( $notificar ) ? $notificar : [];
+    $avisos  = [];
+    if ( $ha_documento_novo && in_array( 'documentos', $pedidos, true ) ) $avisos[] = 'documentos';
+    if ( $ha_movimento_novo && in_array( 'movimentos', $pedidos, true ) ) $avisos[] = 'movimentos';
+    return $avisos;
+}
+
 function cp_ac_rest_sincronizar_pendentes( $request ) {
     $empresa_id = cp_ac_empresa_by_work_id( $request->get_param( 'work_id' ) );
     if ( ! $empresa_id ) return cp_ac_rest_erro_empresa_nao_encontrada();
@@ -1359,7 +1373,8 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
 
     $ha_documento_novo = (bool) array_diff( wp_list_pluck( $documentos, 'id' ), $ids_documentos_antes );
     $ha_movimento_novo = (bool) array_diff( wp_list_pluck( $movimentos, 'id' ), $ids_movimentos_antes );
-    if ( $ha_documento_novo && cp_ac_empresa_tem_ferramenta( $empresa_id, 'documentos_em_falta' ) ) {
+    $avisos = cp_ac_calc_avisos_pendentes( $request->get_param( 'notificar' ), $ha_documento_novo, $ha_movimento_novo );
+    if ( in_array( 'documentos', $avisos, true ) && cp_ac_empresa_tem_ferramenta( $empresa_id, 'documentos_em_falta' ) ) {
         cp_push_notificar_empresa(
             $empresa_id,
             __( 'Novos documentos em falta', 'contabilidade-pro' ),
@@ -1368,7 +1383,7 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
             'documentos_em_falta'
         );
     }
-    if ( $ha_movimento_novo && cp_ac_empresa_tem_ferramenta( $empresa_id, 'movimentos_a_esclarecer' ) ) {
+    if ( in_array( 'movimentos', $avisos, true ) && cp_ac_empresa_tem_ferramenta( $empresa_id, 'movimentos_a_esclarecer' ) ) {
         cp_push_notificar_empresa(
             $empresa_id,
             __( 'Novos movimentos a esclarecer', 'contabilidade-pro' ),

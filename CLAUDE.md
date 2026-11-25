@@ -211,6 +211,12 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   envia em ações da equipa. A importação do e-fatura corre todos os dias e
   nunca avisa o cliente; sem o campo não há push.
 
+- **Documentos em Falta — tabs por mês** (2026-11-25): dentro de Pendentes e
+  de Tratados há uma tab por mês (`?mes=AAAA-MM`, `sem` para os sem mês; sem
+  JS, `cp_ac_calc_tabs_meses()`, testada). O mês vem da Work em
+  `documentos[].mes`; abre o mais recente com algo por enviar. Enquanto a
+  Work não mandar meses não há tabs.
+
 - **Documentos em Falta — Pendentes / Tratados** (2026-11-24): além de
   `documentos` (os por responder), `POST cp/v1/pendentes` pode trazer
   `documentos_tratados` [{id, titulo, pedido_em, mes, estado

@@ -1107,11 +1107,40 @@ function cp_ac_calc_documentos_tratados( $lista ) {
             'id'        => sanitize_text_field( $doc['id'] ),
             'titulo'    => isset( $doc['titulo'] ) ? sanitize_text_field( $doc['titulo'] ) : '',
             'pedido_em' => isset( $doc['pedido_em'] ) ? sanitize_text_field( $doc['pedido_em'] ) : '',
-            'mes'       => isset( $doc['mes'] ) && preg_match( '/^\d{4}-\d{2}$/', (string) $doc['mes'] ) ? (string) $doc['mes'] : '',
+            'mes'       => cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' ),
             'estado'    => in_array( $estado, [ 'enviado', 'recebido', 'tratado' ], true ) ? $estado : 'tratado',
         ];
     }
     return $saida;
+}
+
+// Pura (testada): o próprio mês se for "AAAA-MM" com mês de 01 a 12, senão ''.
+function cp_ac_calc_mes_valido( $mes ) {
+    return is_string( $mes ) && preg_match( '/^\d{4}-(0[1-9]|1[0-2])$/', $mes ) ? $mes : '';
+}
+
+// Pura (testada): tabs por mês de Documentos em Falta. Só os meses que têm
+// documentos, mais recente primeiro; os sem mês (enviados por uma Work
+// antiga) ficam numa tab '' no fim. Abre o mês pedido (?mes=, 'sem' para a
+// tab ''), senão o mais recente com algo por tratar, senão o mais recente.
+// Devolve [ 'meses' => [...], 'ativo' => mês, 'contagem' => [ mês => n ] ].
+function cp_ac_calc_tabs_meses( array $documentos, $pedido = null, $por_tratar = null ) {
+    $contagem = [];
+    foreach ( $documentos as $doc ) {
+        $mes = cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' );
+        if ( ! isset( $contagem[ $mes ] ) ) $contagem[ $mes ] = 0;
+        if ( ! $por_tratar || call_user_func( $por_tratar, $doc ) ) $contagem[ $mes ]++;
+    }
+    krsort( $contagem, SORT_STRING );
+    $meses  = array_keys( $contagem );
+    $pedido = 'sem' === $pedido ? '' : $pedido;
+    if ( in_array( $pedido, $meses, true ) ) {
+        $ativo = $pedido;
+    } else {
+        $com   = array_keys( array_filter( $contagem ) );
+        $ativo = $com ? $com[0] : ( $meses ? $meses[0] : '' );
+    }
+    return [ 'meses' => $meses, 'ativo' => $ativo, 'contagem' => $contagem ];
 }
 
 // Pura (testada): qual filtro mostrar na vista Documentos em Falta —
@@ -1345,6 +1374,7 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
                 'id'        => sanitize_text_field( $doc['id'] ),
                 'titulo'    => isset( $doc['titulo'] ) ? sanitize_text_field( $doc['titulo'] ) : '',
                 'pedido_em' => isset( $doc['pedido_em'] ) ? sanitize_text_field( $doc['pedido_em'] ) : '',
+                'mes'       => cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' ),
             ];
         }
     }

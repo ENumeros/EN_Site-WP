@@ -12,6 +12,9 @@ use Brain\Monkey\Functions;
  * @covers cp_ac_calc_documentos_tratados
  * @covers cp_ac_calc_filtro_documentos
  * @covers cp_ac_calc_avisos_pendentes
+ * @covers cp_ac_calc_mes_valido
+ * @covers cp_ac_calc_tabs_meses
+ * @covers cp_ac_vista_documentos_em_falta
  * @covers cp_ac_ferramentas
  * @covers cp_ac_empresa_tem_ferramenta
  * @covers cp_ac_set_empresa_ferramentas
@@ -253,6 +256,73 @@ final class AreaClienteTest extends TestCase {
 		self::assertSame( 'tratado', $r[1]['estado'] );
 		self::assertSame( '', $r[1]['mes'] );
 		self::assertSame( [], cp_ac_calc_documentos_tratados( null ) );
+	}
+
+	public function test_tabs_meses_mais_recente_com_algo_por_tratar(): void {
+		$docs = [
+			[ 'id' => '1', 'mes' => '2026-09' ],
+			[ 'id' => '2', 'mes' => '2026-10' ],
+			[ 'id' => '3', 'mes' => '2025-12' ],
+			[ 'id' => '4' ],                       // Work antiga, sem mês
+			[ 'id' => '5', 'mes' => '2026-13' ],   // inválido
+		];
+		$t = cp_ac_calc_tabs_meses( $docs );
+		self::assertSame( [ '2026-10', '2026-09', '2025-12', '' ], $t['meses'] );
+		self::assertSame( '2026-10', $t['ativo'] );
+		self::assertSame( [ '2026-10' => 1, '2026-09' => 1, '2025-12' => 1, '' => 2 ], $t['contagem'] );
+
+		// O de outubro já foi respondido: abre setembro; outubro continua lá.
+		$t = cp_ac_calc_tabs_meses( $docs, null, function ( $d ) { return '2' !== $d['id']; } );
+		self::assertSame( '2026-09', $t['ativo'] );
+		self::assertSame( 0, $t['contagem']['2026-10'] );
+
+		self::assertSame( '2025-12', cp_ac_calc_tabs_meses( $docs, '2025-12' )['ativo'] );
+		self::assertSame( '', cp_ac_calc_tabs_meses( $docs, 'sem' )['ativo'] );
+		self::assertSame( '2026-10', cp_ac_calc_tabs_meses( $docs, '2024-01' )['ativo'] );
+		self::assertSame( [ 'meses' => [], 'ativo' => '', 'contagem' => [] ], cp_ac_calc_tabs_meses( [] ) );
+	}
+
+	public function test_vista_documentos_em_falta_em_tabs_por_mes(): void {
+		self::loadThemeFile( 'inc/area-cliente-documentos.php' );
+		self::loadThemeFile( 'inc/area-cliente-vistas.php' );
+		Functions\when( 'cp_ac_empresa_ativa' )->justReturn( 5 );
+		Functions\when( 'get_post_meta' )->alias( fn( $id, $chave ) => [
+			'_cp_pendentes_documentos'          => [
+				[ 'id' => '1', 'titulo' => 'Fatura setembro', 'pedido_em' => '2026-11-25', 'mes' => '2026-09' ],
+				[ 'id' => '2', 'titulo' => 'Fatura outubro', 'pedido_em' => '2026-11-25', 'mes' => '2026-10' ],
+			],
+			'_cp_pendentes_documentos_tratados' => [
+				[ 'id' => '3', 'titulo' => 'Tratada agosto', 'pedido_em' => '', 'mes' => '2026-08', 'estado' => 'tratado' ],
+			],
+		][ $chave ] ?? [] );
+		foreach ( [ 'esc_url', 'esc_attr', 'esc_html', 'admin_url' ] as $fn ) Functions\when( $fn )->returnArg( 1 );
+		Functions\when( 'cp_ac_vista_url' )->justReturn( '/area/?vista=documentos_em_falta' );
+		Functions\when( 'add_query_arg' )->alias( fn( $k, $v, $u ) => "$u&$k=$v" );
+		Functions\when( 'wp_nonce_field' )->justReturn( '' );
+
+		$_GET = [];
+		$html = $this->vista();
+		self::assertStringContainsString( 'Outubro 2026', $html );
+		self::assertStringContainsString( 'Setembro 2026', $html );
+		self::assertStringContainsString( 'Fatura outubro', $html );
+		self::assertStringNotContainsString( 'Fatura setembro', $html );
+
+		$_GET = [ 'mes' => '2026-09' ];
+		$html = $this->vista();
+		self::assertStringContainsString( 'Fatura setembro', $html );
+		self::assertStringNotContainsString( 'Fatura outubro', $html );
+
+		$_GET = [ 'filtro' => 'tratados' ];
+		$html = $this->vista();
+		self::assertStringContainsString( '&filtro=tratados&mes=2026-08', $html );
+		self::assertStringContainsString( 'Tratada agosto', $html );
+		$_GET = [];
+	}
+
+	private function vista(): string {
+		ob_start();
+		cp_ac_vista_documentos_em_falta();
+		return ob_get_clean();
 	}
 
 	public function test_filtro_documentos_pendentes_por_omissao(): void {

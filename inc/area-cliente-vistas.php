@@ -502,17 +502,49 @@ function cp_ac_render_banner_resposta_pendente() {
 
 // ─── Documentos em Falta ────────────────────────────────────────────────────
 
+// Tabs por mês (links ?mes=, sem JS) dentro do filtro ativo. $por_tratar diz
+// que documentos contam no número da tab (null = todos). Devolve só os
+// documentos do mês aberto. Sem meses (Work antiga) não há tabs.
+function cp_ac_render_tabs_meses( array $documentos, $filtro, $por_tratar = null ) {
+	$pedido = isset( $_GET['mes'] ) ? sanitize_text_field( wp_unslash( $_GET['mes'] ) ) : null;
+	$tabs   = cp_ac_calc_tabs_meses( $documentos, $pedido, $por_tratar );
+	if ( ! array_filter( $tabs['meses'] ) ) return $documentos;
+
+	$base = cp_ac_vista_url( 'documentos_em_falta' );
+	if ( 'tratados' === $filtro ) $base = add_query_arg( 'filtro', 'tratados', $base );
+	$nomes = cp_ac_documento_nomes_meses();
+	?>
+	<div class="ac-bo-filtros" role="tablist" aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>">
+		<?php foreach ( $tabs['meses'] as $mes ) :
+			$ativo  = $mes === $tabs['ativo'];
+			$n      = $tabs['contagem'][ $mes ];
+			$rotulo = '' === $mes ? __( 'Sem mês', 'contabilidade-pro' ) : $nomes[ (int) substr( $mes, 5 ) ] . ' ' . substr( $mes, 0, 4 );
+			?>
+			<a class="ac-bo-chip<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( add_query_arg( 'mes', '' === $mes ? 'sem' : $mes, $base ) ); ?>">
+				<?php echo esc_html( $rotulo ); ?>
+				<?php if ( $n ) : ?><span class="ac-badge <?php echo 'tratados' === $filtro ? 'ac-badge-green' : 'ac-badge-amber'; ?>" style="margin-left:8px;padding:1px 7px"><?php echo esc_html( $n ); ?></span><?php endif; ?>
+			</a>
+		<?php endforeach; ?>
+	</div>
+	<?php
+	return array_values( array_filter( $documentos, function ( $doc ) use ( $tabs ) {
+		return cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' ) === $tabs['ativo'];
+	} ) );
+}
+
 // Dois filtros (?filtro=, sem JS, como as tabs por ano de Extratos):
 // "Pendentes" (omissão, com o formulário) e "Tratados" (só leitura: o que o
 // cliente enviou, o que a contabilidade já recebeu e o que já está tratado).
+// Dentro de cada um, uma tab por mês.
 function cp_ac_vista_documentos_em_falta() {
 	$empresa_id = cp_ac_empresa_ativa();
 	$documentos = cp_ac_pendentes_documentos( $empresa_id );
 	$tratados   = cp_ac_pendentes_documentos_tratados( $empresa_id );
 	$filtro     = cp_ac_calc_filtro_documentos( isset( $_GET['filtro'] ) ? sanitize_key( wp_unslash( $_GET['filtro'] ) ) : '' );
-	$por_tratar = count( array_filter( $documentos, function ( $item ) use ( $empresa_id ) {
+	$e_por_tratar = function ( $item ) use ( $empresa_id ) {
 		return ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
-	} ) );
+	};
+	$por_tratar = count( array_filter( $documentos, $e_por_tratar ) );
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Documentos em Falta', 'contabilidade-pro' ); ?></h1>
@@ -535,6 +567,7 @@ function cp_ac_vista_documentos_em_falta() {
 	</div>
 
 	<?php if ( 'tratados' === $filtro ) : ?>
+		<?php $tratados = cp_ac_render_tabs_meses( $tratados, 'tratados' ); ?>
 		<div class="ac-card" style="padding:22px">
 			<?php if ( empty( $tratados ) ) : ?>
 				<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não há documentos tratados.', 'contabilidade-pro' ); ?></div>
@@ -554,7 +587,6 @@ function cp_ac_vista_documentos_em_falta() {
 					<div class="ac-req-row">
 						<div>
 							<div style="font-size:14px;font-weight:600"><?php echo esc_html( $doc['titulo'] ); ?></div>
-							<?php if ( ! empty( $doc['mes'] ) ) : ?><div style="font-size:12px;color:var(--ac-muted);margin-top:2px"><?php printf( /* translators: %s: mês AAAA-MM */ esc_html__( 'Mês %s', 'contabilidade-pro' ), esc_html( $doc['mes'] ) ); ?></div><?php endif; ?>
 						</div>
 						<span class="ac-badge <?php echo 'enviado' === $doc['estado'] ? 'ac-badge-blue' : 'ac-badge-green'; ?>" title="<?php echo esc_attr( $dica_estado ); ?>"><?php echo esc_html( $rotulo_estado ); ?></span>
 					</div>
@@ -565,6 +597,7 @@ function cp_ac_vista_documentos_em_falta() {
 		return;
 	endif; ?>
 
+	<?php $documentos = cp_ac_render_tabs_meses( $documentos, 'pendentes', $e_por_tratar ); ?>
 	<div class="ac-card" style="padding:22px">
 		<div class="ac-sec-head">
 			<div></div>

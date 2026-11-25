@@ -61,8 +61,8 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   nunca `__return_true`.
 - **Matriz de ferramentas por empresa** (`cp_ac_ferramentas()` +
   `_cp_ferramentas_ativas` no post da empresa) é o mecanismo de feature
-  flag: uma ferramenta nova fica OFF em todas as empresas até ser ligada
-  manualmente em wp-admin → Área de Cliente. Ao adicionar uma ferramenta
+  flag: uma ferramenta nova fica OFF em todas as empresas até ser ligada na
+  Work (Portal do cliente › Ferramentas); no wp-admin é só consulta. Ao adicionar uma ferramenta
   nova, implementa sempre:
   1. entrada em `cp_ac_ferramentas()` (label, grupo, ícone);
   2. `cp_ac_vista_<chave>()` em `area-cliente-vistas.php`;
@@ -78,7 +78,9 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`cp_ac_utilizador_ferramentas_ativas()`); `cp_ac_tem_ferramenta()`, os
   pushes e os emails de pagamentos já o respeitam. Quem manda é a Work
   (campo `acessos` em `POST /cp/v1/utilizadores`); o perfil no wp-admin só
-  mostra.
+  mostra. As **empresas** de uma conta da Work (`_cp_work_id`,
+  `cp_ac_user_gerido_na_work()`) também só se veem no perfil; só contas
+  criadas à mão no wp-admin as editam aí.
 - **Convite** (`cp_ac_email_convite`, filtro `wp_new_user_notification_email`):
   os clientes criados pela Work recebem o email nativo "definir a senha" com
   o texto da Entre Números (`cp_ac_calc_texto_convite()`, testada em

@@ -164,19 +164,34 @@ function cp_ac_set_user_empresas( $user_id, array $empresa_ids ) {
 	update_user_meta( $user_id, 'cp_empresas', array_map( 'intval', $empresa_ids ) );
 }
 
-// Campo no perfil do utilizador (wp-admin → Utilizadores → Editar) para
-// associar empresas. O nonce é o nativo do próprio formulário de perfil.
+// Conta gerida na Work (tem work_id): as empresas mudam-se lá, e cada envio
+// da Work substitui a lista. No wp-admin ficam só de leitura.
+function cp_ac_user_gerido_na_work( $user_id ) {
+	return '' !== (string) get_user_meta( $user_id, '_cp_work_id', true );
+}
+
+// Campo no perfil do utilizador (wp-admin → Utilizadores → Editar) com as
+// empresas: só leitura nas contas da Work, editável nas restantes (criadas à
+// mão no wp-admin). O nonce é o nativo do próprio formulário de perfil.
 function cp_ac_user_profile_empresas_field( $user ) {
 	if ( ! current_user_can( 'edit_users' ) ) return;
 	$empresas     = cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) );
 	$selecionadas = cp_ac_user_empresas( $user->ID );
+	$da_work      = cp_ac_user_gerido_na_work( $user->ID );
 	?>
 	<h2><?php esc_html_e( 'Área de Cliente — Empresas', 'contabilidade-pro' ); ?></h2>
 	<table class="form-table">
 		<tr>
-			<th><label for="cp_empresas"><?php esc_html_e( 'Empresas associadas', 'contabilidade-pro' ); ?></label></th>
+			<th><?php esc_html_e( 'Empresas associadas', 'contabilidade-pro' ); ?></th>
 			<td>
-				<?php if ( empty( $empresas ) ) : ?>
+				<?php if ( $da_work ) :
+					if ( ! $selecionadas ) : ?>
+						<p><em><?php esc_html_e( 'Sem empresas associadas.', 'contabilidade-pro' ); ?></em></p>
+					<?php endif;
+					foreach ( $selecionadas as $empresa_id ) : ?>
+						<p style="margin:0 0 4px"><?php echo esc_html( cp_ac_empresa_label( $empresa_id ) ); ?></p>
+					<?php endforeach;
+				elseif ( empty( $empresas ) ) : ?>
 					<p><em><?php esc_html_e( 'Ainda não existem empresas criadas.', 'contabilidade-pro' ); ?></em></p>
 				<?php else :
 					foreach ( $empresas as $empresa ) : ?>
@@ -187,7 +202,13 @@ function cp_ac_user_profile_empresas_field( $user ) {
 						</label>
 					<?php endforeach;
 				endif; ?>
-				<p class="description"><?php esc_html_e( 'A que empresa(s) este utilizador tem acesso na Área de Cliente.', 'contabilidade-pro' ); ?></p>
+				<p class="description"><?php
+					if ( $da_work ) {
+						esc_html_e( 'Definido na Work, em Portal do cliente › Utilizadores.', 'contabilidade-pro' );
+					} else {
+						esc_html_e( 'A que empresa(s) este utilizador tem acesso na Área de Cliente. Esta conta não foi criada na Work.', 'contabilidade-pro' );
+					}
+				?></p>
 			</td>
 		</tr>
 		<?php if ( $selecionadas ) :
@@ -221,6 +242,7 @@ add_action( 'edit_user_profile', 'cp_ac_user_profile_empresas_field' );
 
 function cp_ac_save_user_profile_empresas( $user_id ) {
 	if ( ! current_user_can( 'edit_users' ) ) return;
+	if ( cp_ac_user_gerido_na_work( $user_id ) ) return; // o formulário não traz as caixas: gravar apagava tudo
 	$empresas = isset( $_POST['cp_empresas'] ) ? array_map( 'intval', (array) $_POST['cp_empresas'] ) : [];
 	cp_ac_set_user_empresas( $user_id, $empresas );
 }

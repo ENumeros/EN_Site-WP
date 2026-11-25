@@ -61,6 +61,8 @@ a:hover{color:var(--ac-navy)}
 .ac-sidebar-foot{margin-top:auto;border-top:1px solid rgba(255,255,255,.1);padding-top:16px}
 .ac-main{flex:999 1 560px;min-width:0}
 .ac-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 32px;background:var(--ac-surface);border-bottom:1px solid var(--ac-hairline)}
+.ac-topbar-esq{display:flex;align-items:center;gap:14px}
+.ac-badge.ac-topbar-sinc{padding:7px 12px;border:1px solid var(--ac-line);border-radius:999px}
 .ac-empresa-chip{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;border:1px solid var(--ac-line);background:var(--ac-bg);font-size:13px;font-weight:600;color:var(--ac-text)}
 .ac-content{padding:32px;display:flex;flex-direction:column;gap:26px;box-sizing:border-box}
 .ac-user{display:flex;align-items:center;gap:14px}
@@ -100,8 +102,8 @@ a:hover{color:var(--ac-navy)}
 /* Dashboard: "A sua empresa" (conteúdo principal) + coluna lateral
    discreta (conta corrente, lembretes) — ver cp_ac_vista_dashboard(). */
 .ac-dashboard-cols{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
-.ac-dashboard-main{flex:2 1 460px;min-width:320px;display:flex;flex-direction:column;gap:22px}
-.ac-dashboard-side{flex:1 1 280px;min-width:260px;display:flex;flex-direction:column;gap:14px}
+.ac-dashboard-main{flex:2 1 460px;min-width:min(320px,100%);display:flex;flex-direction:column;gap:22px}
+.ac-dashboard-side{flex:1 1 280px;min-width:min(260px,100%);display:flex;flex-direction:column;gap:14px}
 .ac-resumo-card{padding:6px 26px}
 .ac-resumo-head{font-size:12px;font-weight:600;color:var(--ac-muted);text-transform:uppercase;letter-spacing:.03em;padding:18px 0 6px}
 .ac-resumo-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--ac-hairline);color:inherit}
@@ -157,6 +159,8 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-todo-meta{font-size:12px;color:var(--ac-muted);margin-top:4px}
 .ac-req-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--ac-hairline);flex-wrap:wrap}
 .ac-req-row:last-child{border-bottom:none;padding-bottom:0}
+.ac-req-form{display:flex;align-items:center;gap:10px}
+@media (max-width:560px){.ac-req-form{flex-wrap:wrap;width:100%}.ac-req-form input[type=file]{flex:1 1 150px;min-width:0}.ac-req-form .ac-btn{width:100%}}
 .ac-dropzone{border:1.5px dashed var(--ac-hairline);border-radius:16px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--ac-bg)}
 .ac-dropzone-icon{width:44px;height:44px;border-radius:50%;background:var(--ac-surface);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,40,.06),0 4px 10px -4px rgba(16,24,40,.1);margin-bottom:4px}
 :root[data-theme="dark"] .ac-dropzone-icon{box-shadow:0 1px 2px rgba(0,0,0,.2),0 4px 10px -4px rgba(0,0,0,.3)}
@@ -264,7 +268,15 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 	.ac-sidebar.is-open{transform:translateX(0)}
 	.ac-main{width:100%}
 	.ac-content{padding:20px}
-	.ac-topbar{padding:14px 18px;flex-wrap:wrap}
+	.ac-topbar{padding:14px 18px;flex-wrap:wrap;justify-content:flex-start;gap:12px}
+	/* Menu, empresa e utilizador numa só linha (um nome comprido parte-se
+	   dentro da sua caixa); o aviso "A Work recolheu…" passa para uma linha
+	   própria, que pode partir — numa só linha alargava a página toda. */
+	.ac-topbar-esq{display:contents}
+	.ac-topbar .ac-empresa-chip{flex:1 1 0;min-width:0;max-width:max-content;overflow-wrap:anywhere}
+	.ac-topbar .ac-user{margin-left:auto;flex:none}
+	.ac-badge.ac-topbar-sinc{order:1;max-width:100%;white-space:normal}
+	.ac-user-dropdown{max-width:calc(100vw - 36px)}
 	.ac-mensagens-colunas{flex-direction:column}
 	.ac-mensagens-col-lista{flex:none;width:100%}
 	.ac-user-name{display:none}

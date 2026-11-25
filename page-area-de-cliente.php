@@ -140,7 +140,7 @@ else :
 			<main class="ac-main">
 				<?php cp_bo_render_faixa_pre_visualizacao(); ?>
 				<header class="ac-topbar">
-					<div style="display:flex;align-items:center;gap:14px">
+					<div class="ac-topbar-esq">
 						<button type="button" class="ac-sidebar-toggle" id="ac-sidebar-toggle" aria-expanded="false" aria-controls="ac-sidebar" aria-label="<?php esc_attr_e( 'Abrir menu', 'contabilidade-pro' ); ?>">
 							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
 						</button>

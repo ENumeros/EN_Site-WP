@@ -130,13 +130,13 @@ else :
 
 		<main class="ac-main">
 			<header class="ac-topbar">
-				<div style="display:flex;align-items:center;gap:14px">
+				<div class="ac-topbar-esq">
 					<button type="button" class="ac-sidebar-toggle" id="ac-sidebar-toggle" aria-expanded="false" aria-controls="ac-sidebar" aria-label="<?php esc_attr_e( 'Abrir menu', 'contabilidade-pro' ); ?>">
 						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
 					</button>
 					<span class="ac-empresa-chip"><?php esc_html_e( 'Equipa', 'contabilidade-pro' ); ?></span>
 					<?php if ( $bo_resumo['work_recolha'] ) : ?>
-						<span class="ac-badge ac-badge-green" style="padding:7px 12px;border:1px solid var(--ac-line);border-radius:999px"><?php echo esc_html( sprintf( __( 'A Work recolheu documentos %s', 'contabilidade-pro' ), cp_bo_ha( $bo_resumo['work_recolha'] ) ) ); ?></span>
+						<span class="ac-badge ac-badge-green ac-topbar-sinc"><?php echo esc_html( sprintf( __( 'A Work recolheu documentos %s', 'contabilidade-pro' ), cp_bo_ha( $bo_resumo['work_recolha'] ) ) ); ?></span>
 					<?php endif; ?>
 				</div>
 
@@ -221,7 +221,7 @@ else :
 					<div class="ac-card" style="padding:22px;margin-top:18px">
 						<form method="get" action="<?php echo esc_url( get_permalink() ); ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
 							<label for="cp-bo-empresa" style="font-size:12.5px;font-weight:600"><?php esc_html_e( 'Empresa', 'contabilidade-pro' ); ?></label>
-							<select name="empresa_id" id="cp-bo-empresa" onchange="this.form.submit()" style="padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
+							<select name="empresa_id" id="cp-bo-empresa" onchange="this.form.submit()" style="max-width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--ac-line);background:var(--ac-bg);color:var(--ac-text);font-size:13.5px">
 								<option value=""><?php esc_html_e( 'Escolha uma empresa…', 'contabilidade-pro' ); ?></option>
 								<?php foreach ( cp_ac_ordenar_empresas( get_posts( [ 'post_type' => 'cp_empresa', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] ) ) as $bo_empresa ) : ?>
 									<option value="<?php echo esc_attr( $bo_empresa->ID ); ?>" <?php selected( $bo_empresa_id, $bo_empresa->ID ); ?>><?php echo esc_html( cp_ac_empresa_label( $bo_empresa->ID ) ); ?></option>

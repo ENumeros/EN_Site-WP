@@ -630,7 +630,7 @@ function cp_ac_vista_documentos_em_falta() {
 							<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:7px 12px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
 						</div>
 					<?php else : ?>
-						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:flex;align-items:center;gap:10px">
+						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-req-form">
 							<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
 							<input type="hidden" name="action" value="cp_pendente_responder">
 							<input type="hidden" name="tipo" value="documento">
@@ -676,7 +676,7 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 				<div class="ac-mv-item">
 					<div class="ac-mv-row">
 						<div class="ac-mv-amount <?php echo esc_attr( $valor_cls ); ?>"><?php echo esc_html( $valor_txt ); ?>&nbsp;€</div>
-						<div style="flex:1;min-width:220px">
+						<div style="flex:1;min-width:min(220px,100%)">
 							<div style="font-size:13.5px;font-weight:600"><?php echo esc_html( $mov['data'] ); ?></div>
 							<?php if ( ! empty( $mov['descricao'] ) ) : ?><div class="ac-mv-line"><?php echo esc_html( $mov['descricao'] ); ?></div><?php endif; ?>
 							<?php if ( ! empty( $mov['pergunta'] ) ) : ?><div class="ac-mv-q"><?php echo esc_html( $mov['pergunta'] ); ?></div><?php endif; ?>

@@ -140,6 +140,20 @@ function cp_ac_documento_destino_valido( $empresa_id, $pasta_id, $ano, $mes ) {
 	return null;
 }
 
+// Destino do último envio, que vem no endereço depois de enviar: [ pasta_id,
+// ano, mes ], ou null se não há ou não é válido nesta empresa (ex. mudou de
+// empresa entretanto) — aí o formulário abre na primeira pasta e no mês atual.
+function cp_ac_documento_destino_anterior( $empresa_id, $pedido ) {
+	foreach ( [ 'cp_doc_pasta', 'cp_doc_ano', 'cp_doc_mes' ] as $campo ) {
+		if ( ! isset( $pedido[ $campo ] ) || ! is_scalar( $pedido[ $campo ] ) ) return null;
+	}
+	$pasta_id = sanitize_text_field( wp_unslash( $pedido['cp_doc_pasta'] ) );
+	$ano      = absint( $pedido['cp_doc_ano'] );
+	$mes      = absint( $pedido['cp_doc_mes'] );
+	if ( ! cp_ac_documento_destino_valido( $empresa_id, $pasta_id, $ano, $mes ) ) return null;
+	return [ 'pasta_id' => $pasta_id, 'ano' => $ano, 'mes' => $mes ];
+}
+
 function cp_ac_documentos( $empresa_id ) {
 	return get_posts( [
 		'post_type'      => 'attachment',
@@ -184,6 +198,19 @@ function cp_ac_handle_documento_upload() {
 		exit;
 	}
 	cp_ac_exigir_ferramenta( $empresa_id, 'documentos' );
+
+	$pasta_id = isset( $_POST['pasta_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pasta_id'] ) ) : '';
+	$ano      = isset( $_POST['ano'] ) ? absint( $_POST['ano'] ) : 0;
+	$mes      = isset( $_POST['mes'] ) ? absint( $_POST['mes'] ) : 0;
+	// O destino volta com a página (envio aceite ou recusado), para o
+	// formulário continuar na pasta, mês e ano escolhidos — ver
+	// cp_ac_documento_destino_anterior().
+	$voltar = add_query_arg( [
+		'cp_doc_pasta' => rawurlencode( $pasta_id ),
+		'cp_doc_ano'   => $ano,
+		'cp_doc_mes'   => $mes,
+	], $voltar );
+
 	$ficheiros = cp_ac_documento_ficheiros_do_pedido( $_FILES );
 	if ( ! $ficheiros ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_em_falta', $voltar ) );
@@ -193,9 +220,6 @@ function cp_ac_handle_documento_upload() {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_demasiados', $voltar ) );
 		exit;
 	}
-	$pasta_id = isset( $_POST['pasta_id'] ) ? sanitize_text_field( wp_unslash( $_POST['pasta_id'] ) ) : '';
-	$ano      = isset( $_POST['ano'] ) ? absint( $_POST['ano'] ) : 0;
-	$mes      = isset( $_POST['mes'] ) ? absint( $_POST['mes'] ) : 0;
 	if ( ! cp_ac_documento_destino_valido( $empresa_id, $pasta_id, $ano, $mes ) ) {
 		wp_safe_redirect( add_query_arg( 'cp_erro', 'documento_destino', $voltar ) );
 		exit;
@@ -524,10 +548,14 @@ function cp_ac_rest_documentos_apagar_recusado( $request ) {
 // Só o formulário de envio (dropzone) — reutilizado pela vista Documentos
 // e pelo botão flutuante do Dashboard.
 function cp_ac_render_documento_form() {
-	$pastas = cp_ac_documento_pastas( cp_ac_empresa_ativa() );
+	$empresa_id = cp_ac_empresa_ativa();
+	$pastas     = cp_ac_documento_pastas( $empresa_id );
 	if ( ! $pastas ) return;
 	$ano_atual = (int) current_time( 'Y' );
 	$mes_atual = (int) current_time( 'n' );
+	// Depois de enviar, fica no mesmo destino (dá para continuar a enviar).
+	$destino = cp_ac_documento_destino_anterior( $empresa_id, $_GET );
+	if ( ! $destino ) $destino = [ 'pasta_id' => '', 'ano' => $ano_atual, 'mes' => $mes_atual ];
 	$anos      = [];
 	foreach ( $pastas as $pasta ) $anos = array_merge( $anos, array_map( 'intval', (array) $pasta['anos'] ) );
 	$anos = array_unique( $anos );
@@ -548,7 +576,7 @@ function cp_ac_render_documento_form() {
 					<span><?php esc_html_e( 'Pasta', 'contabilidade-pro' ); ?></span>
 					<select name="pasta_id" required data-cp-doc-pasta>
 						<?php foreach ( $pastas as $pasta ) : ?>
-							<option value="<?php echo esc_attr( $pasta['id'] ); ?>" data-anos="<?php echo esc_attr( implode( ',', array_map( 'intval', (array) $pasta['anos'] ) ) ); ?>"><?php echo esc_html( $pasta['nome'] ); ?></option>
+							<option value="<?php echo esc_attr( $pasta['id'] ); ?>" data-anos="<?php echo esc_attr( implode( ',', array_map( 'intval', (array) $pasta['anos'] ) ) ); ?>" <?php selected( (string) $pasta['id'], $destino['pasta_id'] ); ?>><?php echo esc_html( $pasta['nome'] ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</label>
@@ -556,7 +584,7 @@ function cp_ac_render_documento_form() {
 					<span><?php esc_html_e( 'Mês', 'contabilidade-pro' ); ?></span>
 					<select name="mes" required data-cp-doc-mes>
 						<?php foreach ( cp_ac_documento_nomes_meses() as $n => $nome_mes ) : ?>
-							<option value="<?php echo esc_attr( $n ); ?>" <?php selected( $n, $mes_atual ); ?>><?php echo esc_html( $nome_mes ); ?></option>
+							<option value="<?php echo esc_attr( $n ); ?>" <?php selected( $n, $destino['mes'] ); ?>><?php echo esc_html( $nome_mes ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</label>
@@ -564,7 +592,7 @@ function cp_ac_render_documento_form() {
 					<span><?php esc_html_e( 'Ano', 'contabilidade-pro' ); ?></span>
 					<select name="ano" required data-cp-doc-ano>
 						<?php foreach ( $anos as $a ) : if ( $a > $ano_atual ) continue; ?>
-							<option value="<?php echo esc_attr( $a ); ?>" <?php selected( $a, $ano_atual ); ?>><?php echo esc_html( $a ); ?></option>
+							<option value="<?php echo esc_attr( $a ); ?>" <?php selected( $a, $destino['ano'] ); ?>><?php echo esc_html( $a ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</label>

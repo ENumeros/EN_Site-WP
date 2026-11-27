@@ -164,6 +164,16 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-dropzone{border:1.5px dashed var(--ac-hairline);border-radius:16px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--ac-bg)}
 .ac-dropzone-icon{width:44px;height:44px;border-radius:50%;background:var(--ac-surface);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,40,.06),0 4px 10px -4px rgba(16,24,40,.1);margin-bottom:4px}
 :root[data-theme="dark"] .ac-dropzone-icon{box-shadow:0 1px 2px rgba(0,0,0,.2),0 4px 10px -4px rgba(0,0,0,.3)}
+/* Arrastar e largar (2026-11-27) */
+.ac-dropzone{transition:border-color .15s,background-color .15s}
+.ac-dropzone.is-arrastar{border-color:var(--ac-blue);border-style:solid;background:var(--ac-surface)}
+.ac-dropzone-escolher{position:relative;padding:8px 16px;font-size:13px}
+.ac-dropzone-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.ac-dropzone [data-cp-doc-drop-titulo].is-aviso{color:var(--ac-badge-red-fg,#B14B3D)}
+.ac-dropzone-lista{list-style:none;margin:2px 0 0;padding:0;width:100%;max-width:520px;max-height:150px;overflow:auto;text-align:left;font-size:12.5px}
+.ac-dropzone-lista li{display:flex;justify-content:space-between;gap:12px;padding:5px 8px;border-bottom:1px solid var(--ac-line)}
+.ac-dropzone-lista li span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ac-dropzone-tam{flex:0 0 auto;color:var(--ac-muted)}
 .ac-file-input{color:var(--ac-muted)}
 .ac-file-input::file-selector-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:9px;font-size:14px;font-weight:600;border:1px solid transparent;cursor:pointer;font-family:'Public Sans',sans-serif;background:var(--ac-navy);color:var(--ac-on-navy);margin-right:10px}
 .ac-file-input::file-selector-button:hover{background:var(--ac-navy-strong)}

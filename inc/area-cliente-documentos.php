@@ -565,13 +565,18 @@ function cp_ac_render_documento_form() {
 	<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<?php wp_nonce_field( 'cp_documento_upload', 'cp_documento_nonce' ); ?>
 		<input type="hidden" name="action" value="cp_documento_upload">
-		<div class="ac-dropzone">
+		<?php // Arrastar e largar (2026-11-27): a zona inteira aceita ficheiros; o input nativo fica escondido dentro do botão "ou escolha os ficheiros" (sem id — o formulário pode aparecer duas vezes na página, aqui e na janela do "+"). ?>
+		<div class="ac-dropzone" data-cp-doc-drop>
 			<div class="ac-dropzone-icon">
 				<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--ac-blue)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path><path d="M14 3v4h4"></path><path d="M12 11v6M9 14h6"></path></svg>
 			</div>
-			<div style="font-size:13.5px;font-weight:600"><?php esc_html_e( 'Enviar documentos', 'contabilidade-pro' ); ?></div>
-			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Faturas, despesas ou outros documentos — pode escolher vários de uma vez', 'contabilidade-pro' ); ?></div>
-			<input type="file" name="ficheiros[]" multiple required accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-file-input" style="font-size:12.5px;max-width:260px" data-cp-doc-max="<?php echo esc_attr( cp_ac_documento_max_ficheiros() ); ?>">
+			<div style="font-size:13.5px;font-weight:600" data-cp-doc-drop-titulo><?php esc_html_e( 'Arraste os documentos para aqui', 'contabilidade-pro' ); ?></div>
+			<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Faturas, despesas ou outros documentos — vários de uma vez', 'contabilidade-pro' ); ?></div>
+			<label class="ac-btn ac-btn-ghost ac-dropzone-escolher">
+				<input type="file" name="ficheiros[]" multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="ac-dropzone-input" data-cp-doc-max="<?php echo esc_attr( cp_ac_documento_max_ficheiros() ); ?>">
+				<?php esc_html_e( 'ou escolha os ficheiros', 'contabilidade-pro' ); ?>
+			</label>
+			<ul class="ac-dropzone-lista" data-cp-doc-escolhidos hidden></ul>
 			<div class="ac-doc-destino">
 				<label class="ac-doc-campo ac-doc-campo-pasta">
 					<span><?php esc_html_e( 'Pasta', 'contabilidade-pro' ); ?></span>
@@ -632,15 +637,87 @@ function cp_ac_render_documento_form_script( $ano_atual, $mes_atual ) {
 			pasta.addEventListener('change', atualizar);
 			ano.addEventListener('change', atualizar);
 			atualizar();
-			// Mais ficheiros do que o permitido: avisa antes de enviar.
-			var ficheiros = form.querySelector('[data-cp-doc-max]');
-			if (ficheiros) ficheiros.addEventListener('change', function () {
-				var max = parseInt(ficheiros.getAttribute('data-cp-doc-max'), 10) || 20;
-				ficheiros.setCustomValidity(ficheiros.files.length > max ? <?php echo wp_json_encode( cp_ac_documento_erro_texto( 'documento_demasiados' ) ); ?> : '');
-				ficheiros.reportValidity();
+			ligarZona(form);
+		}
+
+		// Zona de envio: arrastar e largar ou escolher; lista dos escolhidos;
+		// só PDF/imagem; máximo por envio. Os avisos aparecem no título da zona
+		// (o input nativo está escondido, não pode mostrar o seu próprio aviso).
+		var TXT = <?php echo wp_json_encode( [
+			'titulo'     => __( 'Arraste os documentos para aqui', 'contabilidade-pro' ),
+			'um'         => __( '1 ficheiro pronto a enviar', 'contabilidade-pro' ),
+			'varios'     => __( '%d ficheiros prontos a enviar', 'contabilidade-pro' ),
+			'demasiados' => cp_ac_documento_erro_texto( 'documento_demasiados' ),
+			'nenhum'     => __( 'Escolha ou arraste pelo menos um documento.', 'contabilidade-pro' ),
+			'fora_um'    => __( '1 ficheiro ficou de fora — só PDF ou imagem (JPG, PNG).', 'contabilidade-pro' ),
+			'fora'       => __( '%d ficheiros ficaram de fora — só PDF ou imagem (JPG, PNG).', 'contabilidade-pro' ),
+		] ); ?>;
+		var ACEITES = /\.(pdf|jpe?g|png)$/i;
+		function ligarZona(form) {
+			var zona = form.querySelector('[data-cp-doc-drop]');
+			if (!zona) return;
+			var campo = zona.querySelector('[data-cp-doc-max]');
+			var lista = zona.querySelector('[data-cp-doc-escolhidos]');
+			var titulo = zona.querySelector('[data-cp-doc-drop-titulo]');
+			var max = parseInt(campo.getAttribute('data-cp-doc-max'), 10) || 20;
+			function avisar(texto, erro) {
+				titulo.textContent = texto || TXT.titulo;
+				titulo.classList.toggle('is-aviso', !!erro);
+			}
+			function tamanho(b) {
+				return b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+			}
+			function mostrar() {
+				lista.innerHTML = '';
+				Array.prototype.forEach.call(campo.files, function (f) {
+					var li = document.createElement('li');
+					var nome = document.createElement('span');
+					nome.textContent = f.name;
+					var tam = document.createElement('span');
+					tam.className = 'ac-dropzone-tam';
+					tam.textContent = tamanho(f.size);
+					li.appendChild(nome);
+					li.appendChild(tam);
+					lista.appendChild(li);
+				});
+				lista.hidden = !campo.files.length;
+				var n = campo.files.length;
+				if (n > max) avisar(TXT.demasiados, true);
+				else if (n) avisar(n === 1 ? TXT.um : TXT.varios.replace('%d', n));
+				else avisar('');
+			}
+			// Largar soma aos já escolhidos, sem repetir; o que não é PDF/imagem fica de fora.
+			function juntar(novos) {
+				var dt = new DataTransfer(), vistos = {}, fora = 0;
+				Array.prototype.forEach.call(campo.files, function (f) { dt.items.add(f); vistos[f.name + f.size] = true; });
+				Array.prototype.forEach.call(novos, function (f) {
+					if (!ACEITES.test(f.name)) { fora++; return; }
+					if (!vistos[f.name + f.size]) { dt.items.add(f); vistos[f.name + f.size] = true; }
+				});
+				campo.files = dt.files;
+				mostrar();
+				if (fora) avisar(fora === 1 ? TXT.fora_um : TXT.fora.replace('%d', fora), true);
+			}
+			campo.addEventListener('change', mostrar);
+			['dragenter', 'dragover'].forEach(function (ev) {
+				zona.addEventListener(ev, function (e) { e.preventDefault(); zona.classList.add('is-arrastar'); });
+			});
+			zona.addEventListener('dragleave', function (e) { if (!zona.contains(e.relatedTarget)) zona.classList.remove('is-arrastar'); });
+			zona.addEventListener('drop', function (e) {
+				e.preventDefault();
+				zona.classList.remove('is-arrastar');
+				if (e.dataTransfer && e.dataTransfer.files.length) juntar(e.dataTransfer.files);
+			});
+			form.addEventListener('submit', function (e) {
+				if (!campo.files.length) { e.preventDefault(); avisar(TXT.nenhum, true); }
+				else if (campo.files.length > max) { e.preventDefault(); avisar(TXT.demasiados, true); }
 			});
 		}
+
 		document.querySelectorAll('form').forEach(ligar);
+		// Largar um ficheiro fora da zona não o abre no navegador.
+		window.addEventListener('dragover', function (e) { e.preventDefault(); });
+		window.addEventListener('drop', function (e) { if (!e.target.closest || !e.target.closest('[data-cp-doc-drop]')) e.preventDefault(); });
 	})();
 	</script>
 	<?php

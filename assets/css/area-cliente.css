@@ -160,7 +160,7 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-req-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--ac-hairline);flex-wrap:wrap}
 .ac-req-row:last-child{border-bottom:none;padding-bottom:0}
 .ac-req-form{display:flex;align-items:center;gap:10px}
-@media (max-width:560px){.ac-req-form{flex-wrap:wrap;width:100%}.ac-req-form input[type=file]{flex:1 1 150px;min-width:0}.ac-req-form .ac-btn{width:100%}}
+@media (max-width:560px){.ac-req-form{flex-wrap:wrap;width:100%}.ac-req-form .ac-anexo-btn{flex:1 1 150px;min-width:0}.ac-req-form .ac-btn{width:100%}}
 .ac-dropzone{border:1.5px dashed var(--ac-hairline);border-radius:16px;padding:28px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--ac-bg)}
 .ac-dropzone-icon{width:44px;height:44px;border-radius:50%;background:var(--ac-surface);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,40,.06),0 4px 10px -4px rgba(16,24,40,.1);margin-bottom:4px}
 :root[data-theme="dark"] .ac-dropzone-icon{box-shadow:0 1px 2px rgba(0,0,0,.2),0 4px 10px -4px rgba(0,0,0,.3)}
@@ -266,6 +266,14 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-mv-reply{margin-top:14px;padding-top:14px;border-top:1px dashed var(--ac-line);display:flex;flex-direction:column;gap:10px}
 .ac-mv-reply textarea{width:100%;min-height:64px;resize:vertical}
 .ac-mv-reply-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+/* Anexo de um pendente com arrastar e largar (2026-11-27) — cp_ac_render_anexo_pendente() */
+form[data-cp-drop]{transition:background-color .15s,box-shadow .15s;border-radius:10px}
+form[data-cp-drop].is-arrastar{background:var(--ac-bg);box-shadow:0 0 0 2px var(--ac-blue)}
+.ac-anexo-btn{position:relative;padding:7px 12px;font-size:13px;cursor:pointer}
+.ac-anexo-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.ac-anexo-grupo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.ac-anexo-nome{font-size:12.5px;color:var(--ac-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ac-anexo-nome.is-aviso{color:var(--ac-badge-red-fg);white-space:normal}
 .ac-attach-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ac-muted);background:var(--ac-bg);border:1px solid var(--ac-line);border-radius:999px;padding:5px 10px}
 
 /* Mobile: menu lateral vira painel deslizante aberto por um hambúrguer */

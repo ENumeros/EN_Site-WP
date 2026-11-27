@@ -630,13 +630,13 @@ function cp_ac_vista_documentos_em_falta() {
 							<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:7px 12px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
 						</div>
 					<?php else : ?>
-						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-req-form">
+						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-req-form" data-cp-drop>
 							<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
 							<input type="hidden" name="action" value="cp_pendente_responder">
 							<input type="hidden" name="tipo" value="documento">
 							<input type="hidden" name="item_id" value="<?php echo esc_attr( $doc['id'] ); ?>">
 							<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
-							<input type="file" name="anexo" required accept="<?php echo esc_attr( cp_ac_pendente_accept( 'documento' ) ); ?>" style="font-size:12.5px;max-width:200px">
+							<?php cp_ac_render_anexo_pendente( 'documento', true ); ?>
 							<button class="ac-btn ac-btn-primary" type="submit" style="padding:7px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
 						</form>
 					<?php endif; ?>
@@ -693,7 +693,7 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 						<span class="ac-badge <?php echo $resposta ? 'ac-badge-green' : 'ac-badge-amber'; ?>"><?php echo $resposta ? esc_html__( 'Respondido', 'contabilidade-pro' ) : esc_html__( 'Por responder', 'contabilidade-pro' ); ?></span>
 					</div>
 					<?php if ( ! $resposta ) : ?>
-						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-mv-reply">
+						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-mv-reply" data-cp-drop>
 							<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
 							<input type="hidden" name="action" value="cp_pendente_responder">
 							<input type="hidden" name="tipo" value="movimento">
@@ -701,11 +701,7 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 							<label for="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" style="font-size:12px;font-weight:600;color:var(--ac-muted)"><?php esc_html_e( 'A sua resposta', 'contabilidade-pro' ); ?></label>
 							<textarea id="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" name="texto" placeholder="<?php esc_attr_e( 'Ex.: é o pagamento da fatura do fornecedor ABC, em anexo.', 'contabilidade-pro' ); ?>"></textarea>
 							<div class="ac-mv-reply-actions">
-								<label class="ac-btn ac-btn-ghost" style="cursor:pointer">
-									<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5 15 6a3 3 0 0 1 4.2 4.2L11 18.5a4.2 4.2 0 0 1-6-6L13 5"></path></svg>
-									<?php esc_html_e( 'Anexar ficheiro', 'contabilidade-pro' ); ?>
-									<input type="file" name="anexo" accept="<?php echo esc_attr( cp_ac_pendente_accept( 'movimento' ) ); ?>" style="display:none">
-								</label>
+								<div class="ac-anexo-grupo"><?php cp_ac_render_anexo_pendente( 'movimento' ); ?></div>
 								<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Enviar resposta', 'contabilidade-pro' ); ?></button>
 							</div>
 						</form>
@@ -848,6 +844,96 @@ function cp_ac_vista_saft() {
 	<?php
 }
 
+// ─── Util: anexo de um pendente com arrastar e largar (2026-11-27) ────────
+// Botão "Escolher ou arrastar" com o input nativo escondido lá dentro e o
+// nome do ficheiro escolhido ao lado. O formulário inteiro (data-cp-drop)
+// aceita um ficheiro largado; o que não cabe no `accept` fica de fora com
+// aviso. Usado nos Documentos em falta, nos Movimentos a esclarecer e na
+// grelha de Extratos/SAF-T. O script imprime-se uma vez por página.
+
+function cp_ac_render_anexo_pendente( $tipo, $obrigatorio = false ) {
+	?>
+	<label class="ac-btn ac-btn-ghost ac-anexo-btn" title="<?php esc_attr_e( 'Também pode arrastar o ficheiro para aqui', 'contabilidade-pro' ); ?>">
+		<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5 15 6a3 3 0 0 1 4.2 4.2L11 18.5a4.2 4.2 0 0 1-6-6L13 5"></path></svg>
+		<span data-cp-drop-rotulo><?php esc_html_e( 'Escolher ou arrastar', 'contabilidade-pro' ); ?></span>
+		<input type="file" name="anexo" class="ac-anexo-input" accept="<?php echo esc_attr( cp_ac_pendente_accept( $tipo ) ); ?>" <?php echo $obrigatorio ? 'data-cp-drop-obrigatorio' : ''; ?>>
+	</label>
+	<span class="ac-anexo-nome" data-cp-drop-nome hidden></span>
+	<?php
+	cp_ac_render_anexo_pendente_script();
+}
+
+function cp_ac_render_anexo_pendente_script() {
+	static $impresso = false;
+	if ( $impresso ) return;
+	$impresso = true;
+	$txt = [
+		'rotulo'   => __( 'Escolher ou arrastar', 'contabilidade-pro' ),
+		'trocar'   => __( 'Trocar', 'contabilidade-pro' ),
+		'formato'  => __( 'Este tipo de ficheiro não é aceite aqui.', 'contabilidade-pro' ),
+		'um'       => __( 'Um ficheiro de cada vez — ficou o primeiro.', 'contabilidade-pro' ),
+		'nenhum'   => __( 'Escolha ou arraste o ficheiro primeiro.', 'contabilidade-pro' ),
+	];
+	?>
+	<script>
+	(function () {
+		var TXT = <?php echo wp_json_encode( $txt ); ?>;
+		function aceite(input, f) {
+			var lista = (input.getAttribute('accept') || '').toLowerCase().split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+			if (!lista.length) return true;
+			var nome = f.name.toLowerCase();
+			return lista.some(function (e) { return e.charAt(0) === '.' ? nome.slice(-e.length) === e : f.type === e; });
+		}
+		// O script é impresso dentro do primeiro formulário: só liga quando a página inteira já existe.
+		function iniciar() { document.querySelectorAll('form[data-cp-drop]').forEach(ligar); }
+		if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
+		function ligar(form) {
+			var input = form.querySelector('.ac-anexo-input');
+			var nome = form.querySelector('[data-cp-drop-nome]');
+			var rotulo = form.querySelector('[data-cp-drop-rotulo]');
+			if (!input || !nome) return;
+			function mostrar(aviso) {
+				var f = input.files[0];
+				nome.hidden = !f && !aviso;
+				nome.classList.toggle('is-aviso', !!aviso);
+				nome.textContent = aviso || (f ? f.name : '');
+				rotulo.textContent = f ? TXT.trocar : TXT.rotulo;
+				nome.title = nome.textContent;
+			}
+			input.addEventListener('change', function () {
+				if (input.files[0] && !aceite(input, input.files[0])) { input.value = ''; mostrar(TXT.formato); return; }
+				mostrar();
+			});
+			['dragenter', 'dragover'].forEach(function (ev) {
+				form.addEventListener(ev, function (e) { e.preventDefault(); form.classList.add('is-arrastar'); });
+			});
+			form.addEventListener('dragleave', function (e) { if (!form.contains(e.relatedTarget)) form.classList.remove('is-arrastar'); });
+			form.addEventListener('drop', function (e) {
+				e.preventDefault();
+				form.classList.remove('is-arrastar');
+				var fs = e.dataTransfer && e.dataTransfer.files;
+				if (!fs || !fs.length) return;
+				if (!aceite(input, fs[0])) { mostrar(TXT.formato); return; }
+				var dt = new DataTransfer();
+				dt.items.add(fs[0]);
+				input.files = dt.files;
+				mostrar();
+				if (fs.length > 1) nome.textContent = nome.title = fs[0].name + ' · ' + TXT.um;
+			});
+			form.addEventListener('submit', function (e) {
+				// "Sem dados este mês" / "Não houve movimento" não precisam de ficheiro.
+				if (e.submitter && e.submitter.name === 'sem_dados') return;
+				if (input.hasAttribute('data-cp-drop-obrigatorio') && !input.files.length) { e.preventDefault(); mostrar(TXT.nenhum); }
+			});
+		}
+		// Largar um ficheiro fora de uma zona não o abre no navegador.
+		window.addEventListener('dragover', function (e) { e.preventDefault(); });
+		window.addEventListener('drop', function (e) { if (!e.target.closest || !e.target.closest('form[data-cp-drop], [data-cp-doc-drop]')) e.preventDefault(); });
+	})();
+	</script>
+	<?php
+}
+
 // ─── Util: célula/linha de estado partilhada por Extratos e SAF-T ─────────
 // Três estados possíveis: 'sem_dados' (já veio assim da Work, ou o cliente
 // marcou), 'enviado' (o cliente já respondeu com ficheiro) e, por omissão,
@@ -871,13 +957,13 @@ function cp_ac_render_celula_checklist( $item, $empresa_id, $tipo ) {
 			<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:6px 12px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
 		</div>
 	<?php else : ?>
-		<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+		<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap" data-cp-drop>
 			<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
 			<input type="hidden" name="action" value="cp_pendente_responder">
 			<input type="hidden" name="tipo" value="<?php echo esc_attr( $tipo ); ?>">
 			<input type="hidden" name="item_id" value="<?php echo esc_attr( $item['id'] ); ?>">
 			<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
-			<input type="file" name="anexo" accept="<?php echo esc_attr( cp_ac_pendente_accept( $tipo ) ); ?>" style="font-size:12px;max-width:160px">
+			<?php cp_ac_render_anexo_pendente( $tipo ); ?>
 			<button class="ac-btn ac-btn-primary" type="submit" style="padding:6px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
 			<button class="ac-btn ac-btn-ghost" type="submit" name="sem_dados" value="1" style="padding:6px 12px"><?php echo 'extrato' === $tipo ? esc_html__( 'Não houve movimento', 'contabilidade-pro' ) : esc_html__( 'Sem SAF-T este mês', 'contabilidade-pro' ); ?></button>
 		</form>

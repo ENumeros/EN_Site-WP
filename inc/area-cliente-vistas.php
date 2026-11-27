@@ -704,6 +704,23 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 	$e_por_tratar = function ( $item ) use ( $empresa_id ) {
 		return ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
 	};
+	// Filtro Pendentes (omissão) / Respondidos / Todos (2026-11-27); as tabs
+	// por mês só mostram os meses com movimentos do filtro escolhido.
+	$filtro       = cp_ac_calc_filtro_movimentos( isset( $_GET['filtro'] ) ? sanitize_key( wp_unslash( $_GET['filtro'] ) ) : '' );
+	$pendentes    = array_values( array_filter( $movimentos, $e_por_tratar ) );
+	$respondidos  = array_values( array_filter( $movimentos, function ( $m ) use ( $e_por_tratar ) { return ! $e_por_tratar( $m ); } ) );
+	$base         = 'pendentes' === $filtro ? cp_ac_vista_url( 'movimentos_a_esclarecer' ) : add_query_arg( 'filtro', $filtro, cp_ac_vista_url( 'movimentos_a_esclarecer' ) );
+	$filtros      = [
+		'pendentes'   => [ __( 'Pendentes', 'contabilidade-pro' ), count( $pendentes ), 'ac-badge-amber' ],
+		'respondidos' => [ __( 'Respondidos', 'contabilidade-pro' ), count( $respondidos ), 'ac-badge-green' ],
+		'todos'       => [ __( 'Todos', 'contabilidade-pro' ), count( $movimentos ), 'ac-badge-blue' ],
+	];
+	$vazio        = [
+		'pendentes'   => __( 'Não há movimentos por responder.', 'contabilidade-pro' ),
+		'respondidos' => __( 'Ainda não respondeu a nenhum movimento.', 'contabilidade-pro' ),
+		'todos'       => __( 'Sem movimentos a esclarecer de momento.', 'contabilidade-pro' ),
+	];
+	$movimentos   = 'pendentes' === $filtro ? $pendentes : ( 'respondidos' === $filtro ? $respondidos : $movimentos );
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Movimentos a Esclarecer', 'contabilidade-pro' ); ?></h1>
@@ -712,15 +729,22 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 
 	<?php cp_ac_render_banner_resposta_pendente(); ?>
 
+	<div class="ac-bo-filtros" role="tablist" style="margin-top:18px">
+		<?php foreach ( $filtros as $chave => list( $rotulo, $n, $cor ) ) :
+			$ativo = $chave === $filtro;
+			$url   = 'pendentes' === $chave ? cp_ac_vista_url( 'movimentos_a_esclarecer' ) : add_query_arg( 'filtro', $chave, cp_ac_vista_url( 'movimentos_a_esclarecer' ) );
+			?>
+			<a class="ac-bo-chip<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( $url ); ?>">
+				<?php echo esc_html( $rotulo ); ?>
+				<?php if ( $n ) : ?><span class="ac-badge <?php echo esc_attr( $cor ); ?>" style="margin-left:8px;padding:1px 7px"><?php echo esc_html( $n ); ?></span><?php endif; ?>
+			</a>
+		<?php endforeach; ?>
+	</div>
+
 	<div class="ac-card" style="padding:22px">
-		<?php $movimentos = cp_ac_render_tabs_meses( $movimentos, cp_ac_vista_url( 'movimentos_a_esclarecer' ), 'ac-badge-amber', $e_por_tratar ); ?>
-		<?php $no_mes = count( array_filter( $movimentos, $e_por_tratar ) ); ?>
-		<div class="ac-sec-head">
-			<div></div>
-			<?php if ( $no_mes ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( $no_mes ); ?> <?php esc_html_e( 'por responder', 'contabilidade-pro' ); ?></span><?php endif; ?>
-		</div>
+		<?php $movimentos = cp_ac_render_tabs_meses( $movimentos, $base, 'pendentes' === $filtro ? 'ac-badge-amber' : $filtros[ $filtro ][2] ); ?>
 		<?php if ( empty( $movimentos ) ) : ?>
-			<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Sem movimentos a esclarecer de momento.', 'contabilidade-pro' ); ?></div>
+			<div style="color:var(--ac-muted);font-size:13px"><?php echo esc_html( $vazio[ $filtro ] ); ?></div>
 		<?php else :
 			// Por data, mais antigo primeiro (como Documentos em Falta).
 			usort( $movimentos, function ( $a, $b ) { return strcmp( (string) $a['data'], (string) $b['data'] ); } );

@@ -1169,6 +1169,12 @@ function cp_ac_calc_filtro_documentos( $pedido ) {
     return 'tratados' === $pedido ? 'tratados' : 'pendentes';
 }
 
+// Pura (testada): qual filtro mostrar em Movimentos a Esclarecer —
+// 'pendentes' por omissão; 'respondidos' ou 'todos' só se pedidos.
+function cp_ac_calc_filtro_movimentos( $pedido ) {
+    return in_array( $pedido, [ 'respondidos', 'todos' ], true ) ? $pedido : 'pendentes';
+}
+
 function cp_ac_pendentes_movimentos( $empresa_id ) {
     $itens = get_post_meta( $empresa_id, '_cp_pendentes_movimentos', true );
     return is_array( $itens ) ? $itens : [];

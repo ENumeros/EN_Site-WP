@@ -12,6 +12,7 @@ use Brain\Monkey\Functions;
  * @covers cp_ac_calc_documentos_tratados
  * @covers cp_ac_calc_campos_documento
  * @covers cp_ac_calc_filtro_documentos
+ * @covers cp_ac_calc_filtro_movimentos
  * @covers cp_ac_calc_avisos_pendentes
  * @covers cp_ac_calc_mes_valido
  * @covers cp_ac_calc_tabs_meses
@@ -345,5 +346,12 @@ final class AreaClienteTest extends TestCase {
 		self::assertSame( 'pendentes', cp_ac_calc_filtro_documentos( '' ) );
 		self::assertSame( 'pendentes', cp_ac_calc_filtro_documentos( 'outro' ) );
 		self::assertSame( 'tratados', cp_ac_calc_filtro_documentos( 'tratados' ) );
+	}
+
+	public function test_filtro_movimentos_pendentes_por_omissao(): void {
+		self::assertSame( 'pendentes', cp_ac_calc_filtro_movimentos( '' ) );
+		self::assertSame( 'pendentes', cp_ac_calc_filtro_movimentos( 'tratados' ) );
+		self::assertSame( 'respondidos', cp_ac_calc_filtro_movimentos( 'respondidos' ) );
+		self::assertSame( 'todos', cp_ac_calc_filtro_movimentos( 'todos' ) );
 	}
 }

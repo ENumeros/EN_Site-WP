@@ -244,6 +244,9 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   linha extra; a respondida mostra o texto, o anexo e "Respondido". A
   pergunta genérica da Work ("Podes esclarecer este movimento?") não se
   mostra; uma pergunta escrita pela equipa fica como placeholder da caixa.
+  Filtro Pendentes (omissão) / Respondidos / Todos em `?filtro=`
+  (`cp_ac_calc_filtro_movimentos`), com contagem em cada um; as tabs por
+  mês só mostram os meses com movimentos do filtro escolhido.
   A Work não muda: continua a mandar `data` "AAAA-MM-DD".
 
 - **Limpeza por mês pedida pela Work** (`inc/area-cliente-limpeza.php`,

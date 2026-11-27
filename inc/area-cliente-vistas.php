@@ -696,7 +696,14 @@ function cp_ac_vista_documentos_em_falta() {
 
 function cp_ac_vista_movimentos_a_esclarecer() {
 	$empresa_id = cp_ac_empresa_ativa();
-	$movimentos = cp_ac_pendentes_movimentos( $empresa_id );
+	// Tabs por mês (2026-11-27): o mês sai da data do movimento.
+	$movimentos = array_map( function ( $mov ) {
+		$mov['mes'] = substr( (string) $mov['data'], 0, 7 );
+		return $mov;
+	}, cp_ac_pendentes_movimentos( $empresa_id ) );
+	$e_por_tratar = function ( $item ) use ( $empresa_id ) {
+		return ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+	};
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Movimentos a Esclarecer', 'contabilidade-pro' ); ?></h1>
@@ -706,53 +713,111 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 	<?php cp_ac_render_banner_resposta_pendente(); ?>
 
 	<div class="ac-card" style="padding:22px">
+		<?php $movimentos = cp_ac_render_tabs_meses( $movimentos, cp_ac_vista_url( 'movimentos_a_esclarecer' ), 'ac-badge-amber', $e_por_tratar ); ?>
+		<?php $no_mes = count( array_filter( $movimentos, $e_por_tratar ) ); ?>
 		<div class="ac-sec-head">
 			<div></div>
-			<?php if ( ! empty( $movimentos ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $movimentos ) ); ?> <?php esc_html_e( 'por responder', 'contabilidade-pro' ); ?></span><?php endif; ?>
+			<?php if ( $no_mes ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( $no_mes ); ?> <?php esc_html_e( 'por responder', 'contabilidade-pro' ); ?></span><?php endif; ?>
 		</div>
 		<?php if ( empty( $movimentos ) ) : ?>
 			<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Sem movimentos a esclarecer de momento.', 'contabilidade-pro' ); ?></div>
-		<?php else : ?>
-			<?php foreach ( $movimentos as $mov ) :
-				$resposta  = cp_ac_pendente_resposta_do_item( $empresa_id, $mov['id'] );
-				$valor_cls = $mov['valor'] < 0 ? 'ac-mv-neg' : 'ac-mv-pos';
-				$valor_txt = ( $mov['valor'] < 0 ? '−' : '+' ) . number_format_i18n( abs( $mov['valor'] ), 2 );
-				?>
-				<div class="ac-mv-item">
-					<div class="ac-mv-row">
-						<div class="ac-mv-amount <?php echo esc_attr( $valor_cls ); ?>"><?php echo esc_html( $valor_txt ); ?>&nbsp;€</div>
-						<div style="flex:1;min-width:min(220px,100%)">
-							<div style="font-size:13.5px;font-weight:600"><?php echo esc_html( $mov['data'] ); ?></div>
-							<?php if ( ! empty( $mov['descricao'] ) ) : ?><div class="ac-mv-line"><?php echo esc_html( $mov['descricao'] ); ?></div><?php endif; ?>
-							<?php if ( ! empty( $mov['pergunta'] ) ) : ?><div class="ac-mv-q"><?php echo esc_html( $mov['pergunta'] ); ?></div><?php endif; ?>
+		<?php else :
+			// Por data, mais antigo primeiro (como Documentos em Falta).
+			usort( $movimentos, function ( $a, $b ) { return strcmp( (string) $a['data'], (string) $b['data'] ); } );
+			?>
+			<div style="overflow-x:auto">
+				<table class="ac-table ac-mv-tabela">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Data', 'contabilidade-pro' ); ?></th>
+							<th><?php esc_html_e( 'Descrição', 'contabilidade-pro' ); ?></th>
+							<th style="text-align:right"><?php esc_html_e( 'Valor', 'contabilidade-pro' ); ?></th>
+							<th><?php esc_html_e( 'Pergunta', 'contabilidade-pro' ); ?></th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $movimentos as $mov ) :
+							$resposta  = cp_ac_pendente_resposta_do_item( $empresa_id, $mov['id'] );
+							$valor_cls = $mov['valor'] < 0 ? 'ac-mv-neg' : 'ac-mv-pos';
+							$valor_txt = ( $mov['valor'] < 0 ? '−' : '+' ) . number_format_i18n( abs( $mov['valor'] ), 2 ) . ' €';
+							$data      = preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $mov['data'] ) ? date_i18n( 'd/m/Y', strtotime( substr( $mov['data'], 0, 10 ) ) ) : $mov['data'];
+							$id_linha  = 'cp-mv-' . $mov['id'];
+							?>
+							<tr class="<?php echo $resposta ? 'ac-mv-com-detalhe' : ''; ?>">
+								<td style="white-space:nowrap"><?php echo esc_html( $data ); ?></td>
+								<td class="ac-mv-line" style="margin:0"><?php echo esc_html( $mov['descricao'] ); ?></td>
+								<td class="<?php echo esc_attr( $valor_cls ); ?>" style="text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600"><?php echo esc_html( $valor_txt ); ?></td>
+								<td style="font-size:13.5px"><?php echo ! empty( $mov['pergunta'] ) ? esc_html( $mov['pergunta'] ) : '<span style="color:var(--ac-muted)">—</span>'; ?></td>
+								<td style="text-align:right;white-space:nowrap">
+									<?php if ( $resposta ) : ?>
+										<span class="ac-badge ac-badge-green"><?php esc_html_e( 'Respondido', 'contabilidade-pro' ); ?></span>
+									<?php else : ?>
+										<span class="ac-badge ac-badge-amber" style="margin-right:8px"><?php esc_html_e( 'Por responder', 'contabilidade-pro' ); ?></span>
+										<button type="button" class="ac-btn ac-btn-primary" style="padding:7px 12px" aria-expanded="false" aria-controls="<?php echo esc_attr( $id_linha ); ?>" data-cp-mv-abrir><?php esc_html_e( 'Responder', 'contabilidade-pro' ); ?></button>
+									<?php endif; ?>
+								</td>
+							</tr>
 							<?php if ( $resposta ) : ?>
-								<div style="font-size:13px;color:var(--ac-text);margin-top:8px"><?php echo esc_html( $resposta['texto'] ); ?></div>
-								<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?>
-									<a class="ac-attach-chip" style="margin-top:8px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener">
-										<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5 15 6a3 3 0 0 1 4.2 4.2L11 18.5a4.2 4.2 0 0 1-6-6L13 5"></path></svg>
-										<?php echo esc_html( $resposta['anexo_nome'] ? $resposta['anexo_nome'] : __( 'Anexo', 'contabilidade-pro' ) ); ?>
-									</a>
-								<?php endif; ?>
+								<tr class="ac-mv-detalhe">
+									<td></td>
+									<td colspan="4">
+										<span style="font-size:12px;font-weight:600;color:var(--ac-muted)"><?php esc_html_e( 'A sua resposta:', 'contabilidade-pro' ); ?></span>
+										<span style="font-size:13px"><?php echo esc_html( $resposta['texto'] ); ?></span>
+										<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?>
+											<a class="ac-attach-chip" style="margin-left:8px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener">
+												<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5 15 6a3 3 0 0 1 4.2 4.2L11 18.5a4.2 4.2 0 0 1-6-6L13 5"></path></svg>
+												<?php echo esc_html( $resposta['anexo_nome'] ? $resposta['anexo_nome'] : __( 'Anexo', 'contabilidade-pro' ) ); ?>
+											</a>
+										<?php endif; ?>
+									</td>
+								</tr>
+							<?php else : ?>
+								<tr class="ac-mv-detalhe" id="<?php echo esc_attr( $id_linha ); ?>" hidden>
+									<td></td>
+									<td colspan="4">
+										<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-mv-reply" style="margin:0;padding:0;border:0" data-cp-drop>
+											<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
+											<input type="hidden" name="action" value="cp_pendente_responder">
+											<input type="hidden" name="tipo" value="movimento">
+											<input type="hidden" name="item_id" value="<?php echo esc_attr( $mov['id'] ); ?>">
+											<label for="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" style="font-size:12px;font-weight:600;color:var(--ac-muted)"><?php esc_html_e( 'A sua resposta', 'contabilidade-pro' ); ?></label>
+											<textarea id="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" name="texto" placeholder="<?php esc_attr_e( 'Ex.: é o pagamento da fatura do fornecedor ABC, em anexo.', 'contabilidade-pro' ); ?>"></textarea>
+											<div class="ac-mv-reply-actions">
+												<div class="ac-anexo-grupo"><?php cp_ac_render_anexo_pendente( 'movimento' ); ?></div>
+												<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Enviar resposta', 'contabilidade-pro' ); ?></button>
+											</div>
+										</form>
+									</td>
+								</tr>
 							<?php endif; ?>
-						</div>
-						<span class="ac-badge <?php echo $resposta ? 'ac-badge-green' : 'ac-badge-amber'; ?>"><?php echo $resposta ? esc_html__( 'Respondido', 'contabilidade-pro' ) : esc_html__( 'Por responder', 'contabilidade-pro' ); ?></span>
-					</div>
-					<?php if ( ! $resposta ) : ?>
-						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-mv-reply" data-cp-drop>
-							<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
-							<input type="hidden" name="action" value="cp_pendente_responder">
-							<input type="hidden" name="tipo" value="movimento">
-							<input type="hidden" name="item_id" value="<?php echo esc_attr( $mov['id'] ); ?>">
-							<label for="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" style="font-size:12px;font-weight:600;color:var(--ac-muted)"><?php esc_html_e( 'A sua resposta', 'contabilidade-pro' ); ?></label>
-							<textarea id="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" name="texto" placeholder="<?php esc_attr_e( 'Ex.: é o pagamento da fatura do fornecedor ABC, em anexo.', 'contabilidade-pro' ); ?>"></textarea>
-							<div class="ac-mv-reply-actions">
-								<div class="ac-anexo-grupo"><?php cp_ac_render_anexo_pendente( 'movimento' ); ?></div>
-								<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Enviar resposta', 'contabilidade-pro' ); ?></button>
-							</div>
-						</form>
-					<?php endif; ?>
-				</div>
-			<?php endforeach; ?>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<style>
+				.ac-mv-tabela th,.ac-mv-tabela td{padding:11px 10px}
+				.ac-mv-tabela th:first-child,.ac-mv-tabela td:first-child{padding-left:0}
+				.ac-mv-tabela th:last-child,.ac-mv-tabela td:last-child{padding-right:0}
+				.ac-mv-tabela td.ac-mv-line{font-size:12.5px}
+				.ac-mv-tabela tr.ac-mv-com-detalhe td{border-bottom:none}
+				.ac-mv-tabela tr.ac-mv-detalhe td{padding-top:0}
+				.ac-mv-tabela tr.ac-mv-detalhe .ac-mv-reply{white-space:normal}
+			</style>
+			<script>
+			(function () {
+				// "Responder" abre (ou fecha) a linha com o formulário por baixo.
+				document.querySelectorAll('[data-cp-mv-abrir]').forEach(function (botao) {
+					botao.addEventListener('click', function () {
+						var linha = document.getElementById(botao.getAttribute('aria-controls'));
+						if (!linha) return;
+						linha.hidden = !linha.hidden;
+						botao.setAttribute('aria-expanded', linha.hidden ? 'false' : 'true');
+						if (!linha.hidden) { var t = linha.querySelector('textarea'); if (t) t.focus(); }
+					});
+				});
+			})();
+			</script>
 		<?php endif; ?>
 	</div>
 	<?php

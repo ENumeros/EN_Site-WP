@@ -235,6 +235,12 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   (`data`, `nif`, `nome`, `tipo`, `numero`, `valor`) em cada documento,
   limpos por `cp_ac_calc_campos_documento()` (testada); sem eles (Work
   antiga ou pedido manual) a coluna Nome mostra o `titulo`.
+- **Movimentos a Esclarecer** (2026-11-27): tabs por mês como Documentos em
+  Falta (`cp_ac_render_tabs_meses`, o mês sai de `data`; o número da tab é
+  o que falta responder) e tabela Data | Descrição | Valor | Pergunta +
+  estado. O formulário de resposta fica numa linha escondida por baixo do
+  movimento, aberta pelo botão "Responder"; a resposta já dada aparece
+  nessa linha. A Work não muda: continua a mandar `data` "AAAA-MM-DD".
 
 - **Limpeza por mês pedida pela Work** (`inc/area-cliente-limpeza.php`,
   2026-11-24): `POST cp/v1/limpeza` {work_id, simular?, documentos: [ids],

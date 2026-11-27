@@ -353,6 +353,16 @@ form[data-cp-drop].is-arrastar{background:var(--ac-bg);box-shadow:0 0 0 2px var(
 .ac-vf-trilho-mes{text-align:center;padding:6px 0;font-size:12.5px;font-weight:600;color:var(--ac-muted);transition:color .2s ease;white-space:nowrap}
 .ac-vf-trilho-mes.is-vazio{opacity:.35}
 .ac-vf-trilho-mes.is-ativo{color:var(--ac-on-navy)}
+.ac-vf-trilho-mes.is-previsto{font-style:italic;font-weight:500}
+/* Mês em previsão (Work v5.0.158): só o navegador, o aviso, "As contas do mês"
+   e a Previsão para o ano; o resto depende de contas fechadas e esconde-se. */
+#cp-vf-root.is-previsao > :not([data-vf-previsao]){display:none!important}
+#cp-vf-root:not(.is-previsao) .ac-vf-pv-aviso{display:none}
+.ac-vf-pv-aviso{display:flex;gap:12px;align-items:flex-start;padding:16px 20px;border:1.5px dashed #C98F2E;background:rgba(201,143,46,.07)}
+.ac-vf-pv-aviso-texto{font-size:13px;color:var(--ac-muted);margin-top:3px;line-height:1.45}
+#cp-vf-root.is-previsao .ac-vf-contas-grid{grid-template-columns:minmax(0,1fr)}
+#cp-vf-root.is-previsao #cp-vf-ebitda{display:none}
+#cp-vf-root.is-previsao .ac-vf-mapa td.num:nth-child(2){font-style:italic}
 @media (max-width:520px){.ac-vf-trilho-mes{font-size:10.5px;letter-spacing:-.2px}.ac-vf-nav-titulo{font-size:19px}}
 
 /* "As contas do mês": tabela ao jeito do Mapa de exploração da Work.

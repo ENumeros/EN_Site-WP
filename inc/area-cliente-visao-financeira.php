@@ -126,7 +126,7 @@ function cp_ac_vista_visao_financeira() {
 	<div id="cp-vf-root" data-pendentes="<?php echo esc_attr( count( cp_ac_pendentes_documentos( $empresa_id ) ) + count( cp_ac_pendentes_movimentos( $empresa_id ) ) ); ?>">
 
 		<!-- Navegador de mês -->
-		<div class="ac-card ac-vf-nav">
+		<div class="ac-card ac-vf-nav" data-vf-previsao>
 			<div class="ac-vf-nav-head">
 				<h2 id="cp-vf-mes-titulo" class="ac-vf-nav-titulo"></h2>
 				<div class="ac-vf-nav-setas">
@@ -142,6 +142,16 @@ function cp_ac_vista_visao_financeira() {
 			<div id="cp-vf-mes-trilho" class="ac-vf-trilho" role="slider" tabindex="0" aria-label="<?php esc_attr_e( 'Mês', 'contabilidade-pro' ); ?>" aria-valuemin="1" aria-valuemax="12">
 				<span class="ac-vf-trilho-pilula" aria-hidden="true"></span>
 				<div id="cp-vf-mes-botoes" class="ac-vf-trilho-meses" aria-hidden="true"></div>
+			</div>
+		</div>
+
+		<!-- Mês ainda sem contas fechadas (Work v5.0.158): só "As contas do mês"
+		     previstas, com este aviso; o resto da página esconde-se (CSS .is-previsao). -->
+		<div class="ac-card ac-vf-pv-aviso" data-vf-previsao role="status">
+			<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Previsão', 'contabilidade-pro' ); ?></span>
+			<div>
+				<strong id="cp-vf-pv-aviso-titulo"></strong>
+				<div id="cp-vf-pv-aviso-texto" class="ac-vf-pv-aviso-texto"></div>
 			</div>
 		</div>
 
@@ -189,12 +199,12 @@ function cp_ac_vista_visao_financeira() {
 		</div>
 
 		<!-- As contas do mês -->
-		<div class="ac-vf-secao-head">
+		<div class="ac-vf-secao-head" data-vf-previsao>
 			<h2 style="font-size:18px"><?php esc_html_e( 'As contas do mês', 'contabilidade-pro' ); ?></h2>
 			<?php cp_ac_info( __( 'A Demonstração de Resultados, de cima para baixo: começa nas vendas, tira cada custo e mostra o que fica (margem, EBITDA e lucro). O mês escolhido, o acumulado do ano e o mesmo período do ano passado.', 'contabilidade-pro' ) ); ?>
 		</div>
 		<!-- Tabela das contas e, ao lado, o EBITDA (empilham em ecrãs estreitos). -->
-		<div class="ac-vf-contas-grid">
+		<div class="ac-vf-contas-grid" data-vf-previsao>
 			<div class="ac-card" style="padding:10px 14px 16px">
 				<div id="cp-vf-contas"></div>
 			</div>
@@ -234,11 +244,11 @@ function cp_ac_vista_visao_financeira() {
 		<?php if ( ! empty( $dados['previsao']['indicadores'] ) ) : ?>
 		<!-- Previsão para o ano (Work v5.0.137): real até ao último mês publicado,
 		     previsto até dezembro. Não depende do mês escolhido no navegador. -->
-		<div class="ac-vf-secao-head">
+		<div class="ac-vf-secao-head" data-vf-previsao>
 			<h2 style="font-size:18px" id="cp-vf-previsao-titulo"></h2>
 			<?php cp_ac_info( __( 'Até ao último mês com contas fechadas são os valores reais; daí até dezembro é a nossa previsão, feita a partir do ritmo deste ano ou do que aconteceu no ano passado. Serve para planear, não é uma garantia.', 'contabilidade-pro' ) ); ?>
 		</div>
-		<div class="ac-card" style="padding:22px">
+		<div class="ac-card" style="padding:22px" data-vf-previsao>
 			<div id="cp-vf-previsao-tabs" class="ac-vf-pv-tabs" role="group" aria-label="<?php esc_attr_e( 'Indicador', 'contabilidade-pro' ); ?>"></div>
 			<div class="ac-vf-pv-numeros">
 				<div><div class="ac-stat-label" id="cp-vf-previsao-real-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-real" style="font-size:24px"></div></div>

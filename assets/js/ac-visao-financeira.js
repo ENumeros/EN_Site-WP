@@ -14,6 +14,17 @@
 	var pendentes      = parseInt( root.getAttribute( 'data-pendentes' ), 10 ) || 0;
 	var indiceAtual    = meses.length - 1;
 
+	// Meses ainda sem contas fechadas (Work v5.0.158): dados.previsao.meses_previstos
+	// = [ { mes, contas } ] — entram no fim da lista com previsto=true e mostram só
+	// "As contas do mês" previstas, com o aviso "Previsão". Abre-se no último mês real.
+	var ultimoReal = meses[ meses.length - 1 ];
+	var mesesPrevistos = dados.previsao && Array.isArray( dados.previsao.meses_previstos ) ? dados.previsao.meses_previstos : [];
+	mesesPrevistos.forEach( function ( m ) {
+		if ( m && m.mes > ultimoReal.mes && Array.isArray( m.contas ) && m.contas.length ) {
+			meses.push( { mes: m.mes, contas: m.contas, previsto: true } );
+		}
+	} );
+
 	var NOMES_MES = [ 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro' ];
 	var ABREV_MES = [ 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez' ];
 
@@ -105,6 +116,7 @@
 		for ( var i = 0; i < celulas.length; i++ ) {
 			celulas[ i ].classList.toggle( 'is-vazio', porMes[ i + 1 ] === undefined );
 			celulas[ i ].classList.toggle( 'is-ativo', i + 1 === p.mes );
+			celulas[ i ].classList.toggle( 'is-previsto', porMes[ i + 1 ] !== undefined && !! meses[ porMes[ i + 1 ] ].previsto );
 		}
 		elTrilho.style.setProperty( '--vf-pos', p.mes - 1 );
 		elTrilho.setAttribute( 'aria-valuenow', p.mes );
@@ -236,7 +248,9 @@
 		tabela.appendChild( tbody );
 		elContas.appendChild( tabela );
 
-		var nota = el( 'div', 'ac-vf-mapa-nota', 'Valores sem IVA. O lucro é antes do imposto sobre o lucro (IRC). Toque numa linha com › para ver de que é feita.' );
+		var nota = el( 'div', 'ac-vf-mapa-nota', mes.previsto
+			? 'Previsão — valores sem IVA. O mês é previsto; o acumulado junta os meses reais até ' + NOMES_MES[ partesMes( ultimoReal.mes ).mes - 1 ] + ' com a previsão daí em diante. O lucro é antes do imposto sobre o lucro (IRC).'
+			: 'Valores sem IVA. O lucro é antes do imposto sobre o lucro (IRC). Toque numa linha com › para ver de que é feita.' );
 		elContas.appendChild( nota );
 
 		renderEbitda( mes );
@@ -502,10 +516,20 @@
 	function render() {
 		var mes = meses[ indiceAtual ];
 
-		elTitulo.textContent = NOMES_MES[ partesMes( mes.mes ).mes - 1 ].replace( /^./, function ( c ) { return c.toUpperCase(); } ) + ' ' + partesMes( mes.mes ).ano;
+		elTitulo.textContent = NOMES_MES[ partesMes( mes.mes ).mes - 1 ].replace( /^./, function ( c ) { return c.toUpperCase(); } ) + ' ' + partesMes( mes.mes ).ano + ( mes.previsto ? ' · previsão' : '' );
 		btnPrev.disabled = indiceAtual === 0;
 		btnNext.disabled = indiceAtual === meses.length - 1;
 		atualizarBotoesMes();
+
+		root.classList.toggle( 'is-previsao', !! mes.previsto );
+		if ( mes.previsto ) {
+			var nomeMes = NOMES_MES[ partesMes( mes.mes ).mes - 1 ];
+			document.getElementById( 'cp-vf-pv-aviso-titulo' ).textContent = 'Os números de ' + nomeMes + ' são uma previsão';
+			document.getElementById( 'cp-vf-pv-aviso-texto' ).textContent = 'Ainda não há contas fechadas de ' + nomeMes + '. Até ' + NOMES_MES[ partesMes( ultimoReal.mes ).mes - 1 ]
+				+ ' os valores são reais; daí em diante é a nossa previsão, feita a partir do ritmo deste ano ou do ano passado. Serve para planear, não é uma garantia.';
+			renderContas( mes );
+			return;
+		}
 
 		var resumo = mes.resumo || {};
 		document.getElementById( 'cp-vf-resumo-label' ).textContent = resumo.tipo === 'equipa' ? 'O MÊS EM POUCAS PALAVRAS' : 'RESUMO AUTOMÁTICO';

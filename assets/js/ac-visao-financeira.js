@@ -289,9 +289,10 @@
 		if ( e.divida_bancaria ) {
 			var grid = el( 'div', 'ac-vf-grid3' );
 			[
-				[ 'Dívida ÷ EBITDA', e.divida_em_anos_de_ebitda.toFixed( 1 ) + '×' ],
-				[ 'Por cada 100€ de EBITDA', fmtEuro( e.por_cada_100_ebitda ) + ' de dívida' ],
-				[ 'Por cada 100€ de lucro', fmtEuro( e.por_cada_100_lucro ) + ' de dívida' ],
+				// Com EBITDA negativo (prejuízo) a Work manda null: não há rácio.
+				[ 'Dívida ÷ EBITDA', e.divida_em_anos_de_ebitda === null || e.divida_em_anos_de_ebitda === undefined ? '— (EBITDA negativo)' : e.divida_em_anos_de_ebitda.toFixed( 1 ).replace( '.', ',' ) + '×' ],
+				[ 'Por cada 100€ de EBITDA', e.por_cada_100_ebitda === null || e.por_cada_100_ebitda === undefined ? '—' : fmtEuro( e.por_cada_100_ebitda ) + ' de dívida' ],
+				[ 'Por cada 100€ de lucro', e.por_cada_100_lucro === null || e.por_cada_100_lucro === undefined ? '—' : fmtEuro( e.por_cada_100_lucro ) + ' de dívida' ],
 			].forEach( function ( item ) {
 				var col = el( 'div' );
 				col.appendChild( el( 'div', 'ac-stat-label', item[0] ) );
@@ -310,6 +311,25 @@
 	var elVendasGrafico = document.getElementById( 'cp-vf-vendas-grafico' );
 	var elClientes       = document.getElementById( 'cp-vf-clientes' );
 
+	// Escala das barras com zero (Work v5.0.160): com valores negativos (ex:
+	// prejuízo) a barra desce abaixo de uma linha de zero em vez de subir.
+	// 115px para o maior positivo + o maior negativo.
+	function escalaBarras( valores ) {
+		var pos = 0, neg = 0;
+		valores.forEach( function ( v ) { if ( v > 0 ) pos = Math.max( pos, v ); else if ( v < 0 ) neg = Math.max( neg, -v ); } );
+		var tot = ( pos + neg ) || 1;
+		return { k: 115 / tot, zero: neg / tot * 115 };
+	}
+	function porBarra( bar, v, e ) {
+		var h = Math.abs( v || 0 ) * e.k;
+		bar.style.height = h + 'px';
+		bar.style.marginBottom = ( v < 0 ? e.zero - h : e.zero ) + 'px';
+		bar.classList.toggle( 'is-abaixo', v < 0 );
+	}
+	function linhaZero( par, e ) {
+		if ( e.zero > 0 ) par.style.background = 'linear-gradient(var(--ac-muted),var(--ac-muted)) no-repeat 0 calc(100% - ' + e.zero + 'px) / 100% 1px';
+	}
+
 	// Barras por mês (jan–dez): a clara é o ano passado, a escura este ano.
 	// Tocar num mês deste ano com dados vai para esse mês.
 	function desenharBarrasAno( elGraf, pontos, mes ) {
@@ -317,7 +337,7 @@
 		var anoAtual = partesMes( mes.mes ).ano;
 		var porMesAno = {};
 		pontos.forEach( function ( p ) { porMesAno[ p.mes ] = p.valor; } );
-		var max = Math.max.apply( null, pontos.map( function ( p ) { return Math.abs( p.valor ); } ).concat( [ 1 ] ) );
+		var esc = escalaBarras( pontos.map( function ( p ) { return p.valor; } ) );
 		for ( var m = 1; m <= 12; m++ ) {
 			var mm = m < 10 ? '0' + m : String( m );
 			var vAtual = porMesAno[ anoAtual + '-' + mm ];
@@ -325,9 +345,10 @@
 			var col = el( 'div', 'ac-vf-vendas-mes' + ( m === partesMes( mes.mes ).mes ? ' is-ativo' : '' ) );
 			var par = el( 'div', 'ac-vf-vendas-par' );
 			var barAnt = el( 'div', 'ac-vf-vendas-bar ano-anterior' );
-			barAnt.style.height = ( vAnt ? Math.abs( vAnt ) / max * 115 : 0 ) + 'px';
+			porBarra( barAnt, vAnt, esc );
 			var barAtual = el( 'div', 'ac-vf-vendas-bar ano-atual' );
-			barAtual.style.height = ( vAtual ? Math.abs( vAtual ) / max * 115 : 0 ) + 'px';
+			porBarra( barAtual, vAtual, esc );
+			linhaZero( par, esc );
 			par.appendChild( barAnt );
 			par.appendChild( barAtual );
 			if ( vAtual !== undefined ) {
@@ -447,7 +468,7 @@
 		var folegoBadge = document.getElementById( 'cp-vf-tesouraria-folego-badge' );
 		folegoBadge.className = 'ac-badge ' + ( t.folego_meses >= 3 ? 'ac-badge-green' : 'ac-badge-amber' );
 		folegoBadge.textContent = t.folego_meses >= 3 ? 'Confortável' : 'Atenção';
-		document.getElementById( 'cp-vf-tesouraria-folego' ).textContent = ( t.folego_meses !== undefined ? t.folego_meses.toLocaleString( 'pt-PT' ) : '—' ) + ' meses';
+		document.getElementById( 'cp-vf-tesouraria-folego' ).textContent = ( t.folego_meses !== undefined && t.folego_meses !== null ? t.folego_meses.toLocaleString( 'pt-PT' ) + ' meses' : '—' );
 
 		document.getElementById( 'cp-vf-a-receber' ).textContent = fmtEuro( t.a_receber );
 		document.getElementById( 'cp-vf-pmr' ).textContent = t.pmr_dias ? 'Pagam, em média, a ' + t.pmr_dias + ' dias' : '';
@@ -600,16 +621,16 @@
 
 			limpar( elGraf );
 			elGraf.classList.toggle( 'is-custo', !! ind.custo );
-			var max = 1;
-			ind.meses.forEach( function ( x ) { max = Math.max( max, Math.abs( x.valor || 0 ), Math.abs( x.ano_anterior || 0 ) ); } );
+			var esc = escalaBarras( ind.meses.reduce( function ( l, x ) { return l.concat( [ x.valor || 0, x.ano_anterior || 0 ] ); }, [] ) );
 			ind.meses.forEach( function ( x, i ) {
 				var previsto = x.tipo === 'projetado';
 				var col = el( 'div', 'ac-vf-vendas-mes' + ( previsto ? ' is-previsto' : '' ) );
 				var par = el( 'div', 'ac-vf-vendas-par' );
 				var barAnt = el( 'div', 'ac-vf-vendas-bar ano-anterior' );
-				barAnt.style.height = ( x.ano_anterior ? Math.abs( x.ano_anterior ) / max * 115 : 0 ) + 'px';
+				porBarra( barAnt, x.ano_anterior, esc );
 				var bar = el( 'div', 'ac-vf-vendas-bar ' + ( previsto ? 'is-previsto' : 'ano-atual' ) + ( x.valor < 0 ? ' is-negativo' : '' ) );
-				bar.style.height = ( x.valor ? Math.abs( x.valor ) / max * 115 : 0 ) + 'px';
+				porBarra( bar, x.valor, esc );
+				linhaZero( par, esc );
 				par.title = NOMES_MES[ i ] + ': ' + ( x.valor === null ? '—' : fmtEuro( x.valor ) ) + ( previsto ? ' (previsto)' : '' );
 				par.appendChild( barAnt );
 				par.appendChild( bar );

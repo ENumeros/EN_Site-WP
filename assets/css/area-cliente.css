@@ -439,7 +439,11 @@ form[data-cp-drop].is-arrastar{background:var(--ac-bg);box-shadow:0 0 0 2px var(
 .ac-vf-pv-grafico.is-custo .ac-vf-vendas-bar.ano-atual{background:#E4BC72}
 .ac-vf-pv-grafico.is-custo .ac-vf-vendas-bar.is-previsto{background:repeating-linear-gradient(135deg,#E4BC72 0 3px,transparent 3px 6px);border-color:#C98F2E}
 .ac-vf-vendas-mes.is-previsto .ac-vf-vendas-mes-label{font-style:italic}
-.ac-vf-vendas-bar.is-negativo{opacity:.5}
+.ac-vf-vendas-bar.is-negativo{background:#B14B3D;opacity:.85}
+.ac-vf-vendas-bar.is-previsto.is-negativo{background:repeating-linear-gradient(135deg,#B14B3D 0 3px,transparent 3px 6px);border-color:#B14B3D}
+/* Abaixo de zero (prejuízo): a barra desce da linha de zero (Work v5.0.160). */
+.ac-vf-vendas-bar.is-abaixo{border-radius:0 0 3px 3px}
+.ac-vf-vendas-bar.is-previsto.is-abaixo{border-top:0;border-bottom:1.5px dashed #B14B3D}
 .ac-vf-pv-legenda{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:12px;color:var(--ac-muted)}
 .ac-vf-pv-legenda i{display:inline-block;width:12px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:2px}
 

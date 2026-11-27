@@ -231,6 +231,29 @@ function cp_ac_vista_visao_financeira() {
 		</div>
 		<div class="ac-card" id="cp-vf-clientes" style="padding:22px" hidden></div>
 
+		<?php if ( ! empty( $dados['previsao']['indicadores'] ) ) : ?>
+		<!-- Previsão para o ano (Work v5.0.137): real até ao último mês publicado,
+		     previsto até dezembro. Não depende do mês escolhido no navegador. -->
+		<div class="ac-vf-secao-head">
+			<h2 style="font-size:18px" id="cp-vf-previsao-titulo"></h2>
+			<?php cp_ac_info( __( 'Até ao último mês com contas fechadas são os valores reais; daí até dezembro é a nossa previsão, feita a partir do ritmo deste ano ou do que aconteceu no ano passado. Serve para planear, não é uma garantia.', 'contabilidade-pro' ) ); ?>
+		</div>
+		<div class="ac-card" style="padding:22px">
+			<div id="cp-vf-previsao-tabs" class="ac-vf-pv-tabs" role="group" aria-label="<?php esc_attr_e( 'Indicador', 'contabilidade-pro' ); ?>"></div>
+			<div class="ac-vf-pv-numeros">
+				<div><div class="ac-stat-label" id="cp-vf-previsao-real-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-real" style="font-size:24px"></div></div>
+				<div><div class="ac-stat-label" id="cp-vf-previsao-ano-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-ano" style="font-size:28px"></div><div id="cp-vf-previsao-trend" class="ac-trend"></div></div>
+				<div><div class="ac-stat-label" id="cp-vf-previsao-ant-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-ant" style="font-size:24px;color:var(--ac-muted)"></div></div>
+			</div>
+			<div id="cp-vf-previsao-grafico" class="ac-vf-vendas-grafico ac-vf-pv-grafico" style="margin-top:14px"></div>
+			<div class="ac-vf-pv-legenda">
+				<span><i class="ac-vf-vendas-bar ano-atual"></i><?php esc_html_e( 'Real', 'contabilidade-pro' ); ?></span>
+				<span><i class="ac-vf-vendas-bar is-previsto"></i><?php esc_html_e( 'Previsto', 'contabilidade-pro' ); ?></span>
+				<span><i class="ac-vf-vendas-bar ano-anterior"></i><?php esc_html_e( 'Ano passado', 'contabilidade-pro' ); ?></span>
+			</div>
+		</div>
+		<?php endif; ?>
+
 		<!-- Dinheiro: caixa e dívida lado a lado; fôlego por baixo -->
 		<div><h2 style="font-size:18px"><?php esc_html_e( 'Dinheiro — tesouraria', 'contabilidade-pro' ); ?></h2></div>
 		<div class="ac-vf-duas-col">

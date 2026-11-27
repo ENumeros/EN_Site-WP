@@ -543,4 +543,66 @@
 	}
 
 	render();
+
+	// ─── Previsão para o ano (Work v5.0.137) ────────────────────────────────
+	// dados.previsao = { ano, ate_mes, indicadores: [ { id, nome, custo, realizado,
+	// projetado, ano_anterior, meses: [ { mes, valor, tipo: real|projetado, ano_anterior } ] } ] }.
+	// Não depende do mês escolhido no navegador de cima: é sempre o ano todo.
+	( function () {
+		var pv = dados.previsao;
+		var elTabs = document.getElementById( 'cp-vf-previsao-tabs' );
+		if ( ! pv || ! elTabs || ! Array.isArray( pv.indicadores ) || ! pv.indicadores.length ) return;
+		var elGraf = document.getElementById( 'cp-vf-previsao-grafico' );
+		var nomeAte = NOMES_MES[ pv.ate_mes - 1 ];
+		document.getElementById( 'cp-vf-previsao-titulo' ).textContent = 'Previsão para ' + pv.ano;
+		document.getElementById( 'cp-vf-previsao-real-label' ).textContent = 'Até ' + nomeAte;
+		document.getElementById( 'cp-vf-previsao-ano-label' ).textContent = 'Previsão para o ano';
+		document.getElementById( 'cp-vf-previsao-ant-label' ).textContent = 'Ano de ' + ( pv.ano - 1 );
+
+		function mostrar( ind ) {
+			elTabs.querySelectorAll( 'button' ).forEach( function ( b ) { b.setAttribute( 'aria-pressed', b.dataset.id === ind.id ? 'true' : 'false' ); } );
+			document.getElementById( 'cp-vf-previsao-real' ).textContent = fmtEuro( ind.realizado );
+			document.getElementById( 'cp-vf-previsao-ano' ).textContent = fmtEuro( ind.projetado );
+			document.getElementById( 'cp-vf-previsao-ant' ).textContent = ind.ano_anterior === null ? '—' : fmtEuro( ind.ano_anterior );
+			var elTrend = document.getElementById( 'cp-vf-previsao-trend' );
+			if ( ind.ano_anterior ) {
+				var dif = ind.projetado - ind.ano_anterior;
+				// Nos custos, subir não é "bom": sem verde.
+				elTrend.className = 'ac-trend' + ( dif >= 0 && ! ind.custo ? ' ac-trend-up' : '' );
+				elTrend.textContent = ( dif >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( dif ) ) + ' que em ' + ( pv.ano - 1 );
+			} else {
+				elTrend.textContent = '';
+			}
+
+			limpar( elGraf );
+			elGraf.classList.toggle( 'is-custo', !! ind.custo );
+			var max = 1;
+			ind.meses.forEach( function ( x ) { max = Math.max( max, Math.abs( x.valor || 0 ), Math.abs( x.ano_anterior || 0 ) ); } );
+			ind.meses.forEach( function ( x, i ) {
+				var previsto = x.tipo === 'projetado';
+				var col = el( 'div', 'ac-vf-vendas-mes' + ( previsto ? ' is-previsto' : '' ) );
+				var par = el( 'div', 'ac-vf-vendas-par' );
+				var barAnt = el( 'div', 'ac-vf-vendas-bar ano-anterior' );
+				barAnt.style.height = ( x.ano_anterior ? Math.abs( x.ano_anterior ) / max * 115 : 0 ) + 'px';
+				var bar = el( 'div', 'ac-vf-vendas-bar ' + ( previsto ? 'is-previsto' : 'ano-atual' ) + ( x.valor < 0 ? ' is-negativo' : '' ) );
+				bar.style.height = ( x.valor ? Math.abs( x.valor ) / max * 115 : 0 ) + 'px';
+				par.title = NOMES_MES[ i ] + ': ' + ( x.valor === null ? '—' : fmtEuro( x.valor ) ) + ( previsto ? ' (previsto)' : '' );
+				par.appendChild( barAnt );
+				par.appendChild( bar );
+				col.appendChild( par );
+				col.appendChild( el( 'span', 'ac-vf-vendas-mes-label', ABREV_MES[ i ] ) );
+				elGraf.appendChild( col );
+			} );
+		}
+
+		pv.indicadores.forEach( function ( ind ) {
+			var b = el( 'button', 'ac-vf-pv-tab', '' );
+			b.type = 'button';
+			b.dataset.id = ind.id;
+			b.textContent = ind.nome;
+			b.addEventListener( 'click', function () { mostrar( ind ); } );
+			elTabs.appendChild( b );
+		} );
+		mostrar( pv.indicadores[0] );
+	} )();
 } )();

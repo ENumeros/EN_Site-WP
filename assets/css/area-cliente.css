@@ -401,6 +401,20 @@ a.ac-resumo-row:hover .ac-resumo-label{color:var(--ac-blue)}
 .ac-vf-vendas-mes.is-ativo .ano-atual{background:var(--ac-navy)}
 .ac-vf-vendas-mes-label{font-size:10.5px;color:var(--ac-muted);text-transform:lowercase}
 
+/* Previsão para o ano (Work v5.0.137) — reaproveita as barras das vendas. */
+.ac-vf-pv-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.ac-vf-pv-tab{border:1px solid var(--ac-line);background:transparent;color:inherit;border-radius:999px;padding:5px 14px;font:inherit;font-size:13px;cursor:pointer}
+.ac-vf-pv-tab[aria-pressed="true"]{background:var(--ac-navy);border-color:var(--ac-navy);color:#fff;font-weight:600}
+.ac-vf-pv-numeros{display:flex;flex-wrap:wrap;gap:14px 36px}
+.ac-vf-pv-grafico .ac-vf-vendas-par{cursor:default}
+.ac-vf-vendas-bar.is-previsto{background:repeating-linear-gradient(135deg,var(--ac-blue) 0 3px,transparent 3px 6px);border:1.5px dashed var(--ac-blue);border-bottom:0;opacity:.85}
+.ac-vf-pv-grafico.is-custo .ac-vf-vendas-bar.ano-atual{background:#E4BC72}
+.ac-vf-pv-grafico.is-custo .ac-vf-vendas-bar.is-previsto{background:repeating-linear-gradient(135deg,#E4BC72 0 3px,transparent 3px 6px);border-color:#C98F2E}
+.ac-vf-vendas-mes.is-previsto .ac-vf-vendas-mes-label{font-style:italic}
+.ac-vf-vendas-bar.is-negativo{opacity:.5}
+.ac-vf-pv-legenda{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:12px;color:var(--ac-muted)}
+.ac-vf-pv-legenda i{display:inline-block;width:12px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:2px}
+
 .ac-vf-linha-grafico svg{display:block;width:100%;height:auto}
 
 .ac-vf-autonomia-barra{position:relative;height:8px;border-radius:999px;background:var(--ac-line);margin:10px 0 4px;overflow:visible}

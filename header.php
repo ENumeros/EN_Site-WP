@@ -32,13 +32,22 @@
             <?php else : ?>
                 <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="site-header__logo" rel="home">
                     <?php
-                    $cp_logo_path = get_template_directory() . '/assets/img/logo.png';
-                    $cp_logo_src  = get_template_directory_uri() . '/assets/img/logo.png';
-                    if ( file_exists( $cp_logo_path ) ) {
-                        $cp_logo_src .= '?v=' . filemtime( $cp_logo_path );
-                    }
-                    ?>
-                    <img src="<?php echo esc_url( $cp_logo_src ); ?>" alt="<?php bloginfo( 'name' ); ?>" height="52">
+                    // Duas versões do logótipo: azul-escuro no modo claro e
+                    // azul-acinzentado no modo escuro. O CSS mostra só a do
+                    // tema ativo (data-theme no <html>).
+                    $cp_logos = [
+                        'claro'  => 'logo-modo-claro.png',
+                        'escuro' => 'logo-modo-escuro.png',
+                    ];
+                    foreach ( $cp_logos as $cp_modo => $cp_ficheiro ) :
+                        $cp_logo_path = get_template_directory() . '/assets/img/' . $cp_ficheiro;
+                        $cp_logo_src  = get_template_directory_uri() . '/assets/img/' . $cp_ficheiro;
+                        if ( file_exists( $cp_logo_path ) ) {
+                            $cp_logo_src .= '?v=' . filemtime( $cp_logo_path );
+                        }
+                        ?>
+                        <img class="site-header__logo-img site-header__logo-img--<?php echo esc_attr( $cp_modo ); ?>" src="<?php echo esc_url( $cp_logo_src ); ?>" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" height="52">
+                    <?php endforeach; ?>
                 </a>
             <?php endif; ?>
         </div>

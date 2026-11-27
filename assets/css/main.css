@@ -119,7 +119,11 @@ img { max-width: 100%; display: block; }
   max-width: 1320px;
   margin: 0 auto;
 }
-.site-header__logo img { height: 60px; } /* cabeçalho ~97px: cabeçalho + banner cabem num ecrã de portátil */
+.site-header__logo img { height: 60px; width: auto; } /* cabeçalho ~97px: cabeçalho + banner cabem num ecrã de portátil */
+/* Logótipo por tema: azul-escuro no modo claro, azul-acinzentado no escuro. */
+.site-header__logo-img--escuro { display: none; }
+:root[data-theme="dark"] .site-header__logo-img--claro { display: none; }
+:root[data-theme="dark"] .site-header__logo-img--escuro { display: block; }
 .site-nav__list {
   display: flex;
   gap: 32px;

@@ -785,13 +785,28 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 				.ac-mv-tabela th:first-child,.ac-mv-tabela td:first-child{padding-left:0}
 				.ac-mv-tabela th:last-child,.ac-mv-tabela td:last-child{padding-right:0}
 				.ac-mv-tabela td.ac-mv-line{font-size:12.5px;min-width:170px}
-				.ac-mv-linha-form{display:flex;align-items:center;gap:8px;margin:0}
-				.ac-mv-linha-form textarea{flex:1 1 220px;min-width:160px;min-height:34px;height:34px;padding:7px 10px;font-size:13px;line-height:1.35;resize:vertical}
-				.ac-mv-linha-form .ac-anexo-grupo{flex-wrap:nowrap}
-				.ac-mv-linha-form .ac-anexo-nome{max-width:140px}
-				.ac-mv-linha-form .ac-btn{padding:7px 12px;font-size:13px;white-space:nowrap}
-				@media (max-width:760px){.ac-mv-linha-form{flex-wrap:wrap}.ac-mv-linha-form textarea{flex-basis:100%}}
+				.ac-mv-linha-form{display:flex;align-items:center;gap:6px;margin:0}
+				.ac-mv-linha-form textarea{flex:1 1 200px;min-width:150px;max-width:420px;height:30px;min-height:30px;max-height:96px;padding:5px 10px;box-sizing:border-box;font-family:'Public Sans',sans-serif;font-size:12.5px;line-height:1.45;color:var(--ac-text);background:var(--ac-bg);border:1px solid var(--ac-line);border-radius:8px;resize:none;overflow:hidden;transition:border-color .15s,box-shadow .15s,background-color .15s}
+				.ac-mv-linha-form textarea::placeholder{color:var(--ac-muted);opacity:.8}
+				.ac-mv-linha-form textarea:hover{border-color:var(--ac-blue)}
+				.ac-mv-linha-form textarea:focus{outline:none;background:var(--ac-surface);border-color:var(--ac-blue);box-shadow:0 0 0 3px rgba(126,144,181,.22)}
+				:root[data-theme="dark"] .ac-mv-linha-form textarea:focus{box-shadow:0 0 0 3px rgba(155,174,218,.2)}
+				.ac-mv-linha-form .ac-anexo-grupo{flex-wrap:nowrap;gap:6px;margin-left:auto}
+				.ac-mv-linha-form .ac-anexo-btn{padding:5px 10px;font-size:12px;font-weight:500;gap:6px;color:var(--ac-muted);border-radius:8px}
+				.ac-mv-linha-form .ac-anexo-btn:hover{color:var(--ac-text)}
+				.ac-mv-linha-form .ac-anexo-nome{max-width:130px;font-size:12px}
+				.ac-mv-linha-form .ac-btn-primary{padding:6px 12px;font-size:12.5px;border-radius:8px;white-space:nowrap}
+				@media (max-width:760px){.ac-mv-linha-form{flex-wrap:wrap}.ac-mv-linha-form textarea{flex-basis:100%;max-width:none}}
 			</style>
+			<script>
+			(function () {
+				// A caixa cresce com o texto (até 4 linhas) e volta a uma linha quando vazia.
+				document.querySelectorAll('.ac-mv-linha-form textarea').forEach(function (t) {
+					function ajustar() { t.style.height = '30px'; if (t.scrollHeight > 30) t.style.height = Math.min(t.scrollHeight + 2, 96) + 'px'; t.style.overflowY = t.scrollHeight > 96 ? 'auto' : 'hidden'; }
+					t.addEventListener('input', ajustar);
+				});
+			})();
+			</script>
 		<?php endif; ?>
 	</div>
 	<?php

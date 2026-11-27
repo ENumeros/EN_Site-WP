@@ -239,7 +239,8 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   Falta (`cp_ac_render_tabs_meses`, o mês sai de `data`; o número da tab é
   o que falta responder) e tabela Data | Descrição | Valor | Justificação.
   Cada linha por responder tem o próprio formulário na célula Justificação
-  (caixa de texto de uma linha + anexo + Enviar), sem botão "Responder" nem
+  (caixa de uma linha que cresce com o texto, cores do tema claro/escuro,
+  + anexo + Enviar), sem botão "Responder" nem
   linha extra; a respondida mostra o texto, o anexo e "Respondido". A
   pergunta genérica da Work ("Podes esclarecer este movimento?") não se
   mostra; uma pergunta escrita pela equipa fica como placeholder da caixa.

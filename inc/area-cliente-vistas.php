@@ -732,7 +732,7 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 							<th><?php esc_html_e( 'Data', 'contabilidade-pro' ); ?></th>
 							<th><?php esc_html_e( 'Descrição', 'contabilidade-pro' ); ?></th>
 							<th style="text-align:right"><?php esc_html_e( 'Valor', 'contabilidade-pro' ); ?></th>
-							<th><?php esc_html_e( 'Pergunta', 'contabilidade-pro' ); ?></th>
+							<th style="width:50%"><?php esc_html_e( 'Justificação', 'contabilidade-pro' ); ?></th>
 							<th></th>
 						</tr>
 					</thead>
@@ -742,28 +742,18 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 							$valor_cls = $mov['valor'] < 0 ? 'ac-mv-neg' : 'ac-mv-pos';
 							$valor_txt = ( $mov['valor'] < 0 ? '−' : '+' ) . number_format_i18n( abs( $mov['valor'] ), 2 ) . ' €';
 							$data      = preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $mov['data'] ) ? date_i18n( 'd/m/Y', strtotime( substr( $mov['data'], 0, 10 ) ) ) : $mov['data'];
-							$id_linha  = 'cp-mv-' . $mov['id'];
+							// A pergunta genérica da Work não se mostra; uma pergunta
+							// escrita pela equipa fica como texto de ajuda da caixa.
+							$pergunta  = trim( (string) ( $mov['pergunta'] ?? '' ) );
+							$ajuda     = ( '' === $pergunta || 'Podes esclarecer este movimento?' === $pergunta ) ? __( 'Escreva a justificação deste movimento…', 'contabilidade-pro' ) : $pergunta;
 							?>
-							<tr class="<?php echo $resposta ? 'ac-mv-com-detalhe' : ''; ?>">
+							<tr>
 								<td style="white-space:nowrap"><?php echo esc_html( $data ); ?></td>
 								<td class="ac-mv-line" style="margin:0"><?php echo esc_html( $mov['descricao'] ); ?></td>
 								<td class="<?php echo esc_attr( $valor_cls ); ?>" style="text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600"><?php echo esc_html( $valor_txt ); ?></td>
-								<td style="font-size:13.5px"><?php echo ! empty( $mov['pergunta'] ) ? esc_html( $mov['pergunta'] ) : '<span style="color:var(--ac-muted)">—</span>'; ?></td>
-								<td style="text-align:right;white-space:nowrap">
-									<?php if ( $resposta ) : ?>
-										<span class="ac-badge ac-badge-green"><?php esc_html_e( 'Respondido', 'contabilidade-pro' ); ?></span>
-									<?php else : ?>
-										<span class="ac-badge ac-badge-amber" style="margin-right:8px"><?php esc_html_e( 'Por responder', 'contabilidade-pro' ); ?></span>
-										<button type="button" class="ac-btn ac-btn-primary" style="padding:7px 12px" aria-expanded="false" aria-controls="<?php echo esc_attr( $id_linha ); ?>" data-cp-mv-abrir><?php esc_html_e( 'Responder', 'contabilidade-pro' ); ?></button>
-									<?php endif; ?>
-								</td>
-							</tr>
-							<?php if ( $resposta ) : ?>
-								<tr class="ac-mv-detalhe">
-									<td></td>
-									<td colspan="4">
-										<span style="font-size:12px;font-weight:600;color:var(--ac-muted)"><?php esc_html_e( 'A sua resposta:', 'contabilidade-pro' ); ?></span>
-										<span style="font-size:13px"><?php echo esc_html( $resposta['texto'] ); ?></span>
+								<?php if ( $resposta ) : ?>
+									<td style="font-size:13px">
+										<?php echo esc_html( $resposta['texto'] ); ?>
 										<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?>
 											<a class="ac-attach-chip" style="margin-left:8px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener">
 												<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12.5 15 6a3 3 0 0 1 4.2 4.2L11 18.5a4.2 4.2 0 0 1-6-6L13 5"></path></svg>
@@ -771,53 +761,37 @@ function cp_ac_vista_movimentos_a_esclarecer() {
 											</a>
 										<?php endif; ?>
 									</td>
-								</tr>
-							<?php else : ?>
-								<tr class="ac-mv-detalhe" id="<?php echo esc_attr( $id_linha ); ?>" hidden>
-									<td></td>
-									<td colspan="4">
-										<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-mv-reply" style="margin:0;padding:0;border:0" data-cp-drop>
+									<td style="text-align:right;white-space:nowrap"><span class="ac-badge ac-badge-green"><?php esc_html_e( 'Respondido', 'contabilidade-pro' ); ?></span></td>
+								<?php else : ?>
+									<td colspan="2">
+										<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-mv-linha-form" data-cp-drop>
 											<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
 											<input type="hidden" name="action" value="cp_pendente_responder">
 											<input type="hidden" name="tipo" value="movimento">
 											<input type="hidden" name="item_id" value="<?php echo esc_attr( $mov['id'] ); ?>">
-											<label for="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" style="font-size:12px;font-weight:600;color:var(--ac-muted)"><?php esc_html_e( 'A sua resposta', 'contabilidade-pro' ); ?></label>
-											<textarea id="cp-reply-<?php echo esc_attr( $mov['id'] ); ?>" name="texto" placeholder="<?php esc_attr_e( 'Ex.: é o pagamento da fatura do fornecedor ABC, em anexo.', 'contabilidade-pro' ); ?>"></textarea>
-											<div class="ac-mv-reply-actions">
-												<div class="ac-anexo-grupo"><?php cp_ac_render_anexo_pendente( 'movimento' ); ?></div>
-												<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Enviar resposta', 'contabilidade-pro' ); ?></button>
-											</div>
+											<textarea name="texto" rows="1" aria-label="<?php esc_attr_e( 'Justificação', 'contabilidade-pro' ); ?>" placeholder="<?php echo esc_attr( $ajuda ); ?>"></textarea>
+											<div class="ac-anexo-grupo"><?php cp_ac_render_anexo_pendente( 'movimento' ); ?></div>
+											<button class="ac-btn ac-btn-primary" type="submit"><?php esc_html_e( 'Enviar', 'contabilidade-pro' ); ?></button>
 										</form>
 									</td>
-								</tr>
-							<?php endif; ?>
+								<?php endif; ?>
+							</tr>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
 			</div>
 			<style>
-				.ac-mv-tabela th,.ac-mv-tabela td{padding:11px 10px}
+				.ac-mv-tabela th,.ac-mv-tabela td{padding:7px 10px;vertical-align:middle}
 				.ac-mv-tabela th:first-child,.ac-mv-tabela td:first-child{padding-left:0}
 				.ac-mv-tabela th:last-child,.ac-mv-tabela td:last-child{padding-right:0}
-				.ac-mv-tabela td.ac-mv-line{font-size:12.5px}
-				.ac-mv-tabela tr.ac-mv-com-detalhe td{border-bottom:none}
-				.ac-mv-tabela tr.ac-mv-detalhe td{padding-top:0}
-				.ac-mv-tabela tr.ac-mv-detalhe .ac-mv-reply{white-space:normal}
+				.ac-mv-tabela td.ac-mv-line{font-size:12.5px;min-width:170px}
+				.ac-mv-linha-form{display:flex;align-items:center;gap:8px;margin:0}
+				.ac-mv-linha-form textarea{flex:1 1 220px;min-width:160px;min-height:34px;height:34px;padding:7px 10px;font-size:13px;line-height:1.35;resize:vertical}
+				.ac-mv-linha-form .ac-anexo-grupo{flex-wrap:nowrap}
+				.ac-mv-linha-form .ac-anexo-nome{max-width:140px}
+				.ac-mv-linha-form .ac-btn{padding:7px 12px;font-size:13px;white-space:nowrap}
+				@media (max-width:760px){.ac-mv-linha-form{flex-wrap:wrap}.ac-mv-linha-form textarea{flex-basis:100%}}
 			</style>
-			<script>
-			(function () {
-				// "Responder" abre (ou fecha) a linha com o formulário por baixo.
-				document.querySelectorAll('[data-cp-mv-abrir]').forEach(function (botao) {
-					botao.addEventListener('click', function () {
-						var linha = document.getElementById(botao.getAttribute('aria-controls'));
-						if (!linha) return;
-						linha.hidden = !linha.hidden;
-						botao.setAttribute('aria-expanded', linha.hidden ? 'false' : 'true');
-						if (!linha.hidden) { var t = linha.querySelector('textarea'); if (t) t.focus(); }
-					});
-				});
-			})();
-			</script>
 		<?php endif; ?>
 	</div>
 	<?php

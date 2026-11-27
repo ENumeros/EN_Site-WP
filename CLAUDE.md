@@ -114,7 +114,13 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   primeiro — nunca notificar sobre uma ferramenta que a empresa não tem
   ligada na matriz. `cp_push_notificar_empresa()` notifica os clientes de
   uma empresa (nunca quem tem acesso ao Backoffice, mesmo com empresas
-  associadas). Extratos e SAF-T não avisam quando chega um mês novo: os
+  associadas). Desde 2026-11-27 também nunca para um *browser* da equipa:
+  um endpoint pertence só a quem lá subscreveu por último
+  (`cp_push_libertar_endpoint_de_outros()` ao subscrever) e os endpoints
+  subscritos por alguém do Backoffice são retirados dos avisos de clientes
+  (`cp_push_calc_subscricoes_sem_equipa()`, testada) — antes, quem da
+  equipa entrava com a conta de um cliente e aceitava as notificações
+  continuava a receber os avisos desse cliente. Extratos e SAF-T não avisam quando chega um mês novo: os
   lembretes (dia 02 SAF-T, dia 05 extratos) são decididos pela Work e
   pedidos por `POST /cp/v1/lembrete` (`cp_ac_rest_lembrete()`).
   `cp_push_notificar_equipa()` (mesmo ficheiro) notifica a
@@ -226,9 +232,12 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   limpa por `cp_ac_calc_documentos_tratados()` (testada). Lista à parte de
   propósito: nunca aceita resposta (o envio só valida contra
   `cp_ac_pendentes_documentos`) e uma Work antiga que não a mande deixa o
-  que estava. A vista tem dois filtros (`?filtro=`, sem JS,
-  `cp_ac_calc_filtro_documentos()`): Pendentes por omissão, Tratados só
-  leitura.
+  que estava. A vista tem três filtros (`?filtro=`, sem JS,
+  `cp_ac_calc_filtro_documentos()`), como Movimentos a Esclarecer
+  (2026-11-27): Pendentes por omissão (só os ainda sem resposta, com o
+  formulário), Tratados (os já enviados pelo cliente que a Work ainda não
+  tirou dos pedidos, como "Enviado", mais `documentos_tratados`) e Todos;
+  as tabs por mês só mostram os meses do filtro escolhido.
   Desde 2026-11-27 as duas listas são uma tabela
   (`cp_ac_render_tabela_documentos_falta()`): Data | NIF | Nome | Tipo
   documento | Nº documento | Valor + estado/ação. A Work manda esses campos

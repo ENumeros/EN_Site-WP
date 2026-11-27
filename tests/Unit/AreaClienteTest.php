@@ -346,6 +346,7 @@ final class AreaClienteTest extends TestCase {
 		self::assertSame( 'pendentes', cp_ac_calc_filtro_documentos( '' ) );
 		self::assertSame( 'pendentes', cp_ac_calc_filtro_documentos( 'outro' ) );
 		self::assertSame( 'tratados', cp_ac_calc_filtro_documentos( 'tratados' ) );
+		self::assertSame( 'todos', cp_ac_calc_filtro_documentos( 'todos' ) );
 	}
 
 	public function test_filtro_movimentos_pendentes_por_omissao(): void {

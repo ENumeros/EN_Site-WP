@@ -9,6 +9,7 @@ use Brain\Monkey\Functions;
  * @covers cp_push_base64url_decode
  * @covers cp_push_guardar_subscricao
  * @covers cp_push_remover_subscricao
+ * @covers cp_push_calc_subscricoes_sem_equipa
  * @covers cp_push_der_para_raw_ecdsa
  * @covers cp_push_hkdf_expand
  *
@@ -67,6 +68,17 @@ final class PushTest extends TestCase {
 			} );
 
 		cp_push_remover_subscricao( 1, 'https://exemplo.test/a' );
+	}
+
+	public function test_subscricoes_de_cliente_sem_os_browsers_da_equipa(): void {
+		$subscricoes = [
+			[ 'endpoint' => 'https://exemplo.test/telemovel-cliente' ],
+			[ 'endpoint' => 'https://exemplo.test/pc-equipa' ],
+			[ 'keys' => [] ],
+		];
+		$ficam = cp_push_calc_subscricoes_sem_equipa( $subscricoes, [ 'https://exemplo.test/pc-equipa' ] );
+		self::assertSame( [ 'https://exemplo.test/telemovel-cliente', null ], array_map( function ( $s ) { return $s['endpoint'] ?? null; }, $ficam ) );
+		self::assertSame( $subscricoes, cp_push_calc_subscricoes_sem_equipa( $subscricoes, [] ) );
 	}
 
 	public function test_der_para_raw_ecdsa_remove_padding_de_sinal_e_repoe_zeros_a_esquerda(): void {

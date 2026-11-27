@@ -596,19 +596,37 @@ function cp_ac_render_tabela_documentos_falta( array $documentos, callable $celu
 	<?php
 }
 
-// Dois filtros (?filtro=, sem JS, como as tabs por ano de Extratos):
-// "Pendentes" (omissão, com o formulário) e "Tratados" (só leitura: o que o
-// cliente enviou, o que a contabilidade já recebeu e o que já está tratado).
-// Dentro de cada um, uma tab por mês.
+// Três filtros (?filtro=, sem JS), como em Movimentos a Esclarecer
+// (2026-11-27): "Pendentes" (omissão: só o que falta enviar, com o
+// formulário), "Tratados" (o que o cliente já enviou e ainda está nos
+// pedidos, mais os que a Work mandou como enviados/recebidos/tratados) e
+// "Todos". Dentro de cada um, uma tab por mês só com os meses do filtro.
 function cp_ac_vista_documentos_em_falta() {
 	$empresa_id = cp_ac_empresa_ativa();
-	$documentos = cp_ac_pendentes_documentos( $empresa_id );
-	$tratados   = cp_ac_pendentes_documentos_tratados( $empresa_id );
 	$filtro     = cp_ac_calc_filtro_documentos( isset( $_GET['filtro'] ) ? sanitize_key( wp_unslash( $_GET['filtro'] ) ) : '' );
-	$e_por_tratar = function ( $item ) use ( $empresa_id ) {
-		return ! cp_ac_pendente_resposta_do_item( $empresa_id, $item['id'] );
+	$pendentes  = [];
+	$tratados   = [];
+	foreach ( cp_ac_pendentes_documentos( $empresa_id ) as $doc ) {
+		$resposta = cp_ac_pendente_resposta_do_item( $empresa_id, $doc['id'] );
+		if ( $resposta ) {
+			// Enviado pelo cliente; a Work ainda não o tirou dos pedidos.
+			$tratados[ $doc['id'] ] = [ 'estado' => 'enviado', 'anexo_url' => isset( $resposta['anexo_url'] ) ? $resposta['anexo_url'] : '' ] + $doc;
+		} else {
+			$pendentes[] = [ 'estado' => 'pendente' ] + $doc;
+		}
+	}
+	foreach ( cp_ac_pendentes_documentos_tratados( $empresa_id ) as $doc ) {
+		if ( ! isset( $tratados[ $doc['id'] ] ) ) $tratados[ $doc['id'] ] = $doc;
+	}
+	$tratados   = array_values( $tratados );
+	$filtros    = [
+		'pendentes' => [ __( 'Pendentes', 'contabilidade-pro' ), $pendentes, 'ac-badge-amber', __( 'Sem pedidos pendentes de momento.', 'contabilidade-pro' ) ],
+		'tratados'  => [ __( 'Tratados', 'contabilidade-pro' ), $tratados, 'ac-badge-green', __( 'Ainda não há documentos tratados.', 'contabilidade-pro' ) ],
+		'todos'     => [ __( 'Todos', 'contabilidade-pro' ), array_merge( $pendentes, $tratados ), 'ac-badge-blue', __( 'Sem documentos em falta de momento.', 'contabilidade-pro' ) ],
+	];
+	$url_filtro = function ( $chave ) {
+		return 'pendentes' === $chave ? cp_ac_vista_url( 'documentos_em_falta' ) : add_query_arg( 'filtro', $chave, cp_ac_vista_url( 'documentos_em_falta' ) );
 	};
-	$por_tratar = count( array_filter( $documentos, $e_por_tratar ) );
 	?>
 	<div>
 		<h1 style="font-size:23px"><?php esc_html_e( 'Documentos em Falta', 'contabilidade-pro' ); ?></h1>
@@ -618,76 +636,57 @@ function cp_ac_vista_documentos_em_falta() {
 	<?php cp_ac_render_banner_resposta_pendente(); ?>
 
 	<div class="ac-bo-filtros" role="tablist" style="margin-top:18px">
-		<?php foreach ( [ 'pendentes' => __( 'Pendentes', 'contabilidade-pro' ), 'tratados' => __( 'Tratados', 'contabilidade-pro' ) ] as $chave => $rotulo ) :
+		<?php foreach ( $filtros as $chave => list( $rotulo, $lista, $cor ) ) :
 			$ativo = $chave === $filtro;
-			$url   = 'pendentes' === $chave ? cp_ac_vista_url( 'documentos_em_falta' ) : add_query_arg( 'filtro', $chave, cp_ac_vista_url( 'documentos_em_falta' ) );
-			$n     = 'pendentes' === $chave ? $por_tratar : count( $tratados );
+			$n     = count( $lista );
 			?>
-			<a class="ac-bo-chip<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( $url ); ?>">
+			<a class="ac-bo-chip<?php echo $ativo ? ' is-on' : ''; ?>" role="tab" aria-selected="<?php echo $ativo ? 'true' : 'false'; ?>" href="<?php echo esc_url( $url_filtro( $chave ) ); ?>">
 				<?php echo esc_html( $rotulo ); ?>
-				<?php if ( $n ) : ?><span class="ac-badge <?php echo 'pendentes' === $chave ? 'ac-badge-amber' : 'ac-badge-green'; ?>" style="margin-left:8px;padding:1px 7px"><?php echo esc_html( $n ); ?></span><?php endif; ?>
+				<?php if ( $n ) : ?><span class="ac-badge <?php echo esc_attr( $cor ); ?>" style="margin-left:8px;padding:1px 7px"><?php echo esc_html( $n ); ?></span><?php endif; ?>
 			</a>
 		<?php endforeach; ?>
 	</div>
 
-	<?php if ( 'tratados' === $filtro ) : ?>
-		<div class="ac-card" style="padding:22px">
-			<?php $tratados = cp_ac_render_tabs_meses( $tratados, add_query_arg( 'filtro', 'tratados', cp_ac_vista_url( 'documentos_em_falta' ) ), 'ac-badge-green' ); ?>
-			<?php if ( empty( $tratados ) ) : ?>
-				<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não há documentos tratados.', 'contabilidade-pro' ); ?></div>
-			<?php else : ?>
-				<?php cp_ac_render_tabela_documentos_falta( $tratados, function ( $doc ) {
-					$rotulo_estado = [
-						'enviado'  => __( 'Enviado', 'contabilidade-pro' ),
-						'recebido' => __( 'Recebido', 'contabilidade-pro' ),
-						'tratado'  => __( 'Tratado', 'contabilidade-pro' ),
-					][ $doc['estado'] ];
-					$dica_estado = [
-						'enviado'  => __( 'Enviou este documento — a nossa equipa vai tratá-lo.', 'contabilidade-pro' ),
-						'recebido' => __( 'A contabilidade já tem este documento.', 'contabilidade-pro' ),
-						'tratado'  => __( 'Documento já tratado na contabilidade.', 'contabilidade-pro' ),
-					][ $doc['estado'] ];
-					?>
-					<span class="ac-badge <?php echo 'enviado' === $doc['estado'] ? 'ac-badge-blue' : 'ac-badge-green'; ?>" title="<?php echo esc_attr( $dica_estado ); ?>"><?php echo esc_html( $rotulo_estado ); ?></span>
-					<?php
-				} ); ?>
-			<?php endif; ?>
-		</div>
+	<div class="ac-card" style="padding:22px">
+		<?php $documentos = cp_ac_render_tabs_meses( $filtros[ $filtro ][1], $url_filtro( $filtro ), $filtros[ $filtro ][2] ); ?>
+		<?php if ( empty( $documentos ) ) : ?>
+			<div style="color:var(--ac-muted);font-size:13px"><?php echo esc_html( $filtros[ $filtro ][3] ); ?></div>
+		<?php else : ?>
+			<?php cp_ac_render_tabela_documentos_falta( $documentos, 'cp_ac_render_celula_documento_falta' ); ?>
+		<?php endif; ?>
+	</div>
+	<?php
+}
+
+// Última coluna da tabela: formulário para carregar (pendente) ou o estado.
+function cp_ac_render_celula_documento_falta( $doc ) {
+	if ( 'pendente' === $doc['estado'] ) : ?>
+		<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-req-form" data-cp-drop>
+			<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
+			<input type="hidden" name="action" value="cp_pendente_responder">
+			<input type="hidden" name="tipo" value="documento">
+			<input type="hidden" name="item_id" value="<?php echo esc_attr( $doc['id'] ); ?>">
+			<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
+			<?php cp_ac_render_anexo_pendente( 'documento', true ); ?>
+			<button class="ac-btn ac-btn-primary" type="submit" style="padding:7px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
+		</form>
 		<?php
 		return;
-	endif; ?>
-
-	<div class="ac-card" style="padding:22px">
-		<?php $documentos = cp_ac_render_tabs_meses( $documentos, cp_ac_vista_url( 'documentos_em_falta' ), 'ac-badge-amber', $e_por_tratar ); ?>
-		<div class="ac-sec-head">
-			<div></div>
-			<?php if ( ! empty( $documentos ) ) : ?><span class="ac-badge ac-badge-amber"><?php echo esc_html( count( $documentos ) ); ?> <?php esc_html_e( 'pendentes', 'contabilidade-pro' ); ?></span><?php endif; ?>
-		</div>
-		<?php if ( empty( $documentos ) ) : ?>
-			<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Sem pedidos pendentes de momento.', 'contabilidade-pro' ); ?></div>
-		<?php else : ?>
-			<?php cp_ac_render_tabela_documentos_falta( $documentos, function ( $doc ) use ( $empresa_id ) {
-				$resposta = cp_ac_pendente_resposta_do_item( $empresa_id, $doc['id'] );
-				?>
-					<?php if ( $resposta ) : ?>
-						<div style="display:inline-flex;align-items:center;gap:10px">
-							<span class="ac-badge ac-badge-green"><?php esc_html_e( 'Enviado', 'contabilidade-pro' ); ?></span>
-							<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:7px 12px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
-						</div>
-					<?php else : ?>
-						<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ac-req-form" data-cp-drop>
-							<?php wp_nonce_field( 'cp_pendente_resposta', 'cp_pendente_nonce' ); ?>
-							<input type="hidden" name="action" value="cp_pendente_responder">
-							<input type="hidden" name="tipo" value="documento">
-							<input type="hidden" name="item_id" value="<?php echo esc_attr( $doc['id'] ); ?>">
-							<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Pendente', 'contabilidade-pro' ); ?></span>
-							<?php cp_ac_render_anexo_pendente( 'documento', true ); ?>
-							<button class="ac-btn ac-btn-primary" type="submit" style="padding:7px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
-						</form>
-					<?php endif; ?>
-				<?php
-			} ); ?>
-		<?php endif; ?>
+	endif;
+	$rotulo_estado = [
+		'enviado'  => __( 'Enviado', 'contabilidade-pro' ),
+		'recebido' => __( 'Recebido', 'contabilidade-pro' ),
+		'tratado'  => __( 'Tratado', 'contabilidade-pro' ),
+	][ $doc['estado'] ];
+	$dica_estado = [
+		'enviado'  => __( 'Enviou este documento — a nossa equipa vai tratá-lo.', 'contabilidade-pro' ),
+		'recebido' => __( 'A contabilidade já tem este documento.', 'contabilidade-pro' ),
+		'tratado'  => __( 'Documento já tratado na contabilidade.', 'contabilidade-pro' ),
+	][ $doc['estado'] ];
+	?>
+	<div style="display:inline-flex;align-items:center;gap:10px">
+		<span class="ac-badge <?php echo 'enviado' === $doc['estado'] ? 'ac-badge-blue' : 'ac-badge-green'; ?>" title="<?php echo esc_attr( $dica_estado ); ?>"><?php echo esc_html( $rotulo_estado ); ?></span>
+		<?php if ( ! empty( $doc['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:7px 12px" href="<?php echo esc_url( $doc['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
 	</div>
 	<?php
 }

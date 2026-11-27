@@ -283,7 +283,40 @@ function cp_push_rest_subscrever( $request ) {
 	if ( ! is_array( $subscricao ) || ! cp_push_guardar_subscricao( get_current_user_id(), $subscricao ) ) {
 		return new WP_Error( 'cp_push_subscricao_invalida', __( 'Subscrição inválida.', 'contabilidade-pro' ), [ 'status' => 400 ] );
 	}
+	cp_push_libertar_endpoint_de_outros( get_current_user_id(), $subscricao['endpoint'] );
 	return rest_ensure_response( [ 'ok' => true ] );
+}
+
+// Um endpoint é um browser: pertence só a quem lá subscreveu por último
+// (2026-11-27). Sem isto, quem da equipa entrou um dia com a conta de um
+// cliente nesse browser continuava a receber os avisos desse cliente.
+function cp_push_libertar_endpoint_de_outros( $user_id, $endpoint ) {
+	$outros = get_users( [ 'meta_key' => 'cp_push_subscricoes', 'meta_compare' => 'EXISTS', 'exclude' => [ (int) $user_id ], 'fields' => 'ID' ] );
+	foreach ( $outros as $outro_id ) {
+		if ( in_array( $endpoint, wp_list_pluck( cp_push_subscricoes_utilizador( $outro_id ), 'endpoint' ), true ) ) {
+			cp_push_remover_subscricao( $outro_id, $endpoint );
+		}
+	}
+}
+
+// Pura (testada): das subscrições de um cliente, as que não são de um
+// browser também subscrito por alguém da equipa.
+function cp_push_calc_subscricoes_sem_equipa( array $subscricoes, array $endpoints_equipa ) {
+	return array_values( array_filter( $subscricoes, function ( $s ) use ( $endpoints_equipa ) {
+		return ! in_array( isset( $s['endpoint'] ) ? $s['endpoint'] : '', $endpoints_equipa, true );
+	} ) );
+}
+
+// Endpoints (browsers) em que alguém da equipa subscreveu as notificações.
+function cp_push_endpoints_equipa() {
+	$endpoints = [];
+	foreach ( get_users( [ 'meta_key' => 'cp_push_subscricoes', 'meta_compare' => 'EXISTS' ] ) as $u ) {
+		if ( ! cp_backoffice_utilizador_tem_acesso( $u->ID ) ) continue;
+		foreach ( cp_push_subscricoes_utilizador( $u->ID ) as $s ) {
+			if ( ! empty( $s['endpoint'] ) ) $endpoints[] = $s['endpoint'];
+		}
+	}
+	return $endpoints;
 }
 
 function cp_push_rest_cancelar( $request ) {
@@ -319,7 +352,8 @@ function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '', $fe
 		'url'    => $url ? $url : home_url( '/area-de-cliente/' ),
 	] );
 
-	$utilizadores = get_users( [ 'meta_key' => 'cp_empresas', 'meta_compare' => 'EXISTS' ] );
+	$endpoints_equipa = cp_push_endpoints_equipa();
+	$utilizadores     = get_users( [ 'meta_key' => 'cp_empresas', 'meta_compare' => 'EXISTS' ] );
 	foreach ( $utilizadores as $utilizador ) {
 		if ( ! in_array( $empresa_id, cp_ac_user_empresas( $utilizador->ID ), true ) ) {
 			continue;
@@ -330,7 +364,9 @@ function cp_push_notificar_empresa( $empresa_id, $titulo, $corpo, $url = '', $fe
 		if ( '' !== $ferramenta && ! cp_ac_utilizador_tem_ferramenta( $utilizador->ID, $empresa_id, $ferramenta ) ) {
 			continue;
 		}
-		foreach ( cp_push_subscricoes_utilizador( $utilizador->ID ) as $subscricao ) {
+		// Um browser onde a equipa também subscreveu é da equipa: não recebe
+		// avisos de clientes, mesmo que lá se tenha entrado como cliente.
+		foreach ( cp_push_calc_subscricoes_sem_equipa( cp_push_subscricoes_utilizador( $utilizador->ID ), $endpoints_equipa ) as $subscricao ) {
 			cp_push_enviar_subscricao( $utilizador->ID, $subscricao, $payload );
 		}
 	}

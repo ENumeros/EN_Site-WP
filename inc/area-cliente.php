@@ -1164,9 +1164,9 @@ function cp_ac_calc_tabs_meses( array $documentos, $pedido = null, $por_tratar =
 }
 
 // Pura (testada): qual filtro mostrar na vista Documentos em Falta —
-// 'pendentes' por omissão, 'tratados' só se pedido.
+// 'pendentes' por omissão; 'tratados' ou 'todos' só se pedidos.
 function cp_ac_calc_filtro_documentos( $pedido ) {
-    return 'tratados' === $pedido ? 'tratados' : 'pendentes';
+    return in_array( $pedido, [ 'tratados', 'todos' ], true ) ? $pedido : 'pendentes';
 }
 
 // Pura (testada): qual filtro mostrar em Movimentos a Esclarecer —

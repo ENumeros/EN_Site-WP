@@ -229,6 +229,12 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   que estava. A vista tem dois filtros (`?filtro=`, sem JS,
   `cp_ac_calc_filtro_documentos()`): Pendentes por omissão, Tratados só
   leitura.
+  Desde 2026-11-27 as duas listas são uma tabela
+  (`cp_ac_render_tabela_documentos_falta()`): Data | NIF | Nome | Tipo
+  documento | Nº documento | Valor + estado/ação. A Work manda esses campos
+  (`data`, `nif`, `nome`, `tipo`, `numero`, `valor`) em cada documento,
+  limpos por `cp_ac_calc_campos_documento()` (testada); sem eles (Work
+  antiga ou pedido manual) a coluna Nome mostra o `titulo`.
 
 - **Limpeza por mês pedida pela Work** (`inc/area-cliente-limpeza.php`,
   2026-11-24): `POST cp/v1/limpeza` {work_id, simular?, documentos: [ids],

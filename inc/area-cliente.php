@@ -1109,9 +1109,29 @@ function cp_ac_calc_documentos_tratados( $lista ) {
             'pedido_em' => isset( $doc['pedido_em'] ) ? sanitize_text_field( $doc['pedido_em'] ) : '',
             'mes'       => cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' ),
             'estado'    => in_array( $estado, [ 'enviado', 'recebido', 'tratado' ], true ) ? $estado : 'tratado',
-        ];
+        ] + cp_ac_calc_campos_documento( $doc );
     }
     return $saida;
+}
+
+// Pura (testada): colunas da tabela de Documentos em Falta (2026-11-27) —
+// Data | NIF | Nome | Tipo documento | Nº documento | Valor. A Work manda-as
+// à parte do `titulo`; uma Work antiga não as manda e ficam vazias (a vista
+// mostra então o título). Data só "AAAA-MM-DD"; valor número ou null.
+function cp_ac_calc_campos_documento( $doc ) {
+    $texto = function ( $chave ) use ( $doc ) {
+        return isset( $doc[ $chave ] ) && is_scalar( $doc[ $chave ] ) ? sanitize_text_field( (string) $doc[ $chave ] ) : '';
+    };
+    $data  = $texto( 'data' );
+    $valor = isset( $doc['valor'] ) && is_numeric( $doc['valor'] ) ? round( (float) $doc['valor'], 2 ) : null;
+    return [
+        'data'   => preg_match( '/^\d{4}-\d{2}-\d{2}$/', $data ) ? $data : '',
+        'nif'    => $texto( 'nif' ),
+        'nome'   => $texto( 'nome' ),
+        'tipo'   => $texto( 'tipo' ),
+        'numero' => $texto( 'numero' ),
+        'valor'  => $valor,
+    ];
 }
 
 // Pura (testada): o próprio mês se for "AAAA-MM" com mês de 01 a 12, senão ''.
@@ -1375,7 +1395,7 @@ function cp_ac_rest_sincronizar_pendentes( $request ) {
                 'titulo'    => isset( $doc['titulo'] ) ? sanitize_text_field( $doc['titulo'] ) : '',
                 'pedido_em' => isset( $doc['pedido_em'] ) ? sanitize_text_field( $doc['pedido_em'] ) : '',
                 'mes'       => cp_ac_calc_mes_valido( isset( $doc['mes'] ) ? $doc['mes'] : '' ),
-            ];
+            ] + cp_ac_calc_campos_documento( $doc );
         }
     }
 

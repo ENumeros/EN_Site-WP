@@ -543,6 +543,59 @@ function cp_ac_render_tabs_meses( array $documentos, $base, $badge, $por_tratar 
 	} ) );
 }
 
+// Tabela de Documentos em Falta (2026-11-27): Data | NIF | Nome | Tipo
+// documento | Nº documento | Valor, mais uma coluna com o estado/ação que
+// `$celula` desenha (recebe o documento). Por data, mais antigo primeiro.
+// Um documento sem estes campos (Work antiga, ou pedido escrito à mão)
+// mostra o título na coluna Nome.
+function cp_ac_render_tabela_documentos_falta( array $documentos, callable $celula ) {
+	usort( $documentos, function ( $a, $b ) {
+		// Sem data (pedido escrito à mão) vai para o fim.
+		return strcmp( ! empty( $a['data'] ) ? $a['data'] : '9999', ! empty( $b['data'] ) ? $b['data'] : '9999' );
+	} );
+	$traco = '<span style="color:var(--ac-muted)">—</span>';
+	?>
+	<div style="overflow-x:auto">
+		<table class="ac-table ac-df-tabela">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Data', 'contabilidade-pro' ); ?></th>
+					<th><?php esc_html_e( 'NIF', 'contabilidade-pro' ); ?></th>
+					<th><?php esc_html_e( 'Nome', 'contabilidade-pro' ); ?></th>
+					<th><?php esc_html_e( 'Tipo documento', 'contabilidade-pro' ); ?></th>
+					<th><?php esc_html_e( 'Nº documento', 'contabilidade-pro' ); ?></th>
+					<th style="text-align:right"><?php esc_html_e( 'Valor', 'contabilidade-pro' ); ?></th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $documentos as $doc ) :
+					$data  = ! empty( $doc['data'] ) ? date_i18n( 'd/m/Y', strtotime( $doc['data'] ) ) : '';
+					$nome  = ! empty( $doc['nome'] ) ? $doc['nome'] : ( isset( $doc['titulo'] ) ? $doc['titulo'] : '' );
+					$valor = isset( $doc['valor'] ) && null !== $doc['valor'] ? number_format_i18n( (float) $doc['valor'], 2 ) . ' €' : '';
+					?>
+					<tr>
+						<td style="white-space:nowrap"><?php echo '' !== $data ? esc_html( $data ) : $traco; // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+						<td style="white-space:nowrap"><?php echo ! empty( $doc['nif'] ) ? esc_html( $doc['nif'] ) : $traco; // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+						<td style="font-weight:600"><?php echo esc_html( $nome ); ?></td>
+						<td><?php echo ! empty( $doc['tipo'] ) ? esc_html( $doc['tipo'] ) : $traco; // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+						<td style="white-space:nowrap"><?php echo ! empty( $doc['numero'] ) ? esc_html( $doc['numero'] ) : $traco; // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+						<td style="text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums"><?php echo '' !== $valor ? esc_html( $valor ) : $traco; // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
+						<td style="text-align:right;white-space:nowrap"><?php $celula( $doc ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+	</div>
+	<style>
+		.ac-df-tabela th,.ac-df-tabela td{padding:11px 10px}
+		.ac-df-tabela th:first-child,.ac-df-tabela td:first-child{padding-left:0}
+		.ac-df-tabela th:last-child,.ac-df-tabela td:last-child{padding-right:0}
+		.ac-df-tabela .ac-req-form{flex-wrap:nowrap;justify-content:flex-end}
+	</style>
+	<?php
+}
+
 // Dois filtros (?filtro=, sem JS, como as tabs por ano de Extratos):
 // "Pendentes" (omissão, com o formulário) e "Tratados" (só leitura: o que o
 // cliente enviou, o que a contabilidade já recebeu e o que já está tratado).
@@ -583,7 +636,7 @@ function cp_ac_vista_documentos_em_falta() {
 			<?php if ( empty( $tratados ) ) : ?>
 				<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Ainda não há documentos tratados.', 'contabilidade-pro' ); ?></div>
 			<?php else : ?>
-				<?php foreach ( $tratados as $doc ) :
+				<?php cp_ac_render_tabela_documentos_falta( $tratados, function ( $doc ) {
 					$rotulo_estado = [
 						'enviado'  => __( 'Enviado', 'contabilidade-pro' ),
 						'recebido' => __( 'Recebido', 'contabilidade-pro' ),
@@ -595,13 +648,9 @@ function cp_ac_vista_documentos_em_falta() {
 						'tratado'  => __( 'Documento já tratado na contabilidade.', 'contabilidade-pro' ),
 					][ $doc['estado'] ];
 					?>
-					<div class="ac-req-row">
-						<div>
-							<div style="font-size:14px;font-weight:600"><?php echo esc_html( $doc['titulo'] ); ?></div>
-						</div>
-						<span class="ac-badge <?php echo 'enviado' === $doc['estado'] ? 'ac-badge-blue' : 'ac-badge-green'; ?>" title="<?php echo esc_attr( $dica_estado ); ?>"><?php echo esc_html( $rotulo_estado ); ?></span>
-					</div>
-				<?php endforeach; ?>
+					<span class="ac-badge <?php echo 'enviado' === $doc['estado'] ? 'ac-badge-blue' : 'ac-badge-green'; ?>" title="<?php echo esc_attr( $dica_estado ); ?>"><?php echo esc_html( $rotulo_estado ); ?></span>
+					<?php
+				} ); ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -617,15 +666,11 @@ function cp_ac_vista_documentos_em_falta() {
 		<?php if ( empty( $documentos ) ) : ?>
 			<div style="color:var(--ac-muted);font-size:13px"><?php esc_html_e( 'Sem pedidos pendentes de momento.', 'contabilidade-pro' ); ?></div>
 		<?php else : ?>
-			<?php foreach ( $documentos as $doc ) :
+			<?php cp_ac_render_tabela_documentos_falta( $documentos, function ( $doc ) use ( $empresa_id ) {
 				$resposta = cp_ac_pendente_resposta_do_item( $empresa_id, $doc['id'] );
 				?>
-				<div class="ac-req-row">
-					<div>
-						<div style="font-size:14px;font-weight:600"><?php echo esc_html( $doc['titulo'] ); ?></div>
-					</div>
 					<?php if ( $resposta ) : ?>
-						<div style="display:flex;align-items:center;gap:10px">
+						<div style="display:inline-flex;align-items:center;gap:10px">
 							<span class="ac-badge ac-badge-green"><?php esc_html_e( 'Enviado', 'contabilidade-pro' ); ?></span>
 							<?php if ( ! empty( $resposta['anexo_url'] ) ) : ?><a class="ac-btn ac-btn-ghost" style="padding:7px 12px" href="<?php echo esc_url( $resposta['anexo_url'] ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Ver', 'contabilidade-pro' ); ?></a><?php endif; ?>
 						</div>
@@ -640,8 +685,8 @@ function cp_ac_vista_documentos_em_falta() {
 							<button class="ac-btn ac-btn-primary" type="submit" style="padding:7px 12px"><?php esc_html_e( 'Carregar', 'contabilidade-pro' ); ?></button>
 						</form>
 					<?php endif; ?>
-				</div>
-			<?php endforeach; ?>
+				<?php
+			} ); ?>
 		<?php endif; ?>
 	</div>
 	<?php

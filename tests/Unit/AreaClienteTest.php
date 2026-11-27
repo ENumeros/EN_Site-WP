@@ -10,6 +10,7 @@ use Brain\Monkey\Functions;
  * @covers cp_ac_calc_filtrar_destinatarios
  * @covers cp_ac_calc_conta_bloqueada
  * @covers cp_ac_calc_documentos_tratados
+ * @covers cp_ac_calc_campos_documento
  * @covers cp_ac_calc_filtro_documentos
  * @covers cp_ac_calc_avisos_pendentes
  * @covers cp_ac_calc_mes_valido
@@ -252,10 +253,22 @@ final class AreaClienteTest extends TestCase {
 			'lixo',
 		] );
 		self::assertCount( 2, $r );
-		self::assertSame( [ 'id' => '11', 'titulo' => 'Fatura FT 1', 'pedido_em' => '', 'mes' => '2026-10', 'estado' => 'recebido' ], $r[0] );
+		self::assertSame( [ 'id' => '11', 'titulo' => 'Fatura FT 1', 'pedido_em' => '', 'mes' => '2026-10', 'estado' => 'recebido',
+			'data' => '', 'nif' => '', 'nome' => '', 'tipo' => '', 'numero' => '', 'valor' => null ], $r[0] );
 		self::assertSame( 'tratado', $r[1]['estado'] );
 		self::assertSame( '', $r[1]['mes'] );
 		self::assertSame( [], cp_ac_calc_documentos_tratados( null ) );
+	}
+
+	public function test_campos_documento_limpa_data_e_valor(): void {
+		self::assertSame(
+			[ 'data' => '2026-10-03', 'nif' => '500000000', 'nome' => 'BANCO BPI SA', 'tipo' => 'Fatura', 'numero' => 'FT 004/1', 'valor' => 10.4 ],
+			cp_ac_calc_campos_documento( [ 'data' => '2026-10-03', 'nif' => '500000000', 'nome' => 'BANCO BPI SA', 'tipo' => 'Fatura', 'numero' => 'FT 004/1', 'valor' => '10.40' ] )
+		);
+		$r = cp_ac_calc_campos_documento( [ 'data' => '03/10/2026', 'valor' => 'abc', 'nome' => [ 'x' ] ] );
+		self::assertSame( '', $r['data'] );
+		self::assertNull( $r['valor'] );
+		self::assertSame( '', $r['nome'] );
 	}
 
 	public function test_tabs_meses_mais_recente_com_algo_por_tratar(): void {

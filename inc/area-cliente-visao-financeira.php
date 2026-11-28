@@ -126,7 +126,7 @@ function cp_ac_vista_visao_financeira() {
 	<div id="cp-vf-root" data-pendentes="<?php echo esc_attr( count( cp_ac_pendentes_documentos( $empresa_id ) ) + count( cp_ac_pendentes_movimentos( $empresa_id ) ) ); ?>">
 
 		<!-- Navegador de mês -->
-		<div class="ac-card ac-vf-nav" data-vf-previsao>
+		<div class="ac-card ac-vf-nav">
 			<div class="ac-vf-nav-head">
 				<h2 id="cp-vf-mes-titulo" class="ac-vf-nav-titulo"></h2>
 				<div class="ac-vf-nav-setas">
@@ -145,9 +145,10 @@ function cp_ac_vista_visao_financeira() {
 			</div>
 		</div>
 
-		<!-- Mês ainda sem contas fechadas (Work v5.0.158): só "As contas do mês"
-		     previstas, com este aviso; o resto da página esconde-se (CSS .is-previsao). -->
-		<div class="ac-card ac-vf-pv-aviso" data-vf-previsao role="status">
+		<!-- Mês ainda sem contas fechadas (Work v5.0.161): desenha-se como os outros
+		     meses, com este aviso; o que não se prevê ([data-vf-so-real]: dinheiro,
+		     compras, tesouraria, Estado/equipa/solidez) esconde-se (CSS .is-previsao). -->
+		<div class="ac-card ac-vf-pv-aviso" role="status">
 			<span class="ac-badge ac-badge-amber"><?php esc_html_e( 'Previsão', 'contabilidade-pro' ); ?></span>
 			<div>
 				<strong id="cp-vf-pv-aviso-titulo"></strong>
@@ -180,7 +181,7 @@ function cp_ac_vista_visao_financeira() {
 				<div class="ac-vf-destaque-val" id="cp-vf-d-lucro-val"></div>
 				<div id="cp-vf-d-lucro-trend" class="ac-trend"></div>
 			</div>
-			<div class="ac-card ac-vf-card">
+			<div class="ac-card ac-vf-card" data-vf-so-real>
 				<div class="ac-vf-card-head">
 					<div class="ac-stat-label" id="cp-vf-d-dinheiro-label"></div>
 					<?php cp_ac_info( __( 'O que a empresa tinha em caixa e nas contas bancárias no último dia do mês.', 'contabilidade-pro' ) ); ?>
@@ -199,12 +200,12 @@ function cp_ac_vista_visao_financeira() {
 		</div>
 
 		<!-- As contas do mês -->
-		<div class="ac-vf-secao-head" data-vf-previsao>
+		<div class="ac-vf-secao-head">
 			<h2 style="font-size:18px"><?php esc_html_e( 'As contas do mês', 'contabilidade-pro' ); ?></h2>
 			<?php cp_ac_info( __( 'A Demonstração de Resultados, de cima para baixo: começa nas vendas, tira cada custo e mostra o que fica (margem, EBITDA e lucro). O mês escolhido, o acumulado do ano e o mesmo período do ano passado.', 'contabilidade-pro' ) ); ?>
 		</div>
 		<!-- Tabela das contas e, ao lado, o EBITDA (empilham em ecrãs estreitos). -->
-		<div class="ac-vf-contas-grid" data-vf-previsao>
+		<div class="ac-vf-contas-grid">
 			<div class="ac-card" style="padding:10px 14px 16px">
 				<div id="cp-vf-contas"></div>
 			</div>
@@ -226,7 +227,7 @@ function cp_ac_vista_visao_financeira() {
 				<div style="font-size:12px;color:var(--ac-muted)"><?php esc_html_e( 'Total de janeiro ao mês escolhido', 'contabilidade-pro' ); ?></div>
 				<div id="cp-vf-vendas-grafico" class="ac-vf-vendas-grafico" style="margin-top:14px"></div>
 			</div>
-			<div class="ac-card" style="padding:22px">
+			<div class="ac-card" style="padding:22px" data-vf-so-real>
 				<div class="ac-vf-card-head">
 					<div class="ac-stat-label"><?php esc_html_e( 'Compras e serviços por mês', 'contabilidade-pro' ); ?></div>
 					<?php cp_ac_info( __( 'Mercadoria e serviços comprados a terceiros (rendas, energia, combustível…), sem IVA. A barra escura é este ano, a clara é o ano passado.', 'contabilidade-pro' ) ); ?>
@@ -241,32 +242,10 @@ function cp_ac_vista_visao_financeira() {
 		</div>
 		<div class="ac-card" id="cp-vf-clientes" style="padding:22px" hidden></div>
 
-		<?php if ( ! empty( $dados['previsao']['indicadores'] ) ) : ?>
-		<!-- Previsão para o ano (Work v5.0.137): real até ao último mês publicado,
-		     previsto até dezembro. Não depende do mês escolhido no navegador. -->
-		<div class="ac-vf-secao-head" data-vf-previsao>
-			<h2 style="font-size:18px" id="cp-vf-previsao-titulo"></h2>
-			<?php cp_ac_info( __( 'Até ao último mês com contas fechadas são os valores reais; daí até dezembro é a nossa previsão, feita a partir do ritmo deste ano ou do que aconteceu no ano passado. Serve para planear, não é uma garantia.', 'contabilidade-pro' ) ); ?>
-		</div>
-		<div class="ac-card" style="padding:22px" data-vf-previsao>
-			<div id="cp-vf-previsao-tabs" class="ac-vf-pv-tabs" role="group" aria-label="<?php esc_attr_e( 'Indicador', 'contabilidade-pro' ); ?>"></div>
-			<div class="ac-vf-pv-numeros">
-				<div><div class="ac-stat-label" id="cp-vf-previsao-real-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-real" style="font-size:24px"></div></div>
-				<div><div class="ac-stat-label" id="cp-vf-previsao-ano-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-ano" style="font-size:28px"></div><div id="cp-vf-previsao-trend" class="ac-trend"></div></div>
-				<div><div class="ac-stat-label" id="cp-vf-previsao-ant-label"></div><div class="ac-vf-destaque-val" id="cp-vf-previsao-ant" style="font-size:24px;color:var(--ac-muted)"></div></div>
-			</div>
-			<div id="cp-vf-previsao-grafico" class="ac-vf-vendas-grafico ac-vf-pv-grafico" style="margin-top:14px"></div>
-			<div class="ac-vf-pv-legenda">
-				<span><i class="ac-vf-vendas-bar ano-atual"></i><?php esc_html_e( 'Real', 'contabilidade-pro' ); ?></span>
-				<span><i class="ac-vf-vendas-bar is-previsto"></i><?php esc_html_e( 'Previsto', 'contabilidade-pro' ); ?></span>
-				<span><i class="ac-vf-vendas-bar ano-anterior"></i><?php esc_html_e( 'Ano passado', 'contabilidade-pro' ); ?></span>
-			</div>
-		</div>
-		<?php endif; ?>
 
 		<!-- Dinheiro: caixa e dívida lado a lado; fôlego por baixo -->
-		<div><h2 style="font-size:18px"><?php esc_html_e( 'Dinheiro — tesouraria', 'contabilidade-pro' ); ?></h2></div>
-		<div class="ac-vf-duas-col">
+		<div data-vf-so-real><h2 style="font-size:18px"><?php esc_html_e( 'Dinheiro — tesouraria', 'contabilidade-pro' ); ?></h2></div>
+		<div class="ac-vf-duas-col" data-vf-so-real>
 			<div class="ac-card" style="padding:22px">
 				<div class="ac-stat-label"><?php esc_html_e( 'Dinheiro em caixa e bancos', 'contabilidade-pro' ); ?></div>
 				<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px;flex-wrap:wrap">
@@ -286,7 +265,7 @@ function cp_ac_vista_visao_financeira() {
 				<div id="cp-vf-divida-linha" class="ac-vf-linha-grafico" style="margin-top:14px"></div>
 			</div>
 		</div>
-		<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:16px">
+		<div class="ac-card" style="padding:22px;display:flex;flex-direction:column;gap:16px" data-vf-so-real>
 			<div>
 				<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
 					<div class="ac-vf-card-head">
@@ -306,8 +285,8 @@ function cp_ac_vista_visao_financeira() {
 		</div>
 
 		<!-- Estado, equipa e solidez -->
-		<div><h2 style="font-size:18px"><?php esc_html_e( 'Estado, equipa e solidez', 'contabilidade-pro' ); ?></h2></div>
-		<div class="ac-vf-grid3-card">
+		<div data-vf-so-real><h2 style="font-size:18px"><?php esc_html_e( 'Estado, equipa e solidez', 'contabilidade-pro' ); ?></h2></div>
+		<div class="ac-vf-grid3-card" data-vf-so-real>
 			<div class="ac-card" style="padding:22px">
 				<div style="display:flex;align-items:center;justify-content:space-between">
 					<div class="ac-stat-label"><?php esc_html_e( 'Devido ao Estado', 'contabilidade-pro' ); ?></div>

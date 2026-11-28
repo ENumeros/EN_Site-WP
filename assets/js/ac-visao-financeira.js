@@ -14,14 +14,17 @@
 	var pendentes      = parseInt( root.getAttribute( 'data-pendentes' ), 10 ) || 0;
 	var indiceAtual    = meses.length - 1;
 
-	// Meses ainda sem contas fechadas (Work v5.0.158): dados.previsao.meses_previstos
-	// = [ { mes, contas } ] — entram no fim da lista com previsto=true e mostram só
-	// "As contas do mês" previstas, com o aviso "Previsão". Abre-se no último mês real.
+	// Meses ainda sem contas fechadas (Work v5.0.158; como um mês normal desde a
+	// v5.0.161): dados.previsao.meses_previstos = [ { mes, previsto, resumo,
+	// destaques, contas, ebitda } ] — entram no fim da lista e desenham-se como os
+	// outros meses, com o aviso "Previsão"; o que não se prevê esconde-se
+	// ([data-vf-so-real]). Payloads antigos só com contas também servem.
+	// Abre-se no último mês real.
 	var ultimoReal = meses[ meses.length - 1 ];
 	var mesesPrevistos = dados.previsao && Array.isArray( dados.previsao.meses_previstos ) ? dados.previsao.meses_previstos : [];
 	mesesPrevistos.forEach( function ( m ) {
 		if ( m && m.mes > ultimoReal.mes && Array.isArray( m.contas ) && m.contas.length ) {
-			meses.push( { mes: m.mes, contas: m.contas, previsto: true } );
+			meses.push( Object.assign( {}, m, { previsto: true } ) );
 		}
 	} );
 
@@ -30,7 +33,8 @@
 
 	function fmtEuro( v ) {
 		if ( v === null || v === undefined ) return '—';
-		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: 'always' } ).format( v ) + ' €';
+		// Ao cêntimo (2026-11-28), como na Work.
+		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' } ).format( v ) + ' €';
 	}
 	function fmtPct( v, casas ) {
 		return new Intl.NumberFormat( 'pt-PT', { minimumFractionDigits: casas || 1, maximumFractionDigits: casas || 1 } ).format( v ) + '%';
@@ -165,7 +169,7 @@
 	// Custos com "−", rendimentos com "+", totais com o próprio sinal.
 	function valorConta( conta, v ) {
 		if ( v === null || v === undefined ) return '—';
-		if ( Math.round( v ) === 0 ) return fmtEuro( 0 );
+		if ( Math.abs( v ) < 0.005 ) return fmtEuro( 0 );
 		if ( conta.tipo === 'custo' ) return '−' + fmtEuro( Math.abs( v ) );
 		if ( conta.tipo === 'rendimento' ) return '+' + fmtEuro( Math.abs( v ) );
 		return ( v < 0 ? '−' : '' ) + fmtEuro( Math.abs( v ) );
@@ -207,7 +211,7 @@
 			nome.appendChild( document.createTextNode( conta.titulo || conta.nome ) );
 			tr.appendChild( nome );
 			[ [ conta.valor, '' ], [ conta.acumulado, '' ], [ conta.acumulado_ano_anterior, ' col-ant' ] ].forEach( function ( c ) {
-				var negativo = total && c[0] !== null && c[0] !== undefined && Math.round( c[0] ) < 0;
+				var negativo = total && c[0] !== null && c[0] !== undefined && c[0] <= -0.005;
 				tr.appendChild( td( 'num' + c[1] + ( negativo ? ' is-negativo' : '' ), valorConta( conta, c[0] ) ) );
 			} );
 			if ( temDetalhe ) {
@@ -490,7 +494,7 @@
 		var elDivTrend = document.getElementById( 'cp-vf-divida-trend' );
 		var idxDiv = pontosDiv.findIndex( function ( p ) { return p.mes === mes.mes; } );
 		var antDiv = idxDiv > 0 ? pontosDiv[ idxDiv - 1 ].valor : null;
-		if ( antDiv !== null && Math.round( antDiv - divida ) !== 0 ) {
+		if ( antDiv !== null && Math.abs( antDiv - divida ) >= 0.005 ) {
 			var desceu = divida < antDiv;
 			elDivTrend.className = 'ac-trend ' + ( desceu ? 'ac-trend-up' : '' );
 			elDivTrend.textContent = ( desceu ? '↓ ' : '↑ ' ) + fmtEuro( Math.abs( divida - antDiv ) ) + ' desde o mês anterior';
@@ -548,12 +552,10 @@
 			document.getElementById( 'cp-vf-pv-aviso-titulo' ).textContent = 'Os números de ' + nomeMes + ' são uma previsão';
 			document.getElementById( 'cp-vf-pv-aviso-texto' ).textContent = 'Ainda não há contas fechadas de ' + nomeMes + '. Até ' + NOMES_MES[ partesMes( ultimoReal.mes ).mes - 1 ]
 				+ ' os valores são reais; daí em diante é a nossa previsão, feita a partir do ritmo deste ano ou do ano passado. Serve para planear, não é uma garantia.';
-			renderContas( mes );
-			return;
 		}
 
 		var resumo = mes.resumo || {};
-		document.getElementById( 'cp-vf-resumo-label' ).textContent = resumo.tipo === 'equipa' ? 'O MÊS EM POUCAS PALAVRAS' : 'RESUMO AUTOMÁTICO';
+		document.getElementById( 'cp-vf-resumo-label' ).textContent = resumo.tipo === 'equipa' ? 'O MÊS EM POUCAS PALAVRAS' : ( resumo.tipo === 'previsao' ? 'PREVISÃO DO MÊS' : 'RESUMO AUTOMÁTICO' );
 		document.getElementById( 'cp-vf-resumo-texto' ).textContent = resumo.texto || '';
 		document.getElementById( 'cp-vf-resumo-assinatura' ).textContent = resumo.assinatura || '';
 
@@ -563,13 +565,14 @@
 		var pctVendas = d.vendas_ano_anterior ? ( ( d.vendas - d.vendas_ano_anterior ) / d.vendas_ano_anterior * 100 ) : 0;
 		var elTrendV = document.getElementById( 'cp-vf-d-vendas-trend' );
 		elTrendV.className = 'ac-trend ' + ( pctVendas >= 0 ? 'ac-trend-up' : '' );
-		elTrendV.textContent = ( pctVendas >= 0 ? '↑ ' : '↓ ' ) + fmtPct( Math.abs( pctVendas ) ) + ' que em ' + NOMES_MES[ partesMes( mes.mes ).mes - 1 ] + ' de ' + ( partesMes( mes.mes ).ano - 1 );
+		elTrendV.textContent = d.vendas_ano_anterior ? ( pctVendas >= 0 ? '↑ ' : '↓ ' ) + fmtPct( Math.abs( pctVendas ) ) + ' que em ' + NOMES_MES[ partesMes( mes.mes ).mes - 1 ] + ' de ' + ( partesMes( mes.mes ).ano - 1 ) : '';
 
 		document.getElementById( 'cp-vf-d-lucro-val' ).textContent = fmtEuro( d.lucro_acumulado );
 		var diffLucro = d.lucro_acumulado - d.lucro_acumulado_ano_anterior;
 		var elTrendL = document.getElementById( 'cp-vf-d-lucro-trend' );
 		elTrendL.className = 'ac-trend ' + ( diffLucro >= 0 ? 'ac-trend-up' : '' );
-		elTrendL.textContent = ( diffLucro >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( diffLucro ) ) + ' que no mesmo período de ' + ( partesMes( mes.mes ).ano - 1 );
+		elTrendL.textContent = d.lucro_acumulado === null || d.lucro_acumulado === undefined || d.lucro_acumulado_ano_anterior === null || d.lucro_acumulado_ano_anterior === undefined
+			? '' : ( diffLucro >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( diffLucro ) ) + ' que no mesmo período de ' + ( partesMes( mes.mes ).ano - 1 );
 
 		document.getElementById( 'cp-vf-d-dinheiro-label' ).textContent = 'Dinheiro no fim de ' + NOMES_MES[ partesMes( mes.mes ).mes - 1 ];
 		document.getElementById( 'cp-vf-d-dinheiro-val' ).textContent = fmtEuro( d.dinheiro );
@@ -582,6 +585,9 @@
 
 		renderContas( mes );
 		renderVendas( mes );
+		// Num mês previsto o dinheiro, as compras, a tesouraria e o Estado não se
+		// preveem: os blocos estão escondidos ([data-vf-so-real]).
+		if ( mes.previsto ) return;
 		renderCompras( mes );
 		renderTesouraria( mes );
 		renderEstado( mes );
@@ -589,65 +595,4 @@
 
 	render();
 
-	// ─── Previsão para o ano (Work v5.0.137) ────────────────────────────────
-	// dados.previsao = { ano, ate_mes, indicadores: [ { id, nome, custo, realizado,
-	// projetado, ano_anterior, meses: [ { mes, valor, tipo: real|projetado, ano_anterior } ] } ] }.
-	// Não depende do mês escolhido no navegador de cima: é sempre o ano todo.
-	( function () {
-		var pv = dados.previsao;
-		var elTabs = document.getElementById( 'cp-vf-previsao-tabs' );
-		if ( ! pv || ! elTabs || ! Array.isArray( pv.indicadores ) || ! pv.indicadores.length ) return;
-		var elGraf = document.getElementById( 'cp-vf-previsao-grafico' );
-		var nomeAte = NOMES_MES[ pv.ate_mes - 1 ];
-		document.getElementById( 'cp-vf-previsao-titulo' ).textContent = 'Previsão para ' + pv.ano;
-		document.getElementById( 'cp-vf-previsao-real-label' ).textContent = 'Até ' + nomeAte;
-		document.getElementById( 'cp-vf-previsao-ano-label' ).textContent = 'Previsão para o ano';
-		document.getElementById( 'cp-vf-previsao-ant-label' ).textContent = 'Ano de ' + ( pv.ano - 1 );
-
-		function mostrar( ind ) {
-			elTabs.querySelectorAll( 'button' ).forEach( function ( b ) { b.setAttribute( 'aria-pressed', b.dataset.id === ind.id ? 'true' : 'false' ); } );
-			document.getElementById( 'cp-vf-previsao-real' ).textContent = fmtEuro( ind.realizado );
-			document.getElementById( 'cp-vf-previsao-ano' ).textContent = fmtEuro( ind.projetado );
-			document.getElementById( 'cp-vf-previsao-ant' ).textContent = ind.ano_anterior === null ? '—' : fmtEuro( ind.ano_anterior );
-			var elTrend = document.getElementById( 'cp-vf-previsao-trend' );
-			if ( ind.ano_anterior ) {
-				var dif = ind.projetado - ind.ano_anterior;
-				// Nos custos, subir não é "bom": sem verde.
-				elTrend.className = 'ac-trend' + ( dif >= 0 && ! ind.custo ? ' ac-trend-up' : '' );
-				elTrend.textContent = ( dif >= 0 ? '↑ ' : '↓ ' ) + fmtEuro( Math.abs( dif ) ) + ' que em ' + ( pv.ano - 1 );
-			} else {
-				elTrend.textContent = '';
-			}
-
-			limpar( elGraf );
-			elGraf.classList.toggle( 'is-custo', !! ind.custo );
-			var esc = escalaBarras( ind.meses.reduce( function ( l, x ) { return l.concat( [ x.valor || 0, x.ano_anterior || 0 ] ); }, [] ) );
-			ind.meses.forEach( function ( x, i ) {
-				var previsto = x.tipo === 'projetado';
-				var col = el( 'div', 'ac-vf-vendas-mes' + ( previsto ? ' is-previsto' : '' ) );
-				var par = el( 'div', 'ac-vf-vendas-par' );
-				var barAnt = el( 'div', 'ac-vf-vendas-bar ano-anterior' );
-				porBarra( barAnt, x.ano_anterior, esc );
-				var bar = el( 'div', 'ac-vf-vendas-bar ' + ( previsto ? 'is-previsto' : 'ano-atual' ) + ( x.valor < 0 ? ' is-negativo' : '' ) );
-				porBarra( bar, x.valor, esc );
-				linhaZero( par, esc );
-				par.title = NOMES_MES[ i ] + ': ' + ( x.valor === null ? '—' : fmtEuro( x.valor ) ) + ( previsto ? ' (previsto)' : '' );
-				par.appendChild( barAnt );
-				par.appendChild( bar );
-				col.appendChild( par );
-				col.appendChild( el( 'span', 'ac-vf-vendas-mes-label', ABREV_MES[ i ] ) );
-				elGraf.appendChild( col );
-			} );
-		}
-
-		pv.indicadores.forEach( function ( ind ) {
-			var b = el( 'button', 'ac-vf-pv-tab', '' );
-			b.type = 'button';
-			b.dataset.id = ind.id;
-			b.textContent = ind.nome;
-			b.addEventListener( 'click', function () { mostrar( ind ); } );
-			elTabs.appendChild( b );
-		} );
-		mostrar( pv.indicadores[0] );
-	} )();
 } )();

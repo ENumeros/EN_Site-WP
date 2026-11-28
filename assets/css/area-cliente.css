@@ -354,14 +354,13 @@ form[data-cp-drop].is-arrastar{background:var(--ac-bg);box-shadow:0 0 0 2px var(
 .ac-vf-trilho-mes.is-vazio{opacity:.35}
 .ac-vf-trilho-mes.is-ativo{color:var(--ac-on-navy)}
 .ac-vf-trilho-mes.is-previsto{font-style:italic;font-weight:500}
-/* Mês em previsão (Work v5.0.158): só o navegador, o aviso, "As contas do mês"
-   e a Previsão para o ano; o resto depende de contas fechadas e esconde-se. */
-#cp-vf-root.is-previsao > :not([data-vf-previsao]){display:none!important}
+/* Mês em previsão (Work v5.0.161): como os outros meses, com o aviso; o que não
+   se prevê (dinheiro, compras, tesouraria, Estado/equipa/solidez) esconde-se. */
+#cp-vf-root.is-previsao [data-vf-so-real]{display:none!important}
+#cp-vf-root.is-previsao .ac-vf-duas-col{grid-template-columns:minmax(0,1fr)}
 #cp-vf-root:not(.is-previsao) .ac-vf-pv-aviso{display:none}
 .ac-vf-pv-aviso{display:flex;gap:12px;align-items:flex-start;padding:16px 20px;border:1.5px dashed #C98F2E;background:rgba(201,143,46,.07)}
 .ac-vf-pv-aviso-texto{font-size:13px;color:var(--ac-muted);margin-top:3px;line-height:1.45}
-#cp-vf-root.is-previsao .ac-vf-contas-grid{grid-template-columns:minmax(0,1fr)}
-#cp-vf-root.is-previsao #cp-vf-ebitda{display:none}
 #cp-vf-root.is-previsao .ac-vf-mapa td.num:nth-child(2){font-style:italic}
 @media (max-width:520px){.ac-vf-trilho-mes{font-size:10.5px;letter-spacing:-.2px}.ac-vf-nav-titulo{font-size:19px}}
 
@@ -429,23 +428,9 @@ form[data-cp-drop].is-arrastar{background:var(--ac-bg);box-shadow:0 0 0 2px var(
 .ac-vf-vendas-mes.is-ativo .ano-atual{background:var(--ac-navy)}
 .ac-vf-vendas-mes-label{font-size:10.5px;color:var(--ac-muted);text-transform:lowercase}
 
-/* Previsão para o ano (Work v5.0.137) — reaproveita as barras das vendas. */
-.ac-vf-pv-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
-.ac-vf-pv-tab{border:1px solid var(--ac-line);background:transparent;color:inherit;border-radius:999px;padding:5px 14px;font:inherit;font-size:13px;cursor:pointer}
-.ac-vf-pv-tab[aria-pressed="true"]{background:var(--ac-navy);border-color:var(--ac-navy);color:#fff;font-weight:600}
-.ac-vf-pv-numeros{display:flex;flex-wrap:wrap;gap:14px 36px}
-.ac-vf-pv-grafico .ac-vf-vendas-par{cursor:default}
-.ac-vf-vendas-bar.is-previsto{background:repeating-linear-gradient(135deg,var(--ac-blue) 0 3px,transparent 3px 6px);border:1.5px dashed var(--ac-blue);border-bottom:0;opacity:.85}
-.ac-vf-pv-grafico.is-custo .ac-vf-vendas-bar.ano-atual{background:#E4BC72}
-.ac-vf-pv-grafico.is-custo .ac-vf-vendas-bar.is-previsto{background:repeating-linear-gradient(135deg,#E4BC72 0 3px,transparent 3px 6px);border-color:#C98F2E}
-.ac-vf-vendas-mes.is-previsto .ac-vf-vendas-mes-label{font-style:italic}
-.ac-vf-vendas-bar.is-negativo{background:#B14B3D;opacity:.85}
-.ac-vf-vendas-bar.is-previsto.is-negativo{background:repeating-linear-gradient(135deg,#B14B3D 0 3px,transparent 3px 6px);border-color:#B14B3D}
-/* Abaixo de zero (prejuízo): a barra desce da linha de zero (Work v5.0.160). */
-.ac-vf-vendas-bar.is-abaixo{border-radius:0 0 3px 3px}
-.ac-vf-vendas-bar.is-previsto.is-abaixo{border-top:0;border-bottom:1.5px dashed #B14B3D}
-.ac-vf-pv-legenda{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:12px;color:var(--ac-muted)}
-.ac-vf-pv-legenda i{display:inline-block;width:12px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:2px}
+/* Abaixo de zero (ex: notas de crédito): a barra desce da linha de zero, a
+   vermelho (Work v5.0.160). A secção "Previsão para o ano" saiu na v5.0.161. */
+.ac-vf-vendas-bar.is-abaixo{border-radius:0 0 3px 3px;background:#B14B3D!important;opacity:.85}
 
 .ac-vf-linha-grafico svg{display:block;width:100%;height:auto}
 

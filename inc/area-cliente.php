@@ -83,6 +83,11 @@ function cp_ac_ferramentas() {
 			'grupo' => __( 'Contabilidade', 'contabilidade-pro' ),
 			'icon'  => '<path d="M5 19V9M12 19V5M19 19v-7"></path><path d="M3 19h18"></path>',
 		],
+		'colaboradores'      => [
+			'label' => __( 'Colaboradores', 'contabilidade-pro' ),
+			'grupo' => __( 'Recursos Humanos', 'contabilidade-pro' ),
+			'icon'  => '<circle cx="9" cy="8" r="3.5"></circle><path d="M3 19.5c.6-3 3-5 6-5s5.4 2 6 5"></path><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4"></path><path d="M18 14.7c1.6.6 2.7 2.4 3 4.8"></path>',
+		],
 		'recibos_vencimento' => [
 			'label' => __( 'Recibos de Vencimento', 'contabilidade-pro' ),
 			'grupo' => __( 'Recursos Humanos', 'contabilidade-pro' ),

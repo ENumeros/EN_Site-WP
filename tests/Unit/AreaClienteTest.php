@@ -47,6 +47,7 @@ final class AreaClienteTest extends TestCase {
 				'extratos',
 				'saft',
 				'mapas_gestao',
+				'colaboradores',
 				'recibos_vencimento',
 			],
 			$chaves

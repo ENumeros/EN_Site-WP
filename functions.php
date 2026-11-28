@@ -18,6 +18,7 @@ require_once get_template_directory() . '/inc/area-cliente-mensagens.php';
 require_once get_template_directory() . '/inc/area-cliente-visao-financeira.php';
 require_once get_template_directory() . '/inc/area-cliente-pagamentos.php';
 require_once get_template_directory() . '/inc/area-cliente-faturas.php';
+require_once get_template_directory() . '/inc/area-cliente-colaboradores.php';
 require_once get_template_directory() . '/inc/area-cliente-recebimentos.php';
 require_once get_template_directory() . '/inc/area-cliente-backoffice-contas.php';
 

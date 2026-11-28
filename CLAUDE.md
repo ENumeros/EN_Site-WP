@@ -495,6 +495,19 @@ deliberada entre as três é a chave de tema (`cp-theme`) e o prefixo comum
   preco} e os totais só `total`; a taxa decide-se ao emitir. No seletor de
   cliente, vazio = por escolher (erro) e `CP_AC_FAT_NOVO` = cliente novo.
   Funções puras `cp_ac_fat_*` em `tests/Unit/FaturasTest.php`.
+- **Colaboradores** (`inc/area-cliente-colaboradores.php`, ferramenta
+  `colaboradores`, 2026-11-28): o cliente consulta os colaboradores da
+  empresa e pode pedir um novo. A Work envia a lista lida da CentralGest
+  (`POST cp/v1/colaboradores`, substitui tudo, meta `_cp_colaboradores`:
+  número, nome, categoria, NIF, email, localidade, ativo). O pedido de novo
+  colaborador (nome obrigatório; NIF e email validados se preenchidos;
+  categoria, localidade, observações) vai por admin-post
+  `cp_colaborador_novo`, com push à equipa. Mesmo circuito de Pedir faturas:
+  `GET cp/v1/colaboradores/pedidos/novos`, `/confirmar` ("Em análise") e
+  `/estado` (`registado`, `recusado` com motivo, `recebido` para reabrir;
+  push ao cliente). Os pedidos ficam em `_cp_colaboradores_pedidos` (até
+  200, só se cortam tratados); o cliente só cancela antes de a Work receber.
+  Funções puras `cp_ac_colab_*` em `tests/Unit/ColaboradoresTest.php`.
 
 ## Convenções gerais (nas três superfícies)
 
